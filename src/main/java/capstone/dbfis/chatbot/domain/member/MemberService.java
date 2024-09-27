@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.Member;
+package capstone.dbfis.chatbot.domain.member;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

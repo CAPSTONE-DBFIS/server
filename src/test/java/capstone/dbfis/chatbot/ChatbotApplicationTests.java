@@ -1,7 +1,7 @@
 package capstone.dbfis.chatbot;
 
-import capstone.dbfis.chatbot.domain.Member.Member;
-import capstone.dbfis.chatbot.domain.Member.MemberRepository;
+import capstone.dbfis.chatbot.domain.member.Member;
+import capstone.dbfis.chatbot.domain.member.MemberRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

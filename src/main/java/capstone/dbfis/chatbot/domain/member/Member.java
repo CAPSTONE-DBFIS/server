@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.Member;
+package capstone.dbfis.chatbot.domain.member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
