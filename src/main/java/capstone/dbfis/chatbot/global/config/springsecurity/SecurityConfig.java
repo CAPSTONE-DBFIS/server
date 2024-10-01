@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.global.config;
+package capstone.dbfis.chatbot.global.config.springsecurity;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
