@@ -40,7 +40,6 @@ public class TokenProviderTest {
                 .interests("Reading, Coding")
                 .profileImage("default.png")
                 .personaPreset(1)
-                .refreshToken("dummy_refresh_token")
                 .build());
     }
 
