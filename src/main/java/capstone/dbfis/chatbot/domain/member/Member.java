@@ -35,7 +35,4 @@ public class Member {
 
     @Column(name = "persona_preset")
     private int personaPreset;
-
-    @Column(name = "refresh_token")
-    private String refreshToken;
 }

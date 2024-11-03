@@ -1,16 +1,30 @@
 package capstone.dbfis.chatbot.domain.member;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MemberService {
-    @Autowired
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
 
-    public List<Member> getAllUsers(String id) {
-        return memberRepository.findAll();
+    @Transactional
+    public Member registerMember(Member member) {
+        validateMember(member);
+        return memberRepository.save(member);
     }
+
+    private void validateMember(Member member) {
+        if (memberRepository.findById(member.getId()).isPresent()) {
+            throw new IllegalArgumentException("이미 존재하는 ID입니다.");
+        }
+    }
+
+    public Member findById(String id) {
+        return memberRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("invalid member"));
+    }
+
+
 }
