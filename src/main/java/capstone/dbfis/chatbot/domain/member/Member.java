@@ -14,7 +14,7 @@ import lombok.*;
 public class Member {
 
     @Id
-    @Column(name= "id")
+    @Column(name= "id", updatable = false)
     private String id;
 
     @Id
@@ -47,7 +47,4 @@ public class Member {
 
     @Column(name = "persona_preset")
     private int personaPreset;
-
-    @Column(name = "refresh_token")
-    private String refreshToken;
 }

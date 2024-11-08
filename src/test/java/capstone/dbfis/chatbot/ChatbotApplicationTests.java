@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChatbotApplicationTests {
 	@Autowired private MemberRepository memberRepository;
 	@Test
-	void saveUser() {
+	void saveMember() {
 		// given
 		Member member = Member.builder()
 				.id("User1")
@@ -23,7 +23,6 @@ class ChatbotApplicationTests {
 				.interests("Reading, Coding")
 				.profileImage("default.png")
 				.personaPreset(1)
-				.refreshToken("dummy_refresh_token")
 				.build();
 
 		// when
