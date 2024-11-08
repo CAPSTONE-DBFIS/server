@@ -1,8 +1,8 @@
 package capstone.dbfis.chatbot.domain.member;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import capstone.dbfis.chatbot.domain.department.Department;
+import capstone.dbfis.chatbot.domain.role.Role;
+import jakarta.persistence.*;
 import lombok.*;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -10,10 +10,22 @@ import lombok.*;
 @Getter
 @Entity
 @Builder
+@IdClass(MemberId.class)
 public class Member {
+
     @Id
-    @Column(name = "id", updatable = false)
+    @Column(name= "id")
     private String id;
+
+    @Id
+    @OneToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
+
+    @Id
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     @Column(name = "name", nullable = false)
     private String name;
