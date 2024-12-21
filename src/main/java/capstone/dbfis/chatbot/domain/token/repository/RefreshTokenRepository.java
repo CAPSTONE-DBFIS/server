@@ -1,6 +1,6 @@
 package capstone.dbfis.chatbot.domain.token.repository;
 
-import capstone.dbfis.chatbot.domain.token.model.RefreshToken;
+import capstone.dbfis.chatbot.domain.token.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

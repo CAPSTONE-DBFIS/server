@@ -1,6 +1,6 @@
 package capstone.dbfis.chatbot.global.config.jwt;
 
-import capstone.dbfis.chatbot.domain.member.Member;
+import capstone.dbfis.chatbot.domain.member.entity.Member;
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,18 +51,19 @@ public class TokenProvider {
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
-                    // secret 값으로 복호화
                     .setSigningKey(jwtProperties.getSecret())
                     .parseClaimsJws(token);
             return true;
         } catch (ExpiredJwtException e) {
-            log.error("JWT Token이 만료되었습니다.");
+            log.error("JWT Token이 만료되었습니다. 유효기간: {}", e.getClaims().getExpiration());
         } catch (UnsupportedJwtException e) {
-            log.error("JWT Token이 지원되지 않습니다.");
+            log.error("JWT Token이 지원되지 않습니다. {}", e.getMessage());
         } catch (MalformedJwtException e) {
-            log.error("JWT Token이 손상되었습니다.");
+            log.error("JWT Token이 손상되었습니다. {}", e.getMessage());
+        } catch (SignatureException e) {
+            log.error("JWT Token의 서명이 유효하지 않습니다. {}", e.getMessage());
         } catch (Exception e) {
-            log.error("JWT Token 유효성 검증에 실패하였습니다.");
+            log.error("JWT Token 유효성 검증에 실패하였습니다. {}", e.getMessage());
         }
         return false;
     }

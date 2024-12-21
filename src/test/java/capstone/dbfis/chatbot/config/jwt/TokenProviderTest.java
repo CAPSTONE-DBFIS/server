@@ -1,7 +1,8 @@
 package capstone.dbfis.chatbot.config.jwt;
 
-import capstone.dbfis.chatbot.domain.member.Member;
-import capstone.dbfis.chatbot.domain.member.MemberRepository;
+import capstone.dbfis.chatbot.domain.member.entity.Member;
+import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import capstone.dbfis.chatbot.domain.token.repository.RefreshTokenRepository;
 import capstone.dbfis.chatbot.global.config.jwt.JwtProperties;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.jsonwebtoken.Jwts;
@@ -24,11 +25,15 @@ public class TokenProviderTest {
     private MemberRepository memberRepository;
     @Autowired
     private JwtProperties jwtProperties;
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private Member testMember;
 
     @BeforeEach
     void setUp() {
+        // 먼저 refresh_token 삭제
+        refreshTokenRepository.deleteAll();
         memberRepository.deleteAll();
         // given
         testMember = memberRepository.save(Member.builder()
@@ -38,8 +43,10 @@ public class TokenProviderTest {
                 .phone("010-1234-5678")
                 .nickname("gildong")
                 .interests("Reading, Coding")
+                .department("develop")
                 .profileImage("default.png")
                 .personaPreset(1)
+                .isVerified(true)
                 .build());
     }
 

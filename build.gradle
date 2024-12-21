@@ -24,20 +24,32 @@ repositories {
 }
 
 dependencies {
+	// Spring Boot 스타터
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0' // Spring MVC용 Swagger
+	implementation 'org.springframework.boot:spring-boot-starter-mail' // 메일 기능 추가
+
+	// OpenAPI/Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
+
+	// JWT 관련
 	implementation 'io.jsonwebtoken:jjwt:0.9.1'
+
+	// JAXB
 	implementation 'javax.xml.bind:jaxb-api:2.3.1'
+
+	// Lombok
 	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
 
+	// PostgreSQL
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// 테스트 의존성
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
-
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

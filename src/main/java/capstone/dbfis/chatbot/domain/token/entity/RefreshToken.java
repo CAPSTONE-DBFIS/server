@@ -1,6 +1,6 @@
-package capstone.dbfis.chatbot.domain.token.model;
+package capstone.dbfis.chatbot.domain.token.entity;
 
-import capstone.dbfis.chatbot.domain.member.Member;
+import capstone.dbfis.chatbot.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
