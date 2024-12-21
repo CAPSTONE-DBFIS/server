@@ -1,9 +1,9 @@
 package capstone.dbfis.chatbot.config.jwt;
 
-import capstone.dbfis.chatbot.domain.member.Member;
-import capstone.dbfis.chatbot.domain.member.MemberRepository;
+import capstone.dbfis.chatbot.domain.member.entity.Member;
+import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
 import capstone.dbfis.chatbot.domain.token.dto.CreateAccessTokenRequest;
-import capstone.dbfis.chatbot.domain.token.model.RefreshToken;
+import capstone.dbfis.chatbot.domain.token.entity.RefreshToken;
 import capstone.dbfis.chatbot.domain.token.repository.RefreshTokenRepository;
 import capstone.dbfis.chatbot.global.config.jwt.JwtProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,8 +59,10 @@ public class TokenApiControllerTest {
                 .phone("010-1234-5678")
                 .nickname("gildong")
                 .interests("Reading, Coding")
+                .department("develop")
                 .profileImage("default.png")
                 .personaPreset(1)
+                .isVerified(true)
                 .build());
 
         String refreshToken = JwtFactory.builder()
