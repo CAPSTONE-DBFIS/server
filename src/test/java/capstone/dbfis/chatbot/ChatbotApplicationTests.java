@@ -1,7 +1,8 @@
 package capstone.dbfis.chatbot;
 
-import capstone.dbfis.chatbot.domain.member.Member;
-import capstone.dbfis.chatbot.domain.member.MemberRepository;
+import capstone.dbfis.chatbot.domain.member.entity.Member;
+import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChatbotApplicationTests {
 	@Autowired private MemberRepository memberRepository;
 	@Test
+	@BeforeEach
+	public void mockMvcSetup() throws Exception {
+		memberRepository.deleteAll();
+	}
 	void saveMember() {
 		// given
 		Member member = Member.builder()
@@ -20,9 +25,11 @@ class ChatbotApplicationTests {
 				.email("gildong@example.com")
 				.phone("010-1234-5678")
 				.nickname("gildong")
+				.department("develop")
 				.interests("Reading, Coding")
 				.profileImage("default.png")
 				.personaPreset(1)
+				.isVerified(false)
 				.build();
 
 		// when
