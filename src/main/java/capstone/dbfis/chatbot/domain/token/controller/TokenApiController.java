@@ -21,7 +21,7 @@ public class TokenApiController {
 
         // 요청으로 받은 리프레시 토큰을 사용하여 새로운 액세스 토큰 생성
         String newAccessToken = accessTokenService
-                .createdNewAccessToken(request.getRefreshToken());
+                .createNewAccessToken(request.getRefreshToken());
 
         // HTTP 201 CREATED 상태와 함께 새로 생성된 액세스 토큰을 응답 본문으로 반환
         return ResponseEntity.status(HttpStatus.CREATED)
