@@ -38,6 +38,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader(HEADER_AUTHORIZATION);
         String token = getAccessToken(authorizationHeader);
 
+        // 토큰이 null이거나 비어있는 경우, 검증을 생략하고 다음 필터로 이동
+        if (token == null || token.isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 토큰 유효성 검증
         if (tokenProvider.validateToken(token)) {
             // 유효한 토큰일 경우 인증 정보 가져오기
