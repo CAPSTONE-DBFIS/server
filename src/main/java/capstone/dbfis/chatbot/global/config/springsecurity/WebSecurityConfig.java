@@ -49,8 +49,8 @@ public class WebSecurityConfig {
                 .authorizeRequests()
                 .requestMatchers("/login").permitAll() // 회원가입 페이지는 인증 없이 접근 가능
                 .requestMatchers("/signup").permitAll() // 회원가입 페이지는 인증 없이 접근 가능
-                .requestMatchers("/api/token").permitAll() // 토큰 재발급 url 인증 없이 접근 가능
-                .requestMatchers("/api/**").authenticated() // 나머지 api url은 인증 필요
+//                .requestMatchers("/api/token").permitAll() // 토큰 재발급 url 인증 없이 접근 가능
+                .requestMatchers("/api/**").permitAll() // 나머지 api url은 인증 필요 ! 개발단계에서는 허용
                 .anyRequest().permitAll(); // 그 외의 요청은 모두 허용
 
         http.sessionManagement()
