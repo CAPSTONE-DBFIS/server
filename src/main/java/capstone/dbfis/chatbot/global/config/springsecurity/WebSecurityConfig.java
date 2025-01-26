@@ -1,6 +1,5 @@
 package capstone.dbfis.chatbot.global.config.springsecurity;
 
-import capstone.dbfis.chatbot.domain.member.service.MemberService;
 import capstone.dbfis.chatbot.domain.token.service.RefreshTokenService;
 import capstone.dbfis.chatbot.global.config.jwt.JwtSuccessHandler;
 import capstone.dbfis.chatbot.global.config.jwt.TokenAuthenticationFilter;
@@ -47,7 +46,7 @@ public class WebSecurityConfig {
                 .successHandler(jwtSuccessHandler) // 성공 핸들러 설정
                 .and()
                 .authorizeRequests()
-                .requestMatchers("/login").permitAll() // 회원가입 페이지는 인증 없이 접근 가능
+                .requestMatchers("/login").permitAll() // 로그인 페이지는 인증 없이 접근 가능
                 .requestMatchers("/signup").permitAll() // 회원가입 페이지는 인증 없이 접근 가능
 //                .requestMatchers("/api/token").permitAll() // 토큰 재발급 url 인증 없이 접근 가능
                 .requestMatchers("/api/**").permitAll() // 나머지 api url은 인증 필요 ! 개발단계에서는 허용
