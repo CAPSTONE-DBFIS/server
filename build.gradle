@@ -27,7 +27,8 @@ dependencies {
 	// Spring Boot 스타터
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-web' // RestTemplate
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'  // WebClient 사용 (비동기)
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-mail' // 메일 기능 추가
 
@@ -56,12 +57,17 @@ dependencies {
 	implementation 'com.google.apis:google-api-services-youtube:v3-rev20230816-2.0.0'
 	implementation 'com.google.http-client:google-http-client-jackson2:1.39.2'
 
+	// macOS Netty DNS Resolver for Apple Silicon
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.113.Final:osx-aarch_64'
+
 	// 테스트 의존성
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
 tasks.named('test') {
