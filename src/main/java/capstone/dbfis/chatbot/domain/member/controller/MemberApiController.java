@@ -1,6 +1,8 @@
 package capstone.dbfis.chatbot.domain.member.controller;
 
 import capstone.dbfis.chatbot.domain.member.dto.AddMemberRequest;
+import capstone.dbfis.chatbot.domain.member.dto.LoginRequest;
+import capstone.dbfis.chatbot.domain.member.dto.LoginResponse;
 import capstone.dbfis.chatbot.domain.member.dto.UpdateMemberRequest;
 import capstone.dbfis.chatbot.domain.member.service.MemberService;
 import capstone.dbfis.chatbot.domain.member.service.EmailVerificationService;
@@ -11,10 +13,19 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api")
 public class MemberApiController {
 
     private final MemberService memberService;
     private final EmailVerificationService emailVerificationService;
+
+    // 로그인 (JWT 발급)
+    @PostMapping("/login")
+    @Operation(summary = "로그인", description = "로그인을 진행합니다. 로그인 성공시 AccessToken과 RefreshToken을 발급합니다.")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        LoginResponse response = memberService.authenticate(request);
+        return ResponseEntity.ok(response);
+    }
 
     // 회원 가입 (인증 불필요)
     @PostMapping("/signup")

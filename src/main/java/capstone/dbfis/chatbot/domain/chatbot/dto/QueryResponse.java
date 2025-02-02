@@ -22,7 +22,7 @@ public class QueryResponse {
         private String query;
 
         @JsonProperty("search_results")
-        private List<SearchResult> searchResults;
+        private List<SearchResult> searchResults; // 출처 메타데이터
     }
 
     @Getter

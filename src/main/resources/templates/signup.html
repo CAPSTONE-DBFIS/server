@@ -110,7 +110,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '/signup',
+                url: 'api/signup',
                 contentType: 'application/json',
                 data: JSON.stringify(formData),
                 success: function () {
@@ -132,7 +132,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '/verify-email',
+                url: 'api/verify-email',
                 data: { verificationCode: verificationCode },
                 success: function (response) {
                     alert(response);

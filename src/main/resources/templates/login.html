@@ -20,24 +20,62 @@
                 <p class="text-white-50 mt-2 mb-5">서비스를 사용하려면 로그인을 해주세요!</p>
 
                 <div class="mb-2">
-                    <form action="/login" method="POST">
-                        <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+                    <form id="loginForm">
                         <div class="mb-3">
                             <label class="form-label text-white">ID</label>
-                            <input type="text" class="form-control" name="username" required>
+                            <input type="text" class="form-control" id="username" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white">Password</label>
-                            <input type="password" class="form-control" name="password" required>
+                            <input type="password" class="form-control" id="password" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <button type="submit" class="btn btn-primary">로그인</button>
                     </form>
 
                     <button type="button" class="btn btn-secondary mt-3" onclick="location.href='/signup'">회원가입</button>
                 </div>
+                <p id="errorMessage" class="text-danger mt-3"></p>
             </div>
         </div>
     </div>
 </section>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async function(event) {
+        event.preventDefault(); // 기본 폼 제출 방지
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        try {
+            const response = await fetch("api/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!response.ok) {
+                throw new Error("아이디 또는 비밀번호를 확인하세요.");
+            }
+
+            const responseData = await response.json();
+            if (responseData.accessToken) {
+                // JWT 토큰을 로컬 스토리지에 저장
+                localStorage.setItem("accessToken", responseData.accessToken);
+                localStorage.setItem("refreshToken", responseData.refreshToken);
+
+                // 로그인 성공 후 페이지 이동 (예: 대시보드)
+                window.location.href = "/";
+            } else {
+                throw new Error("로그인 실패: 잘못된 응답 형식입니다.");
+            }
+        } catch (error) {
+            document.getElementById("errorMessage").innerText = error.message;
+        }
+    });
+</script>
+
 </body>
 </html>

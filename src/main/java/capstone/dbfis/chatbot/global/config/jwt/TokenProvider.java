@@ -21,35 +21,37 @@ public class TokenProvider {
 
     private final JwtProperties jwtProperties;
 
-    // JWT 토큰 생성 로직
+    // JWT 토큰 생성
     public String generateToken(Member member, Duration expiredAt) {
         Date now = new Date();
         return makeToken(new Date(now.getTime() + expiredAt.toMillis()), member);
     }
 
-    // JWT 토큰 생성 메서드
+    // JWT 토큰 생성 로직
     private String makeToken(Date expiry, Member member) {
         try {
             Date now = new Date();
+            log.info("JWT Secret Key in makeToken: {}", jwtProperties.getSecret());
             return Jwts.builder()
                     .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
                     .setIssuer(jwtProperties.getIssuer())
                     .setIssuedAt(now)
                     .setExpiration(expiry)
-                    .setSubject(member.getEmail())
-                    .claim("id", member.getId())
-                    // 서명: 비밀값과 함께 해시값을 HS256 방식으로 암호화
+                    .setSubject(String.valueOf(member.getId())) // String 변환
+                    .claim("id", String.valueOf(member.getId())) // String 변환
                     .signWith(SignatureAlgorithm.HS256, jwtProperties.getSecret())
                     .compact();
         } catch (JwtException e) {
-            log.error("Error creating JWT token");
+            log.error("Error creating JWT token: {}", e.getMessage());
             throw new RuntimeException("Error creating JWT token");
         }
     }
 
-    // JWT 토큰 유효성 검증 메서드
+    // JWT 유효성 검증
     public boolean validateToken(String token) {
         try {
+            token = removeBearerPrefix(token);
+            log.info("JWT Secret Key in validateToken: {}", jwtProperties.getSecret());
             Jwts.parser()
                     .setSigningKey(jwtProperties.getSecret())
                     .parseClaimsJws(token);
@@ -68,37 +70,55 @@ public class TokenProvider {
         return false;
     }
 
-    // JWT 토큰 기반으로 인증 정보(이메일)를 가져오는 메서드
+    // JWT 토큰 기반 인증 정보 반환
     public Authentication getAuthentication(String token) {
         Claims claims = getClaims(token);
         if (claims == null || claims.getSubject() == null) {
             throw new IllegalStateException("유효하지 않은 토큰입니다.");
         }
         Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"));
-        return new UsernamePasswordAuthenticationToken(new org.springframework.
-                security.core.userdetails.User(claims.getSubject(), "", authorities), token, authorities);
+        return new UsernamePasswordAuthenticationToken(
+                new org.springframework.security.core.userdetails.User(claims.getSubject(), "", authorities),
+                token,
+                authorities
+        );
     }
 
-    // JWT 토큰에서 클레임 정보를 추출하는 메서드
-    private Claims getClaims(String token) {
+    // JWT에서 클레임 정보 추출
+    public Claims getClaims(String token) {
         try {
+            token = removeBearerPrefix(token);
+            log.info("Parsing JWT Token: {}", token);
             return Jwts.parser()
                     .setSigningKey(jwtProperties.getSecret())
                     .parseClaimsJws(token)
                     .getBody();
+        } catch (ExpiredJwtException e) {
+            log.error("JWT 만료됨: {}", e.getMessage());
+            throw new IllegalStateException("토큰이 만료되었습니다.");
+        } catch (SignatureException e) {
+            log.error("JWT 서명 불일치: {}", e.getMessage());
+            throw new IllegalStateException("토큰 서명이 유효하지 않습니다.");
         } catch (JwtException e) {
-            log.error("토큰으로부터 클레임 정보를 가져오는데 실패했습니다.");
-            return null;
+            log.error("JWT 파싱 오류: {}", e.getMessage());
+            throw new IllegalStateException("유효하지 않은 토큰입니다.");
         }
-
     }
 
-    // JWT 토큰에서 member id를 가져옴
+    // JWT 토큰에서 Member ID 반환
     public String getMemberId(String token) {
         Claims claims = getClaims(token);
         if (claims == null || claims.get("id", String.class) == null) {
             throw new IllegalStateException("Member ID가 토큰에 존재하지 않습니다.");
         }
         return claims.get("id", String.class);
+    }
+
+    // "Bearer " 제거 함수
+    private String removeBearerPrefix(String token) {
+        if (token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token;
     }
 }

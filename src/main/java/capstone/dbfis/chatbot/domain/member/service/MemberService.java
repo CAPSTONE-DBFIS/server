@@ -1,30 +1,39 @@
 package capstone.dbfis.chatbot.domain.member.service;
 
+import capstone.dbfis.chatbot.domain.member.dto.LoginRequest;
+import capstone.dbfis.chatbot.domain.member.dto.LoginResponse;
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
 import capstone.dbfis.chatbot.domain.member.dto.AddMemberRequest;
 import capstone.dbfis.chatbot.domain.member.dto.UpdateMemberRequest;
+import capstone.dbfis.chatbot.domain.token.entity.RefreshToken;
+import capstone.dbfis.chatbot.domain.token.service.RefreshTokenService;
+import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
+    private final TokenProvider tokenProvider;
 
     @Transactional
     public String registerMember(AddMemberRequest req) {
         validateMember(req);
         Member newMember = memberRepository.save(Member.builder()
                 .id(req.getId())
-                .password(bCryptPasswordEncoder.encode(req.getPassword()))
+                .password(passwordEncoder.encode(req.getPassword()))
                 .name(req.getName())
                 .email(req.getEmail())
                 .phone(req.getPhone())
@@ -49,6 +58,33 @@ public class MemberService {
         }
     }
 
+    // 로그인 & JWT 발급
+    @Transactional
+    public LoginResponse authenticate(LoginRequest request) {
+        // 사용자 조회
+        Member member = memberRepository.findById(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // 액세스 & 리프레시 토큰 발급
+        String accessToken = tokenProvider.generateToken(member, Duration.ofHours(2));
+        String refreshToken = tokenProvider.generateToken(member, Duration.ofDays(14));
+
+        // 기존 리프레시 토큰이 있는지 확인 후 업데이트 or 저장
+        Optional<RefreshToken> existingToken = refreshTokenService.findByMemberId(member.getId());
+        if (existingToken.isPresent()) {
+            refreshTokenService.updateRefreshToken(member, refreshToken);
+        } else {
+            refreshTokenService.saveRefreshToken(member, refreshToken);
+        }
+
+        return new LoginResponse(accessToken, refreshToken);
+    }
+
     @Transactional
     public void findPassWord(UpdateMemberRequest req) {
         Member existingMember = memberRepository.findById(req.getEmail())
@@ -68,7 +104,7 @@ public class MemberService {
         existingMember.setDepartment(req.getDepartment());
         existingMember.setPersonaPreset(req.getPersona_preset() != null ? Integer.parseInt(req.getPersona_preset()) : existingMember.getPersonaPreset());
         if (req.getPassword() != null) {
-            existingMember.setPassword(bCryptPasswordEncoder.encode(req.getPassword()));
+            existingMember.setPassword(passwordEncoder.encode(req.getPassword()));
         }
 
         return memberRepository.save(existingMember);
