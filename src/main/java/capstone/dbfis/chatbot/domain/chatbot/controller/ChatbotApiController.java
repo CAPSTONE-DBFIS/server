@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -23,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/chatbot")
 @RequiredArgsConstructor
-public class ChatbotController {
+public class ChatbotApiController {
 
     private final WebClient webClient;
     private final ChatRoomService chatRoomService;
