@@ -18,30 +18,30 @@ public class ChatRoomService {
 
     // 새로운 채팅방 생성
     @Transactional
-    public ChatRoom createChatRoom(String userId) {
+    public ChatRoom createChatRoom(String memberId) {
         ChatRoom chatRoom = ChatRoom.builder()
-                .userId(userId)
+                .memberId(memberId)
                 .build();
         return chatRoomRepository.save(chatRoom);
     }
 
 
     // 특정 사용자에 대한 채팅방 리스트 조회
-    public List<ChatRoom> getChatRoomsByUserId(String userId) {
-        return chatRoomRepository.findAllByUserId(userId);
+    public List<ChatRoom> getChatRoomsByMemberId(String memberId) {
+        return chatRoomRepository.findAllByMemberId(memberId);
     }
 
 
     // 특정 사용자와 채팅방 ID에 대한 대한 채팅방 조회
-    public ChatRoom getChatRoomByIdAndUserId(Long chatroomId, String userId) {
-        return chatRoomRepository.findByIdAndUserId(chatroomId, userId)
+    public ChatRoom getChatRoomByIdAndMemberId(Long chatroomId, String memberId) {
+        return chatRoomRepository.findByIdAndMemberId(chatroomId, memberId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 채팅방을 찾을 수 없습니다."));
     }
 
     // 채팅방 삭제
     @Transactional
-    public void deleteChatRoomAndMessages(Long chatroomId, String userId) {
-        ChatRoom chatRoom = chatRoomRepository.findByIdAndUserId(chatroomId, userId)
+    public void deleteChatRoomAndMessages(Long chatroomId, String memberId) {
+        ChatRoom chatRoom = chatRoomRepository.findByIdAndMemberId(chatroomId, memberId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 채팅방을 찾을 수 없습니다."));
 
         // 해당 채팅방의 모든 메시지 삭제

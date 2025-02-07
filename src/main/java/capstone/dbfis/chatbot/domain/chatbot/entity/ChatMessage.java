@@ -32,7 +32,7 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "chat_room_id", nullable = false)
-    private ChatRoom chatRoom;
+    private ChatRoom chatRoom; // 채팅방
 
     @CreationTimestamp
     private LocalDateTime createdAt;

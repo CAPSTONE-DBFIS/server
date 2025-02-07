@@ -10,6 +10,6 @@ public class ChatbotViewController {
     @GetMapping("/chat/{chatroomId}")
     public String chatRoomPage(@PathVariable Long chatroomId, Model model) {
         model.addAttribute("chatroomId", chatroomId);
-        return "chat";  // chat.html 템플릿을 반환 (templates 폴더 안)
+        return "chat";  // chat.html 템플릿 반환 (/resource/templates)
     }
 }

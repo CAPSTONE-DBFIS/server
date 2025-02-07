@@ -4,6 +4,7 @@ import capstone.dbfis.chatbot.domain.chatbot.entity.ChatMessage;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +17,16 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
 
     // 채팅 메시지 저장
+    @Async
     @Transactional
-    public ChatMessage saveMessage(String message, String response, String sender, ChatRoom chatRoom) {
+    public void saveMessage(String message, String response, String sender, ChatRoom chatRoom) {
         ChatMessage chatMessage = ChatMessage.builder()
                 .message(message)
                 .response(response)
                 .sender(sender)
                 .chatRoom(chatRoom)
                 .build();
-        return chatMessageRepository.save(chatMessage);
+        chatMessageRepository.save(chatMessage);
     }
 
     // 특정 채팅방의 메시지 목록 불러오기

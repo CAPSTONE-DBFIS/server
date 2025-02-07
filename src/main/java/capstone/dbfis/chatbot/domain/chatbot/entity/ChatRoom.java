@@ -16,6 +16,6 @@ public class ChatRoom {
     private Long id;
 
     @Column(nullable = false)
-    private String userId; // 사용자 ID
+    private String memberId; // 사용자 ID
 
 }

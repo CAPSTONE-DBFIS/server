@@ -9,6 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
-    List<ChatRoom> findAllByUserId(String userId); // 사용자의 모든 채팅방 조회
-    Optional<ChatRoom> findByIdAndUserId(Long id, String userId); // 특정 chatroomId + userId로 채팅방 조회
+    List<ChatRoom> findAllByMemberId(String userId); // 사용자의 모든 채팅방 조회
+    Optional<ChatRoom> findByIdAndMemberId(Long id, String userId); // 특정 chatroomId + userId로 채팅방 조회
 }

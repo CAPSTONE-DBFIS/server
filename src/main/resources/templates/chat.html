@@ -210,20 +210,56 @@
 </div>
 
 <script>
-    let currentChatroomId = null;
-
     function getAuthToken() {
         return localStorage.getItem("accessToken");
+    }
+
+    async function getNewAccessToken() {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) { logout(); return null; }
+
+        try {
+            const response = await fetch("http://localhost:8080/api/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken }),
+            });
+
+            if (!response.ok) { logout(); return null; }
+
+            const data = await response.json();
+            localStorage.setItem("accessToken", data.accessToken);
+            return data.accessToken;
+        } catch (error) { logout(); return null; }
+    }
+
+    async function requestWithAuth(url, options = {}) {
+        let token = getAuthToken();
+        options.headers = options.headers || {};
+        options.headers["Authorization"] = `Bearer ${token}`;
+
+        let response = await fetch(url, options);
+        if (response.status === 401) {
+            token = await getNewAccessToken();
+            if (!token) return response;
+            options.headers["Authorization"] = `Bearer ${token}`;
+            response = await fetch(url, options);
+        }
+        return response;
     }
 
     async function loadChatrooms() {
         const token = getAuthToken();
         if (!token) return alert("로그인이 필요합니다.");
 
-        const response = await fetch('http://localhost:8080/api/chatbot/chatrooms', {
+        const response = await requestWithAuth('http://localhost:8080/api/chatbot/chatrooms', {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`채팅방 로딩 실패: ${errorText}`);
+        }
 
         const chatrooms = await response.json();
         const chatroomList = document.getElementById('chatroomList');
@@ -276,7 +312,7 @@
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}`, {
+            const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -310,7 +346,7 @@
         window.history.pushState(null, "", `/chat/${chatroomId}`);
 
         try {
-            const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/messages`, {
+            const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/messages`, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -395,7 +431,7 @@
         console.log("📡 전송 데이터:", requestBody);
 
         try {
-            const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/query`, {
+            const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/query`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -502,83 +538,13 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    async function sendMessage() {
-        const input = document.getElementById('userInput');
-        const message = input.value.trim();
-        if (!message) return;
-
-        const token = getAuthToken();
-        if (!token) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
-
-        const chatroomId = currentChatroomId;
-        if (!chatroomId) {
-            alert("채팅방을 선택하세요.");
-            return;
-        }
-
-        const requestBody = { query: message };
-
-        console.log("📡 전송 데이터:", requestBody);
-
-        try {
-            const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/query`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            let responseText = await response.text();
-            console.log("✅ 서버 응답 원본:", responseText);
-
-            if (!response.ok) {
-                console.error("🚨 서버 응답 오류:", response.status, responseText);
-                alert(`메시지 전송 실패 (HTTP ${response.status}): ${responseText}`);
-                return;
-            }
-
-            let responseData;
-            try {
-                responseData = JSON.parse(responseText);
-            } catch (jsonError) {
-                console.error("🚨 JSON 파싱 오류:", jsonError, responseText);
-                alert(`서버 응답을 처리할 수 없습니다.\n응답 내용: ${responseText}`);
-                return;
-            }
-
-            console.log("✅ 서버 응답 파싱 완료:", responseData);
-
-            // 사용자 메시지 추가
-            displayTypingEffect(message, "user");
-
-            // GPT 응답 추가 (한 글자씩 출력)
-            if (responseData.results?.gpt_response) {
-                displayTypingEffect(responseData.results.gpt_response, "bot");
-            }
-
-            // 검색 결과 추가 (아코디언으로 접을 수 있도록 변경)
-            if (responseData.results?.search_results && responseData.results.search_results.length > 0) {
-                displaySearchResults(responseData.results.search_results);
-            }
-
-            input.value = "";
-        } catch (error) {
-            console.error("🚨 네트워크 오류:", error);
-            alert(`서버와 연결할 수 없습니다.\n오류 메시지: ${error.message}`);
-        }
-    }
-
     document.getElementById('userInput').addEventListener('keypress', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault();
             sendMessage();
         }
     });
+
     async function createNewChatroom() {
         const token = getAuthToken();
         if (!token) {
@@ -587,7 +553,7 @@
         }
 
         try {
-            const response = await fetch("http://localhost:8080/api/chatbot/chatroom", {
+            const response = await requestWithAuth("http://localhost:8080/api/chatbot/chatroom", {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`,
