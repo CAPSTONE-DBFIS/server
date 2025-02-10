@@ -19,7 +19,7 @@ public class TokenApiController {
     private final TokenProvider tokenProvider;
 
     @PostMapping()
-    @Operation(summary = "리프레쉬 토큰으로 새로운 액세스 토큰 발급", description = "리프레쉬 토큰으로 새로운 액세스 토큰 발급합니다.")
+    @Operation(summary = "리프레쉬 토큰으로 새로운 액세스 토큰 발급", description = "리프레쉬 토큰으로 새로운 액세스 토큰을 발급합니다.")
     public ResponseEntity<AccessTokenResponse> createNewAccessToken(@RequestBody AccessTokenRequest request) {
         // 리프레쉬 토큰으로 새로운 액세스 토큰 발급
         String newAccessToken = accessTokenService.createNewAccessToken(request.getRefreshToken());

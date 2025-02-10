@@ -1,15 +1,14 @@
 package capstone.dbfis.chatbot.domain.member.controller;
 
-import capstone.dbfis.chatbot.domain.member.dto.AddMemberRequest;
-import capstone.dbfis.chatbot.domain.member.dto.LoginRequest;
-import capstone.dbfis.chatbot.domain.member.dto.LoginResponse;
-import capstone.dbfis.chatbot.domain.member.dto.UpdateMemberRequest;
+import capstone.dbfis.chatbot.domain.member.dto.*;
 import capstone.dbfis.chatbot.domain.member.service.MemberService;
 import capstone.dbfis.chatbot.domain.member.service.EmailVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,7 +22,7 @@ public class MemberApiController {
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "로그인을 진행합니다. 로그인 성공시 AccessToken과 RefreshToken을 발급합니다.")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        LoginResponse response = memberService.authenticate(request);
+        LoginResponse response = memberService.login(request);
         return ResponseEntity.ok(response);
     }
 
@@ -39,11 +38,35 @@ public class MemberApiController {
     @PostMapping("/verify-email")
     @Operation(summary = "이메일 인증 번호 확인", description = "사용자가 입력한 인증 번호의 유효성을 확인합니다.")
     public ResponseEntity<String> verifyEmail(@RequestParam String verificationCode) {
-        boolean isVerified = emailVerificationService.verifyCode(verificationCode);
+        boolean isVerified = emailVerificationService.verifySignUpCode(verificationCode);
         if (isVerified) {
             return ResponseEntity.ok("이메일 인증이 완료되었습니다.");
         } else {
             return ResponseEntity.badRequest().body("인증 코드가 유효하지 않습니다.");
+        }
+    }
+
+    // 비밀번호 찾기 이메일 발송
+    @PostMapping("/forgot-password")
+    @Operation(summary = "비밀번호 찾기", description = "사용자의 이메일로 비밀번호 재설정 링크를 보냅니다. 비밀번호 재설정 토큰은 30분 동안 유효합니다.")
+    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+        memberService.requestPasswordReset(email);
+        return ResponseEntity.ok("비밀번호 재설정 링크를 이메일로 전송했습니다.");
+    }
+
+    // 비밀번호 재설정
+    @PostMapping("/reset-password")
+    @Operation(summary = "비밀번호 재설정", description = "비밀번호 재설정 토큰을 검증하고 새 비밀번호로 변경합니다.")
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
+        try {
+            memberService.resetPassword(request);
+            return ResponseEntity.ok().body("비밀번호가 성공적으로 변경되었습니다.");
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 내부 오류가 발생했습니다.");
         }
     }
 }

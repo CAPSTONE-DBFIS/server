@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
     <style>
+        /* 기본 스타일 */
         * {
             margin: 0;
             padding: 0;
@@ -15,15 +16,102 @@
             font-family: 'Nunito', sans-serif;
         }
 
-        /* 전체 레이아웃을 화면 크기에 맞게 조정 */
         body {
             display: flex;
+            flex-direction: column;
             height: 100vh;
             background-color: #f4f4f4;
             overflow: hidden;
         }
 
-        /* 사이드바 */
+        /* ===================================
+           상단바 (Header)
+        =================================== */
+        .header {
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            height: 70px;
+        }
+
+        .logo {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #0a192f;
+            cursor: pointer;
+        }
+
+        /* 네비게이션 메뉴 */
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            font-size: 1.2em;
+            color: #333;
+            transition: color 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #0a192f;
+        }
+
+        /* 사용자 메뉴 */
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-menu i {
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #555;
+            transition: color 0.3s ease;
+        }
+
+        .user-menu i:hover {
+            color: #0a192f;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #555;
+            transition: color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            color: #0a192f;
+        }
+
+        /* ===================================
+           전체 레이아웃 (메인 컨테이너)
+        =================================== */
+        .container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            height: 100vh;
+            margin-top: 70px; /* 상단바 높이만큼 아래로 내리기 */
+        }
+
+        /* ===================================
+           사이드바
+        =================================== */
         .sidebar {
             width: 250px;
             background: #0a192f;
@@ -32,6 +120,8 @@
             flex-direction: column;
             padding: 20px;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            height: calc(100vh - 70px); /* 상단바 제외 */
+            position: relative;
         }
 
         .sidebar h2 {
@@ -40,11 +130,14 @@
             font-weight: 600;
         }
 
+        /* 채팅방 목록 */
         .chatroom-list {
             flex-grow: 1;
             overflow-y: auto;
+            padding-bottom: 60px; /* 버튼 공간 확보 */
         }
 
+        /* 채팅방 항목 */
         .chatroom-item {
             padding: 12px;
             background: #1a2b50;
@@ -52,29 +145,54 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .chatroom-item:hover, .chatroom-item.active {
             background: #0088cc;
         }
 
+        /* 채팅방 삭제 버튼 */
+        .chatroom-item button {
+            background: transparent;
+            border: none;
+            color: #ff4d4d;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .chatroom-item button:hover {
+            color: #ff2222;
+        }
+
+        /* 새 채팅방 버튼 */
         .new-chatroom-btn {
             background: #00aaff;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             text-align: center;
             border-radius: 5px;
             cursor: pointer;
             font-size: 1em;
             transition: background 0.3s ease;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
         }
 
         .new-chatroom-btn:hover {
             background: #0077aa;
         }
 
-        /* 채팅창 */
+        /* ===================================
+           채팅창
+        =================================== */
         .chat-container {
             flex: 1;
             display: flex;
@@ -85,7 +203,7 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             margin: auto;
             max-width: 700px;
-            height: 90vh; /* 화면의 90% 높이 차지 */
+            height: calc(100vh - 70px);
         }
 
         .chat-header {
@@ -95,8 +213,9 @@
             color: #333;
         }
 
+        /* 채팅 메시지 박스 */
         .chat-box {
-            flex: 1; /* 남은 공간을 모두 차지 */
+            flex: 1;
             overflow-y: auto;
             padding: 15px;
             border-radius: 8px;
@@ -104,9 +223,10 @@
             font-size: 1.1em;
             word-wrap: break-word;
             white-space: pre-wrap;
-            min-height: 100px; /* 너무 작아지지 않도록 */
+            min-height: 100px;
         }
 
+        /* 입력창 */
         .chat-input {
             display: flex;
             margin-top: 10px;
@@ -140,6 +260,9 @@
             background-color: #021024;
         }
 
+        /* ===================================
+           메시지 스타일
+        =================================== */
         .messages-container {
             display: flex;
             flex-direction: column;
@@ -149,12 +272,12 @@
 
         .message-wrapper {
             display: flex;
-            justify-content: flex-start; /* 기본적으로 챗봇 메시지는 왼쪽 */
+            justify-content: flex-start;
             width: 100%;
         }
 
         .message-wrapper.user {
-            justify-content: flex-end; /* 사용자 메시지는 오른쪽 */
+            justify-content: flex-end;
         }
 
         .message {
@@ -182,30 +305,56 @@
             border-bottom-left-radius: 5px;
         }
 
-        .message-time {
-            font-size: 0.8em;
-            color: gray;
-            margin-top: 5px;
-            text-align: right;
+        /* ===================================
+           로딩 스피너
+        =================================== */
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #0a192f;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+<header class="header">
+    <div class="logo">TRENDB</div>
+    <nav class="nav-menu">
+        <a href="#">스코프</a>
+        <a href="#">쓰레드</a>
+        <a href="#">인사이트</a>
+        <a href="#">커뮤니티</a>
+    </nav>
+    <div class="user-menu">
+        <i class="fas fa-bell"></i>
+        <button class="logout-btn" id="logout-button">로그아웃</button>
+    </div>
+</header>
+<div class="container">
+    <!-- 좌측 사이드바 -->
+    <div class="sidebar">
+        <h2>채팅방 목록</h2>
+        <div class="chatroom-list" id="chatroomList"></div>
+        <button class="new-chatroom-btn" onclick="createNewChatroom()">+ 새 채팅방</button>
+    </div>
 
-<!-- 좌측 사이드바 -->
-<div class="sidebar">
-    <h2>채팅방 목록</h2>
-    <div class="chatroom-list" id="chatroomList"></div>
-    <button class="new-chatroom-btn" onclick="createNewChatroom()">+ 새 채팅방</button>
-</div>
-
-<!-- 채팅창 -->
-<div class="chat-container">
-    <div class="chat-header">TRENDB</div>
-    <div class="chat-box" id="messagesContainer"></div>
-    <div class="chat-input">
-        <input type="text" id="userInput" placeholder="메시지를 입력하세요" onkeypress="handleKeyPress(event)" />
-        <button onclick="sendMessage()">전송</button>
+    <!-- 채팅창 -->
+    <div class="chat-container">
+        <div class="chat-header">TRENDB</div>
+        <div class="chat-box" id="messagesContainer"></div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
+            <button onclick="sendMessage()">전송</button>
+        </div>
     </div>
 </div>
 
@@ -327,7 +476,7 @@
             alert("채팅방과 관련된 모든 메시지가 삭제되었습니다.");
             loadChatrooms(); // 채팅방 목록 갱신
         } catch (error) {
-            console.error("🚨 채팅방 삭제 오류:", error);
+            console.error("채팅방 삭제 오류:", error);
             alert(`채팅방을 삭제할 수 없습니다.\n오류 메시지: ${error.message}`);
         }
     }
@@ -428,7 +577,13 @@
 
         const requestBody = { query: message };
 
-        console.log("📡 전송 데이터:", requestBody);
+        console.log("전송 데이터:", requestBody);
+
+        // 사용자 메시지 출력
+        displayMessage(message, "user");
+
+        // 로딩 애니메이션 추가
+        const loadingMessage = showLoadingSpinner();
 
         try {
             const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/query`, {
@@ -441,10 +596,10 @@
             });
 
             let responseText = await response.text();
-            console.log("✅ 서버 응답 원본:", responseText);
+            console.log("서버 응답 원본:", responseText);
 
             if (!response.ok) {
-                console.error("🚨 서버 응답 오류:", response.status, responseText);
+                console.error("서버 응답 오류:", response.status, responseText);
                 alert(`메시지 전송 실패 (HTTP ${response.status}): ${responseText}`);
                 return;
             }
@@ -453,34 +608,64 @@
             try {
                 responseData = JSON.parse(responseText);
             } catch (jsonError) {
-                console.error("🚨 JSON 파싱 오류:", jsonError, responseText);
+                console.error("JSON 파싱 오류:", jsonError, responseText);
                 alert(`서버 응답을 처리할 수 없습니다.\n응답 내용: ${responseText}`);
                 return;
             }
 
-            console.log("✅ 서버 응답 파싱 완료:", responseData);
+            console.log("서버 응답 파싱 완료:", responseData);
 
-            // 사용자 메시지 추가
-            displayMessage(message, "user");
+            // 로딩 애니메이션 제거
+            removeLoadingSpinner(loadingMessage);
 
-            // GPT 응답 추가
+            // GPT 응답 출력 (타이핑 효과 적용)
             if (responseData.results?.gpt_response) {
-                displayMessage(responseData.results.gpt_response, "bot");
+                displayTypingEffect(responseData.results.gpt_response, "bot");
             }
 
             // 검색 결과 추가
             if (responseData.results?.search_results && responseData.results.search_results.length > 0) {
-                responseData.results.search_results.forEach(result => {
-                    displayMessage(`🔎 ${result.title} - ${result.url}`, "bot");
-                });
+                displaySearchResults(responseData.results.search_results);
             }
 
             input.value = "";
         } catch (error) {
-            console.error("🚨 네트워크 오류:", error);
+            console.error("네트워크 오류:", error);
             alert(`서버와 연결할 수 없습니다.\n오류 메시지: ${error.message}`);
+
+            // 오류 발생 시 로딩 애니메이션 제거
+            removeLoadingSpinner(loadingMessage);
         }
     }
+
+    function showLoadingSpinner() {
+        const chatBox = document.getElementById('messagesContainer');
+
+        // 메시지 감싸는 div
+        const messageWrapper = document.createElement('div');
+        messageWrapper.classList.add('message-wrapper', 'bot');
+
+        // 로딩 스피너 div
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', 'bot');
+        messageDiv.innerHTML = `<div class="loading-spinner"></div>`;
+
+        messageWrapper.appendChild(messageDiv);
+        chatBox.appendChild(messageWrapper);
+
+        // 스크롤 자동 하단 이동
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        return messageWrapper;
+    }
+
+    function removeLoadingSpinner(loadingMessage) {
+        if (loadingMessage) {
+            loadingMessage.remove(); // DOM에서 제거
+        }
+    }
+
+
     function displayTypingEffect(text, sender) {
         const chatBox = document.getElementById('messagesContainer');
 
@@ -567,20 +752,52 @@
             }
 
             const chatroom = await response.json();
-            console.log("✅ 새 채팅방 생성 완료:", chatroom);
+            console.log("새 채팅방 생성 완료:", chatroom);
 
             // 채팅방 목록 갱신
             loadChatrooms();
 
             // 새 채팅방 자동 선택
             loadChatMessages(chatroom.id);
+
         } catch (error) {
-            console.error("🚨 새 채팅방 생성 오류:", error);
+            console.error("새 채팅방 생성 오류:", error);
             alert(`새 채팅방을 생성할 수 없습니다.\n오류 메시지: ${error.message}`);
         }
     }
 
-    document.addEventListener("DOMContentLoaded", loadChatrooms);
+    function logout() {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login"; // 로그아웃 후 로그인 페이지로 이동
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const logoutButton = document.getElementById("logout-button");
+        const logo = document.querySelector(".logo");
+
+        // 로그인 상태 확인 (토큰이 있는지 체크)
+        function isLoggedIn() {
+            return localStorage.getItem("accessToken") !== null;
+        }
+
+        // 로그인 상태일 때만 로그아웃 버튼 표시
+        if (isLoggedIn()) {
+            logoutButton.style.display = "block"; // 로그아웃 버튼 보이기
+            loadChatrooms(); // 로그인 상태일 때만 채팅방 목록 로딩
+        } else {
+            window.location.href = "/login"; // 로그인 상태가 아니면 로그인 페이지로 리다이렉트
+        }
+
+        // 로그아웃 버튼 클릭 시 로그아웃 실행
+        logoutButton.addEventListener("click", logout);
+
+        // TRENDB 로고 클릭 시 홈(`/`)으로 이동
+        logo.addEventListener("click", () => {
+            window.location.href = "/";
+        });
+    });
+
 </script>
 
 </body>
