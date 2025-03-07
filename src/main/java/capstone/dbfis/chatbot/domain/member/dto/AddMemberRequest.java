@@ -13,6 +13,7 @@ public class AddMemberRequest {
     private String phone;
     private String nickname;
     private String department;
+    private String role;
     private String interests;
     private String persona_preset;
 }
