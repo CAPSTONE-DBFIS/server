@@ -46,7 +46,7 @@ public class TeamService {
         leader.setTeam(savedTeam);
         leader.setMember(creator);
         leader.setRole(creatorRole);
-        leader.setTeam_role("리더");
+        leader.setTeamRole("리더");
         teamMemberRepository.save(leader);
 
         return savedTeam;
@@ -109,7 +109,7 @@ public class TeamService {
         teamMember.setTeam(team);
         teamMember.setMember(member);
         teamMember.setRole(request.getRole()); // 직무
-        teamMember.setTeam_role(request.getTeamRole()); // 팀내 역할
+        teamMember.setTeamRole(request.getTeamRole()); // 팀내 역할
 
         return new TeamMemberResponse(teamMemberRepository.save(teamMember));
     }
@@ -117,18 +117,24 @@ public class TeamService {
     // 팀 멤버 역할 수정
     @Transactional
     public void updateTeamMemberRole(Long teamId, String requesterId, String memberId, String newRole, String newTeamRole) {
-        // 리더 권한 확인
+        // 리더 권한 확인 (요청자가 리더인지 체크)
         checkIfLeader(teamId, requesterId);
-
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 팀입니다."));
 
         TeamMember teamMember = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, memberId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 멤버는 팀에 존재하지 않습니다."));
 
+        // 기존 역할이 "리더"이고, 변경하고자 하는 역할이 "리더"가 아니면서 한 명 이상의 리더가 존재하지 않는다면 예외 처리
+        if ("리더".equals(teamMember.getTeamRole()) && !"리더".equals(newTeamRole)) {
+            long leaderCount = teamMemberRepository.countByTeam_IdAndTeamRole(teamId, "리더");
+
+            if (leaderCount <= 1) {
+                throw new IllegalArgumentException("팀에는 최소 한 명 이상의 리더가 필요합니다.");
+            }
+        }
+
         // 팀원의 역할 변경
         teamMember.setRole(newRole);  // 직무 역할 변경
-        teamMember.setTeam_role(newTeamRole);  // 팀 내 역할 변경
+        teamMember.setTeamRole(newTeamRole);  // 팀 내 역할 변경
 
         teamMemberRepository.save(teamMember);  // 변경 사항 저장
     }
@@ -139,19 +145,29 @@ public class TeamService {
         // 리더 권한 확인
         checkIfLeader(teamId, requesterId);
 
-        // 자기 자신을 삭제하려고 시도하는지 확인
-        if (requesterId.equals(memberId)) {
-            throw new IllegalArgumentException("리더는 자신을 삭제할 수 없습니다.");
-        }
-
         Optional<TeamMember> teamMemberOpt = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, memberId);
 
         if (teamMemberOpt.isEmpty()) {
             throw new IllegalArgumentException("해당 팀에 존재하지 않는 멤버입니다.");
         }
 
+        TeamMember teamMember = teamMemberOpt.get();
+
+        // 삭제 대상이 리더인지 확인
+        boolean isTargetLeader = "리더".equals(teamMember.getTeamRole());
+
+        if (isTargetLeader) {
+            // 현재 팀에 남아 있는 리더 수 확인
+            long leaderCount = teamMemberRepository.countByTeam_IdAndTeamRole(teamId, "리더");
+
+            // 유일한 리더라면 삭제 불가
+            if (leaderCount <= 1) {
+                throw new IllegalArgumentException("팀에는 최소 한 명의 리더가 필요합니다. 다른 리더를 지정한 후 삭제하세요.");
+            }
+        }
+
         // 멤버 삭제
-        teamMemberRepository.delete(teamMemberOpt.get());
+        teamMemberRepository.delete(teamMember);
 
         // 팀에 남은 멤버가 있는지 확인
         boolean isTeamEmpty = teamMemberRepository.countByTeam_Id(teamId) == 0;
@@ -166,7 +182,7 @@ public class TeamService {
     // 팀 리더 권한 예외 처리 메서드
     private void checkIfLeader(Long teamId, String memberId) {
         Optional<TeamMember> teamMemberOpt = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, memberId);
-        if (teamMemberOpt.isEmpty() || !"리더".equals(teamMemberOpt.get().getTeam_role())) {
+        if (teamMemberOpt.isEmpty() || !"리더".equals(teamMemberOpt.get().getTeamRole())) {
             throw new IllegalArgumentException("해당 작업은 팀 리더만 수행할 수 있습니다.");
         }
     }
@@ -175,7 +191,7 @@ public class TeamService {
     public boolean isUserTeamLeader(Long teamId, String memberId) {
         TeamMember teamMember = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, memberId)
                 .orElseThrow(() -> new IllegalArgumentException("팀원 정보가 없습니다."));
-        return "리더".equals(teamMember.getTeam_role());
+        return "리더".equals(teamMember.getTeamRole());
     }
 
     // 사용자가 팀에 속해있는지 체크하는 메서드
@@ -204,7 +220,7 @@ public class TeamService {
                         teamMember.getMember().getPhone(),
                         teamMember.getMember().getEmail(),
                         teamMember.getRole(),
-                        teamMember.getTeam_role()
+                        teamMember.getTeamRole()
                 ))
                 .collect(Collectors.toList());
     }
