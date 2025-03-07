@@ -63,7 +63,7 @@ public class MemberService {
     @Transactional
     public LoginResponse login(LoginRequest request) {
         // 사용자 조회
-        Member member = memberRepository.findById(request.getUsername())
+        Member member = memberRepository.findById(request.getId())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         // 비밀번호 검증
@@ -81,9 +81,26 @@ public class MemberService {
         return new LoginResponse(accessToken, refreshToken);
     }
 
+    public String findId(String email) {
+        System.out.println(email);
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException(("해당 이메일을 가진 사용자가 없습니다.")));
+
+        return maskId(member.getId());
+    }
+
+    public String maskId(String memberId){
+        if (memberId.length() <= 3) {
+            return memberId;
+        }
+
+        // 사용자 id의 앞 3글자까지만 노출하고, 나머지는 마스킹 처리
+        return memberId.substring(0, 3) + "*".repeat(memberId.length() - 3);
+    }
+
     // 비밀번호 재설정 요청 처리 (토큰 생성 및 비밀번호 재설정 이메일 전송)
     @Transactional
-    public void requestPasswordReset(String email) {
+    public void findPassword(String email) {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("해당 이메일을 가진 사용자가 없습니다."));
 
