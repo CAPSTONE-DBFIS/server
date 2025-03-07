@@ -1,8 +1,10 @@
 package capstone.dbfis.chatbot.domain.member.controller;
 
 import capstone.dbfis.chatbot.domain.member.dto.*;
+import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
 import capstone.dbfis.chatbot.domain.member.service.MemberService;
 import capstone.dbfis.chatbot.domain.member.service.EmailVerificationService;
+import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ public class MemberApiController {
 
     private final MemberService memberService;
     private final EmailVerificationService emailVerificationService;
+    private final TokenProvider tokenProvider;
 
     // 로그인 (JWT 발급)
     @PostMapping("/login")
@@ -82,4 +85,33 @@ public class MemberApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 내부 오류가 발생했습니다.");
         }
     }
+
+    // 마이페이지 회원 정보 조회
+    @GetMapping("/mypage")
+    @Operation(summary = "마이페이지 회원 정보 조회", description = "사용자의 마이페이지 정보를 조회합니다.")
+    public ResponseEntity<MyPageResponse> getUserProfile(@RequestHeader("Authorization") String token) {
+        String memberId = tokenProvider.getMemberId(token);
+        return ResponseEntity.ok(memberService.getMyPageData(memberId));
+    }
+
+    @PatchMapping("/update-profile")
+    @Operation(summary = "회원 정보 수정", description = "사용자의 프로필 정보를 수정합니다.")
+    public ResponseEntity<String> updateProfile(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpdateProfileRequest request) {
+        String memberId = tokenProvider.getMemberId(token);
+        memberService.updateProfile(memberId, request);
+        return ResponseEntity.ok("프로필 정보이 성공적으로 변경되었습니다.");
+    }
+
+    @PatchMapping("/update-password")
+    @Operation(summary = "비밀번호 변경", description = "사용자의 비밀번호를 변경합니다.")
+    public ResponseEntity<String> updatePassword(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpdatePasswordRequest request) {
+        String memberId = tokenProvider.getMemberId(token);
+        memberService.updatePassword(memberId, request);
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+    }
+
 }
