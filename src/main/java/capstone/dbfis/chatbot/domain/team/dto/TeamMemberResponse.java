@@ -18,7 +18,7 @@ public class TeamMemberResponse {
 
     public TeamMemberResponse(TeamMember teamMember) {
         this.id = teamMember.getId();
-        this.teamRole = teamMember.getTeam_role();
+        this.teamRole = teamMember.getTeamRole();
         this.role = teamMember.getMember().getRole();
         if (teamMember.getMember() != null) {
             this.memberId = teamMember.getMember().getId();

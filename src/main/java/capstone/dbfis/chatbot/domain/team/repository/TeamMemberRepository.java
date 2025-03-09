@@ -11,5 +11,5 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     Optional<TeamMember> findByTeam_IdAndMember_Id(Long teamId, String memberId); // 팀 id와 멤버 id로 특정 팀에 속한 멤버를 조회
     boolean existsByTeam_IdAndMember_Id(Long teamId, String memberId); // 팀 id와 멤버 id로 특정 팀에 멤버가 속해 있는지 확인
     long countByTeam_Id(Long teamId); // 특정 팀에 속한 멤버 수를 반환
-
+    long countByTeam_IdAndTeamRole(Long teamId, String teamRole); // 팀 내 특정 역할을 가진 멤버 수 조회 (리더 수 확인용)
 }

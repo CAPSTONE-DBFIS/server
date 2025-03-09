@@ -24,6 +24,6 @@ public class TeamMember {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;  // 회원 정보
     private String role; // 직무
-    private String team_role;  // 팀 내 역할 (리더, 팀원)
+    private String teamRole;  // 팀 내 역할 (리더, 팀원)
 }
 
