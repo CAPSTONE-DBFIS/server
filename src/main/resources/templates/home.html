@@ -152,6 +152,8 @@
         <a href="#">쓰레드</a>
         <a href="#">인사이트</a>
         <a href="#">커뮤니티</a>
+        <a href="#" onclick="goToUpload()">파일 업로드</a>
+        <a href="#" onclick="goToFileList()">파일 다운로드</a>
     </nav>
     <div class="user-menu">
         <i class="fas fa-bell"></i> <!-- 알림 아이콘 -->
@@ -161,7 +163,7 @@
 
         <!-- 로그인 후: 프로필 아이콘 + 로그아웃 버튼 -->
         <div class="profile-container" id="profile-container">
-            <i class="fas fa-user-circle" id="profile-icon"></i>
+            <i class="fas fa-user-circle" id="profile-icon" onclick="goToMyPage()"></i>
             <div class="profile-menu" id="profile-menu">
                 <a href="/chat">채팅</a>
             </div>
@@ -175,7 +177,9 @@
     <h1>트렌드 검색 / 데이터 요약</h1>
     <p>일을 쉽고 빠르게 처리하세요. 원하는 데이터를 가공하여 더욱 효율적으로 분석할 수 있습니다.</p>
 
-    <button class="btn btn-primary" onclick="goToChat()">채팅 시작</button>
+    <button class="btn btn-primary" onclick="goToChat()">rag 채팅 시작</button>
+    <button class="btn btn-primary" onclick="goToAgentChat()">agent 채팅 시작</button>
+    <button class="btn btn-primary" onclick="goToGraphChat()">langgraph 채팅 시작</button>
 </div>
 
 <footer class="footer">
@@ -208,9 +212,8 @@
         }
     }
 
-    function goToChat() {
+    function validateTokenAndRedirect(url) {
         const token = localStorage.getItem("accessToken");
-        console.log("📢 채팅 이동 시 가져온 토큰:", token);
 
         if (!token) {
             alert("로그인이 필요합니다.");
@@ -224,19 +227,27 @@
         })
             .then(response => {
                 if (response.ok) {
-                    console.log("인증 성공: 채팅 페이지로 이동");
-                    window.location.href = `/chat`;
+                    console.log(`JWT 검증 성공: ${url}로 이동`);
+                    window.location.href = url;
                 } else {
-                    console.log("인증 실패: 로그인 필요");
+                    console.log(`JWT 검증 실패: 로그인 필요`);
                     alert("세션이 만료되었습니다. 다시 로그인하세요.");
                     logout();
                 }
             })
             .catch(error => {
-                console.error("네트워크 오류 발생:", error);
-                alert("서버 연결 오류. 다시 시도해 주세요.");
+                console.error("서버 연결 오류:", error);
+                alert("서버에 문제가 발생했습니다. 다시 시도해 주세요.");
             });
     }
+
+    // 페이지 이동 함수
+    function goToMyPage() { validateTokenAndRedirect("/mypage"); }
+    function goToChat() { validateTokenAndRedirect("/chat"); }
+    function goToAgentChat() { validateTokenAndRedirect("/agent_chat"); }
+    function goToGraphChat() { validateTokenAndRedirect("/graph_chat"); }
+    function goToUpload() { validateTokenAndRedirect("/upload"); }
+    function goToFileList() { validateTokenAndRedirect("/file-list"); }
 
     function logout() {
         localStorage.removeItem("accessToken");
@@ -249,6 +260,7 @@
     function redirectToLogin() {
         window.location.href = "/login";
     }
+
 </script>
 
 </body>

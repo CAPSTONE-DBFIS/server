@@ -10,8 +10,29 @@ public class HomeController {
         return "home";
     }
 
+    @GetMapping("/mypage")
+    public String mypage() {
+        return "mypage";
+    }
+
+    @GetMapping("/upload")
+    public String uploadPage() { return "upload"; }
+
+    @GetMapping("/file-list")
+    public String fileListPage() { return "file-list"; }
+
     @GetMapping("/chat")
     public String chatPage() {
         return "chat";
+    }
+
+    @GetMapping("/agent_chat")
+    public String agentPage() {
+        return "agent_chat";
+    }
+
+    @GetMapping("/graph_chat")
+    public String graphPage() {
+        return "graph_chat";
     }
 }
