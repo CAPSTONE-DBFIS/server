@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>게시물작성폼</title>
+</head>
+
+<style>
+    .layout{
+        width: 500px;
+        margin: 0 auto;
+        margin-top: 40px;
+    }
+
+    .layout  input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .layout textarea {
+        width: 100%;
+        margin-top: 10px;
+        min-height: 300px;
+    }
+</style>
+<body>
+<div class="layout">
+    <h1>게시글 수정</h1>
+
+    <!-- 제목과 내용 입력 필드 -->
+    <label for="title">제목:</label>
+    <input type="text" id="title" name="title">
+    <br>
+
+    <label for="content">내용:</label>
+    <textarea id="content" name="content"></textarea>
+    <br>
+
+    <!-- 작성 버튼 -->
+    <button onclick="submitPost()">수정</button>
+</div>
+<script>
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;  // 쿠키 문자열 앞에 세미콜론 추가
+        const parts = value.split(`; ${name}=`);  // 쿠키 이름과 값을 구분해서 배열로 분리
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();  // 쿠키 값 반환
+        }
+        return null;  // 쿠키가 없으면 null 반환
+    }
+
+    function submitPost() {
+        // 쿠키에서 토큰을 가져옵니다.
+        let token = getCookie('refresh_token');
+        if (!token) {
+            alert('로그인 정보가 없습니다!');
+            return;
+        }
+
+        let postId = parseInt(window.location.pathname.split("/").pop(), 10);
+
+        if (isNaN(postId)) {  // ID가 숫자가 아닐 경우 오류 처리
+            alert('잘못된 게시글 ID입니다.');
+            return;
+        }
+        fetch(`/board/update/${postId}`, {  // `${postId}`로 실제 ID를 동적으로 전달
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+            body: JSON.stringify({
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value
+            })
+        })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // 리디렉션 URL로 이동
+                } else {
+                    return response.json(); // 정상적인 응답 처리
+                }
+            })
+            .then(data => {
+                console.log('Success:', data);
+                // 성공 시 처리
+                window.location.href = '/board/list';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // 에러 시 처리
+                window.location.href = '/board/list';
+            });
+    }
+</script>
+</body>
+</html>

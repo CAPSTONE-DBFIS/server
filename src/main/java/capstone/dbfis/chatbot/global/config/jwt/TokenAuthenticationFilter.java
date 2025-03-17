@@ -38,6 +38,13 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader(HEADER_AUTHORIZATION);
         String token = getAccessToken(authorizationHeader);
 
+
+        // /api/** 경로에 대해 인증을 생략 (중요: 개발 과정 중에서만 허용, 추후 수정 필요)
+        if (request.getRequestURI().startsWith("/api/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 토큰이 null이거나 비어있는 경우, 검증을 생략하고 다음 필터로 이동
         if (token == null || token.isEmpty()) {
             filterChain.doFilter(request, response);

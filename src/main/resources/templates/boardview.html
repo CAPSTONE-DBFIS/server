@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>게시글 상세 페이지</title>
+</head>
+<body>
+<h1 th:text="${board.title}">제목입니다.</h1>
+<p th:text="${board.content}">내용입니다</p>
+<p th:text="${board.member.id}">작성자입니다</p>
+<button onclick="deletePost()">삭제</button>
+<a th:href="@{/board/modify/{id}(id=${board.id})}">글 수정</a>
+<button id="like-btn" onclick="toggleEmotion('like')">좋아요</button>
+<button id="angry-btn" onclick="toggleEmotion('angry')">화나요</button>
+<button id="sad-btn" onclick="toggleEmotion('sad')">슬퍼요</button>
+<button id="impressed-btn" onclick="toggleEmotion('impressed')">감동했어요</button>
+<button id="cheer-btn" onclick="toggleEmotion('cheer')">응원해요</button>
+
+<div id="emotion-count"></div>
+
+<!--댓글작성-->
+<div id="comment-write">
+    <form id="comment-form">
+        <textarea name="content" id="comment-content"></textarea>
+        <button type="submit">댓글 작성</button>
+    </form>
+</div>
+<!--댓글 출력-->
+<div id="comment-list">
+    <div th:each="comment : ${comments}" th:id="|comment-${comment.id}|">
+        <p th:id="|comment-text-${comment.id}|" th:text="${comment.content}"></p>
+        <p class="comment-author" th:text="${comment.member.name}"></p>
+        <button th:attr="onclick='editComment(' + ${comment.id} + ', \'' + ${comment.member.name} + '\')'">수정</button>
+        <button th:attr="onclick='deleteComment(' + ${comment.id} + ')'">삭제</button>
+    </div>
+</div>
+
+
+<script>
+
+    let postId = parseInt(window.location.pathname.split("/").pop(), 10);
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    function deletePost() {
+        let token = getCookie('refresh_token');
+        if (!token) {
+            alert('로그인 정보가 없습니다!');
+            return;
+        }
+
+
+        if (isNaN(postId)) {  // ID가 숫자가 아닐 경우 오류 처리
+            alert('잘못된 게시글 ID입니다.');
+            return;
+        }
+
+        fetch(`/board/delete/${postId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    window.location.href = '/board/list'; // 게시판 목록으로 리다이렉트
+                }
+            })
+            .catch(error => {
+                console.error('삭제 중 오류 발생:', error);
+                alert('삭제 실패!');
+            });
+    }
+
+
+
+    //감정표현
+
+    let selectedEmotion = null; // 현재 선택된 감정 저장
+
+    function toggleEmotion(emotion) {
+        const token = getCookie('refresh_token');
+        if (!token) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+
+        const method = (selectedEmotion === emotion) ? "POST" : "POST";
+
+        fetch(`/board/${postId}/emotion`, {
+            method: method,
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ emotion: emotion }) // 감정을 JSON으로 전달
+        })
+            .then(response => response.text())
+            .then(data => {
+                selectedEmotion = (selectedEmotion === emotion) ? null : emotion;
+                updateEmotionButtons();
+                updateEmotionCount();
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function updateEmotionButtons() {
+        const emotions = ["like", "angry", "sad", "impressed", "cheer"];
+        emotions.forEach(em => {
+            const button = document.getElementById(`${em}-btn`)
+            if (button) {
+                button.style.backgroundColor = (selectedEmotion === em) ? "blue" : "gray";
+            }
+        });
+    }
+
+    function updateEmotionCount() {
+        fetch(`/board/${postId}/emotions`)
+            .then(response => response.json())
+            .then(counts => {
+                document.getElementById("emotion-count").innerText =
+                    `좋아요: ${counts.like} | 화나요: ${counts.angry} | 슬퍼요: ${counts.sad} | 감동했어요: ${counts.impressed} | 응원해요: ${counts.cheer}`;
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // 페이지 로드 시, 사용자의 감정 상태 가져오기
+    document.addEventListener('DOMContentLoaded', function(){
+        fetch(`/board/${postId}/emotion-status`, {
+            headers: { "Authorization": `Bearer ${getCookie('refresh_token')}` }
+        })
+            .then(response => response.json())
+            .then(data => {
+                selectedEmotion = data.emotion;
+                updateEmotionButtons();
+            })
+            .catch(error => console.error('Error:', error));
+
+        updateEmotionCount();
+
+    });
+
+    // 댓글
+    const commentForm = document.getElementById('comment-form');
+
+    commentForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const content = document.getElementById('comment-content').value.trim();
+        const token = getCookie('refresh_token'); // 쿠키에서 토큰 가져오기
+
+        if (!token) {
+            alert('로그인 정보가 없습니다!');
+            return;
+        }
+
+        if (!content) {
+            alert('댓글 내용을 입력해 주세요.');
+            return;
+        }
+
+        // fetch 요청에 필요한 URL 설정
+        const url = `/comment/write?postId=${postId}&content=${encodeURIComponent(content)}`;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('댓글 작성 실패! 서버와의 통신에 문제가 발생했습니다.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message);
+                location.reload();  // 페이지 새로고침
+            })
+            .catch(error => {
+                console.error('에러 발생:', error);
+                alert(error.message); // 사용자에게 오류 메시지 출력
+            });
+    });
+
+    function editComment(commentId, memberName) {
+        let commentText = document.getElementById(`comment-text-${commentId}`);
+        let currentText = commentText.innerText;
+
+        let commentDiv = document.getElementById(`comment-${commentId}`);
+
+        // 작성자 정보를 포함하여 수정 폼을 유지
+        commentDiv.innerHTML = `
+        <textarea id="edit-input-${commentId}">${currentText}</textarea>
+        <button onclick="saveComment(${commentId}, '${memberName}')">저장</button>
+        <button onclick="cancelEdit(${commentId}, '${currentText}', '${memberName}')">취소</button>
+        <p class="comment-author">${memberName}</p>
+        <button onclick="deleteComment(${commentId})">삭제</button>
+    `;
+    }
+
+    function saveComment(commentId, memberName) {
+        let updatedText = document.getElementById(`edit-input-${commentId}`).value;
+        const token = getCookie('refresh_token');
+        if (!token) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+
+        fetch(`/comment/update/${commentId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: updatedText })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let commentDiv = document.getElementById(`comment-${commentId}`);
+                    commentDiv.innerHTML = `
+                <p id="comment-text-${commentId}">${updatedText}</p>
+                <p class="comment-author">${memberName}</p>
+                <button onclick="editComment(${commentId}, '${memberName}')">수정</button>
+                <button onclick="deleteComment(${commentId})">삭제</button>
+            `;
+
+                } else {
+                    alert("댓글 수정에 실패했습니다.");
+                }
+            });
+    }
+
+    function cancelEdit(commentId, originalText, memberName) {
+        let commentDiv = document.getElementById(`comment-${commentId}`);
+        commentDiv.innerHTML = `
+            <p id="comment-text-${commentId}">${originalText}</p>
+            <p class="comment-author">${memberName}</p>
+            <button onclick="editComment(${commentId}, '${memberName}')">수정</button>
+            <button onclick="deleteComment(${commentId})">삭제</button>`;
+
+    }
+
+
+    // 댓글 삭제 함수
+    function deleteComment(commentId) {
+        const token = getCookie('refresh_token');
+        if (!token) {
+            alert('로그인 정보가 없습니다!');
+            return;
+        }
+
+        if (confirm('정말 댓글을 삭제하시겠습니까?')) {
+            fetch(`/comment/delete/${commentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.text())  // JSON 대신 텍스트로 받아 처리
+                .then(message => {
+                    alert(message);  // 서버에서 받은 메시지 출력
+
+                    // 댓글 요소를 즉시 삭제하여 새로고침 없이 반영
+                    let commentDiv = document.getElementById(`comment-${commentId}`);
+                    if (commentDiv) {
+                        commentDiv.remove();
+                    }
+                })
+                .catch(error => {
+                    console.error('삭제 요청 중 오류 발생:', error);
+                    alert('댓글 삭제 실패!');
+                });
+        }
+    }
+
+
+</script>
+</body>
+</html>
