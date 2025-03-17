@@ -47,6 +47,7 @@ public class BoardController {
     @PostMapping("/board/writedo")
     public ResponseEntity<Map<String, Object>> writePost(@RequestBody Map<String, Object> request,
                                                          @RequestHeader("Authorization") String authorizationHeader) {
+<<<<<<< HEAD
 
         // Member 조회
         String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
@@ -54,15 +55,40 @@ public class BoardController {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid user"));
 
+=======
+        // Authorization 헤더에서 토큰 추출
+        String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
+
+        // 토큰에서 Member ID 추출
+        String memberId = tokenProvider.getMemberId(token);
+        System.out.println("Authenticated Member ID: " + memberId);
+
+        // Member ID로 Member 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user"));
+
+        System.out.println("Member retrieved: " + member);
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
 
         // 요청 데이터 추출
         String title = (String) request.get("title");
         String content = (String) request.get("content");
         List<String> hashtags = (List<String>) request.getOrDefault("hashtags", new ArrayList<>());
 
+<<<<<<< HEAD
 
         Post post = new Post(title, content, member, null);
 
+=======
+        System.out.println("Post Title: " + title);
+        System.out.println("Post Content: " + content);
+        System.out.println("Extracted Hashtags: " + hashtags);
+
+        // 게시글 객체 생성
+        Post post = new Post(title, content, member, null);
+
+        // 게시글 저장
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
         boardRepository.save(post);
 
         // 해시태그 처리
@@ -70,12 +96,20 @@ public class BoardController {
             Hashtag hashtag = hashtagRepository.findByName(tagName)
                     .orElseGet(() -> new Hashtag(tagName));
 
+<<<<<<< HEAD
+=======
+            // 양방향 관계 설정
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
             hashtag.getPosts().add(post);
             post.setHashtag(hashtag);
 
             hashtagRepository.save(hashtag); // 해시태그 저장
         }
 
+<<<<<<< HEAD
+=======
+        // JSON 응답 반환
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
         Map<String, Object> response = new HashMap<>();
         response.put("message", "게시글이 작성되었습니다.");
         response.put("postId", post.getId());
@@ -101,11 +135,27 @@ public class BoardController {
 
     @PostMapping("/board/delete/{id}")
     public String boardDelete(@PathVariable("id") Long id, @RequestHeader("Authorization") String authorizationHeader) {
+<<<<<<< HEAD
 
     String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
     String memberId = tokenProvider.getMemberId(token); // TokenProvider의 getMemberId 호출
     Post post = boardRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Post not found"));
 
+=======
+    // Authorization 헤더에서 토큰 추출
+    String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
+
+    // 토큰에서 Member ID 추출
+    String memberId = tokenProvider.getMemberId(token); // TokenProvider의 getMemberId 호출
+
+    // 게시글 조회
+    Post post = boardRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Post not found"));
+
+    // Member ID로 Member 조회
+    Member member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid user"));
+
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
     // 작성자가 로그인한 사용자와 일치하는지 확인
     if (!post.getMember().getId().equals(memberId)) {
         throw new AccessDeniedException("권한이 없습니다.");
@@ -131,12 +181,36 @@ public class BoardController {
 
     @PostMapping("/board/update/{id}")
     public String boardUpdate(@PathVariable("id") Long id, @RequestBody Post post, @RequestHeader("Authorization") String authorizationHeader) {
+<<<<<<< HEAD
         String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
         System.out.println("Received update request for postId: " + id);
         String memberId = tokenProvider.getMemberId(token);  // TokenProvider의 getMemberId 호출
 
         Post postTemp = boardRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Post not found"));
 
+=======
+        // Authorization 헤더에서 토큰 추출
+        String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
+        System.out.println("Received update request for postId: " + id);
+        // 토큰에서 Member ID 추출
+        String memberId = tokenProvider.getMemberId(token);  // TokenProvider의 getMemberId 호출
+
+        System.out.println("Authenticated Member ID: " + memberId);
+
+        // 게시글 조회
+        Post postTemp = boardRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Post not found"));
+
+        // Member ID로 Member 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user"));
+
+        System.out.println("Member retrieved: " + member);
+        System.out.println("Post Title: " + post.getTitle());  // 게시글 제목 출력
+        System.out.println("Post Content: " + post.getContent());  // 게시글 내용 출력
+        System.out.println("Post Member: " + postTemp.getMember());
+
+        // 작성자가 로그인한 사용자와 일치하는지 확인
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
         if (!postTemp.getMember().getId().equals(memberId)) {
             throw new AccessDeniedException("권한이 없습니다.");
         }
@@ -148,6 +222,10 @@ public class BoardController {
         // 게시글 업데이트
         boardRepository.save(postTemp);
 
+<<<<<<< HEAD
+=======
+        // 게시글 목록 페이지로 리다이렉트
+>>>>>>> e5e3669776904733c2b1ebb8b916513f36c41bc7
         return "redirect:/board/list";
     }
 }
