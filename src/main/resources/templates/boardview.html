@@ -9,7 +9,7 @@
 <p th:text="${board.content}">내용입니다</p>
 <p th:text="${board.member.id}">작성자입니다</p>
 <button onclick="deletePost()">삭제</button>
-<a th:href="@{/board/modify/{id}(id=${board.id})}">글 수정</a>
+<a th:href="@{/api/board/modify/{id}(id=${board.id})}">글 수정</a>
 <button id="like-btn" onclick="toggleEmotion('like')">좋아요</button>
 <button id="angry-btn" onclick="toggleEmotion('angry')">화나요</button>
 <button id="sad-btn" onclick="toggleEmotion('sad')">슬퍼요</button>
@@ -40,15 +40,9 @@
 
     let postId = parseInt(window.location.pathname.split("/").pop(), 10);
 
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-    }
 
     function deletePost() {
-        let token = getCookie('refresh_token');
+        const token = localStorage.getItem("accessToken");
         if (!token) {
             alert('로그인 정보가 없습니다!');
             return;
@@ -60,7 +54,7 @@
             return;
         }
 
-        fetch(`/board/delete/${postId}`, {
+        fetch(`/api/board/delete/${postId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,7 +65,7 @@
                 if (response.redirected) {
                     window.location.href = response.url;
                 } else {
-                    window.location.href = '/board/list'; // 게시판 목록으로 리다이렉트
+                    window.location.href = '/api/board/list'; // 게시판 목록으로 리다이렉트
                 }
             })
             .catch(error => {
@@ -87,7 +81,7 @@
     let selectedEmotion = null; // 현재 선택된 감정 저장
 
     function toggleEmotion(emotion) {
-        const token = getCookie('refresh_token');
+        const token = localStorage.getItem("accessToken");
         if (!token) {
             alert('로그인이 필요합니다.');
             return;
@@ -134,8 +128,10 @@
 
     // 페이지 로드 시, 사용자의 감정 상태 가져오기
     document.addEventListener('DOMContentLoaded', function(){
+        const token = localStorage.getItem("accessToken");
+
         fetch(`/board/${postId}/emotion-status`, {
-            headers: { "Authorization": `Bearer ${getCookie('refresh_token')}` }
+            headers: { "Authorization": `Bearer ${token}` }
         })
             .then(response => response.json())
             .then(data => {
@@ -154,7 +150,7 @@
     commentForm.addEventListener('submit', function(event) {
         event.preventDefault();
         const content = document.getElementById('comment-content').value.trim();
-        const token = getCookie('refresh_token'); // 쿠키에서 토큰 가져오기
+        const token = localStorage.getItem("accessToken"); // 쿠키에서 토큰 가져오기
 
         if (!token) {
             alert('로그인 정보가 없습니다!');
@@ -213,7 +209,7 @@
 
     function saveComment(commentId, memberName) {
         let updatedText = document.getElementById(`edit-input-${commentId}`).value;
-        const token = getCookie('refresh_token');
+        const token = localStorage.getItem("accessToken");
         if (!token) {
             alert('로그인이 필요합니다.');
             return;
@@ -257,7 +253,7 @@
 
     // 댓글 삭제 함수
     function deleteComment(commentId) {
-        const token = getCookie('refresh_token');
+        const token = localStorage.getItem("accessToken");
         if (!token) {
             alert('로그인 정보가 없습니다!');
             return;

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>마이페이지</h2>
+    <p id="user-info">사용자 정보를 불러오는 중...</p>
+
+    <!-- 버튼 -->
+    <div class="mb-3">
+        <button class="btn btn-primary" id="openProfileModal">내 정보 변경</button>
+        <button class="btn btn-secondary" id="openPasswordModal">비밀번호 변경</button>
+    </div>
+
+    <!-- 팀 목록 -->
+    <div id="teams-info"></div>
+
+    <!-- 팀 추가 폼 -->
+    <div class="mt-5">
+        <h3>새 팀 추가</h3>
+        <input type="text" id="team-name" class="form-control mb-2" placeholder="팀 이름">
+        <input type="text" id="team-description" class="form-control mb-2" placeholder="팀 설명">
+        <!-- 리더 역할 선택 -->
+        <label>팀 리더 역할 선택</label>
+        <select id="leader-role" class="form-control mb-2">
+            <option value="">역할 선택</option>
+            <option value="프론트엔드">프론트엔드</option>
+            <option value="백엔드">백엔드</option>
+            <option value="디자인">디자인</option>
+            <option value="AI">AI</option>
+            <option value="PM">PM</option>
+        </select>
+        <button class="btn btn-primary btn-block" onclick="createTeam()">팀 추가</button>
+    </div>
+</div>
+
+<!-- 내 정보 변경 모달 -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">내 정보 변경</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>이름</label>
+                <input type="text" id="edit-name" class="form-control">
+                <label>닉네임</label>
+                <input type="text" id="edit-nickname" class="form-control">
+                <label>전화번호</label>
+                <input type="text" id="edit-phone" class="form-control">
+                <label>프로필 이미지 (URL)</label>
+                <input type="text" id="edit-profile-image" class="form-control">
+                <label>부서</label>
+                <input type="text" id="edit-department" class="form-control">
+                <label>직무</label>
+                <input type="text" id="edit-role" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="updateProfile()">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 비밀번호 변경 모달 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">비밀번호 변경</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>현재 비밀번호</label>
+                <input type="password" id="current-password" class="form-control">
+                <label>새 비밀번호</label>
+                <input type="password" id="new-password" class="form-control">
+                <label>새 비밀번호 확인</label>
+                <input type="password" id="confirm-password" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="updatePassword()">변경</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+        }
+
+        fetch("/api/mypage", {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("user-info").innerHTML = `
+                <strong>이름:</strong> ${data.name} <br>
+                <strong>닉네임:</strong> ${data.nickname} <br>
+                <strong>부서:</strong> ${data.department} <br>
+                <strong>직무:</strong> ${data.role} <br>
+                <strong>이메일:</strong> ${data.email} <br>
+            `;
+
+                let teamsHtml = "<h3 class='mt-4'>소속 팀</h3>";
+                if (data.teams && data.teams.length > 0) {
+                    data.teams.forEach(team => {
+                        teamsHtml += `
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h5 id="team-name-${team.teamId}" class="card-title">${team.teamName}</h5>
+                                <h6 class="mt-3">팀 ID: ${team.teamId}</h6>
+                                <h6 class="mt-3 d-flex justify-content-between align-items-center">
+                                    <span id="team-description-${team.teamId}">${team.teamDescription}</span>
+                                    <button class="btn btn-primary btn-sm" onclick="editTeamDetails(${team.teamId})">수정</button>
+                                </h6>
+                                <!-- 팀 이름 수정 및 팀 설명 수정 모달 -->
+                                <div class="modal fade" id="editTeamDetailsModal" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">팀 이름 및 설명 수정</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <label for="edit-team-name">팀 이름</label>
+                                                <input type="text" id="edit-team-name" class="form-control" placeholder="새로운 팀 이름을 입력하세요.">
+
+                                                <label for="edit-team-description">팀 설명</label>
+                                                <textarea id="edit-team-description" class="form-control" rows="4" placeholder="새로운 팀 설명을 입력하세요."></textarea>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-primary" id="saveTeamDetailsBtn" onclick="saveTeamDetails()">저장</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-danger btn-sm float-right" onclick="deleteTeam(${team.teamId})">삭제</button>
+                                <h6 class="mt-3">멤버:</h6>
+                                <ul id="members-${team.teamId}" class="list-group">
+                                    ${team.members.map(member => `
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="badge badge-primary p-2 mr-2">${member.team_role}</span>
+                                                <span class="badge badge-secondary p-2 mr-2">${member.role}</span>
+                                                <strong>${member.name}</strong>
+                                                <div class="mt-2">
+                                                    <span class="text-muted">
+                                                        <i class="fas fa-envelope mr-2"></i>${member.email}
+                                                        |
+                                                        <i class="fas fa-phone-alt mr-2"></i>${member.phone}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <!-- 역할 변경 버튼 -->
+                                                <button class="btn btn-primary btn-sm mx-1"
+                                                        onclick="showRoleChangeModal(${team.teamId}, '${member.id}')">
+                                                    수정
+                                                </button>
+
+                                                <!-- 삭제 버튼 -->
+                                                <button class="btn btn-danger btn-sm mx-1"
+                                                        onclick="deleteMember(${team.teamId}, '${member.id}')">
+                                                    삭제
+                                                </button>
+                                            </div>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                                <!-- 역할 변경 모달 -->
+                                <div class="modal fade" id="roleChangeModal" tabindex="-1" role="dialog" aria-labelledby="roleChangeModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="roleChangeModalLabel">팀 멤버 역할 변경</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <label for="role-select">직무 역할</label>
+                                                <select id="role-select" class="form-control mb-2">
+                                                    <option value="프론트엔드">프론트엔드</option>
+                                                    <option value="백엔드">백엔드</option>
+                                                    <option value="디자인">디자인</option>
+                                                    <option value="AI">AI</option>
+                                                    <option value="PM">PM</option>
+                                                </select>
+
+                                                <label for="team-role-select">팀 내 역할</label>
+                                                <select id="team-role-select" class="form-control mb-2">
+                                                    <option value="팀원">팀원</option>
+                                                    <option value="리더">리더</option>
+                                                </select>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+                                                <button type="button" class="btn btn-primary" onclick="updateMemberRole()">저장</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-2">
+                                    <div class="input-group-prepend">
+                                        <select id="team-role-${team.teamId}" class="form-control">
+                                            <option value="팀원">팀원</option>
+                                            <option value="리더">리더</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group-prepend">
+                                        <select id="role-${team.teamId}" class="form-control">
+                                            <option value="프론트엔드">프론트엔드</option>
+                                            <option value="백엔드">백엔드</option>
+                                            <option value="디자인">디자인</option>
+                                            <option value="AI">AI</option>
+                                            <option value="PM">PM</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" id="new-member-${team.teamId}" class="form-control" placeholder="추가할 멤버 ID">
+                                </div>
+                                <button class="btn btn-success btn-sm btn-block" onclick="addMember(${team.teamId})">멤버 추가</button>
+                            </div>
+                        </div>
+                    `;
+                    });
+                } else {
+                    teamsHtml += "<p>소속된 팀이 없습니다.</p>";
+                }
+                document.getElementById("teams-info").innerHTML = teamsHtml;
+            })
+            .catch(error => {
+                alert("🚫 사용자 정보를 불러오는 데 실패했습니다.\n" + error.message);
+            });
+
+
+        document.getElementById("openProfileModal").addEventListener("click", function () {
+            fetch("/api/mypage", {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // 내 정보 변경 모달에 현재 사용자 정보를 기본으로 채우기
+                    document.getElementById("edit-name").value = data.name;
+                    document.getElementById("edit-nickname").value = data.nickname;
+                    document.getElementById("edit-phone").value = data.phone;
+                    document.getElementById("edit-profile-image").value = data.profileImage;
+                    document.getElementById("edit-department").value = data.department;
+                    document.getElementById("edit-role").value = data.role;
+                    $("#editProfileModal").modal("show"); // 모달 열기
+                })
+                .catch(error => {
+                    alert("🚫 사용자 정보를 불러오는 데 실패했습니다.\n" + error.message);
+                });
+        });
+        document.getElementById("openPasswordModal").addEventListener("click", function () {
+            $("#changePasswordModal").modal("show");
+        });
+    });
+
+
+    // 팀 생성 API 호출
+    function createTeam() {
+        const name = document.getElementById("team-name").value;
+        const description = document.getElementById("team-description").value;
+        const role = document.getElementById("leader-role").value;
+        const token = localStorage.getItem("accessToken");
+
+        if (!name.trim()) {
+            alert("팀 이름을 입력하세요.");
+            return;
+        }
+
+        fetch("/api/teams", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ name, description, role })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("팀이 성공적으로 생성되었습니다.");
+                window.location.reload();
+            })
+            .catch(error => {
+                alert("🚫 팀 생성 실패: " + error.message);
+            });
+    }
+
+    let currentTeamId;
+    let currentMemberId;
+
+    function showRoleChangeModal(teamId, memberId) {
+        // 팀 ID와 멤버 ID 저장
+        currentTeamId = teamId;
+        currentMemberId = memberId;
+
+        // 모달 열기
+        $('#roleChangeModal').modal('show');
+    }
+
+    function updateMemberRole() {
+        const newRole = document.getElementById('role-select').value;
+        const newTeamRole = document.getElementById('team-role-select').value;
+
+        const token = localStorage.getItem('accessToken');
+
+        fetch(`/api/teams/${currentTeamId}/members/${currentMemberId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                newRole: newRole,
+                newTeamRole: newTeamRole
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("팀원의 역할이 성공적으로 변경되었습니다.");
+                window.location.reload();
+            })
+            .catch(error => {
+                alert("🚫 팀원 역할 변경 실패: " + error.message);
+            });
+    }
+
+    // 팀 삭제 API 호출
+    function deleteTeam(teamId) {
+        const token = localStorage.getItem("accessToken");
+
+        if (!confirm("정말 이 팀을 삭제하시겠습니까?")) {
+            return;
+        }
+
+        fetch(`/api/teams/${teamId}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("팀이 성공적으로 삭제되었습니다.");
+                window.location.reload();
+            })
+            .catch(error => {
+                alert("🚫 " + error.message);
+            });
+    }
+
+    // 팀 이름과 설명 수정 모달 열기
+    function editTeamDetails(teamId) {
+        const currentTeamName = document.getElementById(`team-name-${teamId}`).innerText;
+        const currentDescription = document.getElementById(`team-description-${teamId}`).innerText;
+
+        // 해당 팀의 이름과 설명을 수정할 입력 필드에 설정
+        document.getElementById("edit-team-name").value = currentTeamName;
+        document.getElementById("edit-team-description").value = currentDescription;
+
+        // 팀 ID를 저장
+        document.getElementById("edit-team-description").dataset.teamId = teamId;
+
+        // 모달 표시
+        $("#editTeamDetailsModal").modal("show");
+    }
+
+    // 팀 이름과 설명 수정 저장 버튼 클릭 시 처리할 함수
+    function saveTeamDetails() {
+        const newTeamName = document.getElementById("edit-team-name").value.trim();
+        const newDescription = document.getElementById("edit-team-description").value.trim();
+        const teamId = document.getElementById("edit-team-description").dataset.teamId; // 팀 ID 저장
+
+        if (!newTeamName || !newDescription) {
+            alert("팀 이름과 설명을 모두 입력하세요.");
+            return;
+        }
+
+        const token = localStorage.getItem("accessToken");
+
+        fetch(`/api/teams/${teamId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                teamName: newTeamName,
+                description: newDescription
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("팀 이름과 설명이 성공적으로 수정되었습니다.");
+                // 수정 후 UI 업데이트
+                document.getElementById(`team-name-${teamId}`).innerText = newTeamName;
+                document.getElementById(`team-description-${teamId}`).innerText = newDescription;
+                $("#editTeamDetailsModal").modal("hide"); // 모달 닫기
+            })
+            .catch(error => {
+                alert("🚫 팀 이름 및 설명 수정 실패: " + error.message);
+            });
+    }
+
+    // 팀 멤버 추가 API 호출
+    function addMember(teamId) {
+        const token = localStorage.getItem("accessToken");
+        const newMemberId = document.getElementById(`new-member-${teamId}`).value;
+        const role = document.getElementById(`role-${teamId}`).value;
+        const teamRole = document.getElementById(`team-role-${teamId}`).value;
+
+        if (!newMemberId.trim()) {
+            alert("추가할 멤버 ID를 입력하세요.");
+            return;
+        }
+
+        const requestData = {
+            memberId: newMemberId,
+            role: role,
+            teamRole: teamRole
+        };
+
+        fetch(`/api/teams/${teamId}/members`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("멤버가 성공적으로 추가되었습니다. (역할: " + role + ", 팀 내 역할: " + teamRole + ")");
+                window.location.reload();
+            })
+            .catch(error => {
+                alert("🚫 " + error.message);
+            });
+    }
+
+    // 팀 멤버 삭제 API 호출
+    function deleteMember(teamId, memberId) {
+        const token = localStorage.getItem("accessToken");
+
+        if (!confirm("이 멤버를 삭제하시겠습니까?")) {
+            return;
+        }
+
+        fetch(`/api/teams/${teamId}/members/${memberId}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert("멤버가 성공적으로 삭제되었습니다.");
+                window.location.reload();
+            })
+            .catch(error => {
+                alert("🚫 " + error.message);
+            });
+    }
+
+    function updateProfile() {
+        const token = localStorage.getItem("accessToken");
+
+        const updatedData = {};
+        const fields = ["name", "nickname", "phone", "profileImage", "department", "role"];
+
+        fields.forEach(field => {
+            const inputElement = document.getElementById(`edit-${field}`);
+            if (inputElement) {
+                const inputValue = inputElement.value.trim();
+                if (inputValue) {
+                    updatedData[field] = inputValue;
+                }
+            }
+        });
+
+        fetch("/api/update-profile", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(() => {
+                alert("프로필이 변경되었습니다.");
+                location.reload();
+            })
+            .catch(error => alert("프로필 변경 실패: " + error.message));
+    }
+
+    function updatePassword() {
+        const token = localStorage.getItem("accessToken");
+        const oldPassword = document.getElementById("current-password").value;
+        const newPassword = document.getElementById("new-password").value;
+        const confirmPassword = document.getElementById("confirm-password").value;
+
+        if (newPassword !== confirmPassword) {
+            alert("새 비밀번호가 일치하지 않습니다.");
+            return;
+        }
+
+        fetch("/api/update-password", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ oldPassword, newPassword }) // 요청 본문 필드명 수정
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errMsg => { throw new Error(errMsg); });
+                }
+                return response.text();
+            })
+            .then(() => {
+                alert("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
+                localStorage.removeItem("accessToken");
+                window.location.href = "/login";
+            })
+            .catch(error => alert("비밀번호 변경 실패: " + error.message));
+    }
+</script>
+<!-- jQuery 추가 (Bootstrap 모달 작동에 필요) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Bootstrap JavaScript 추가 (모달 작동을 위해 필수) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

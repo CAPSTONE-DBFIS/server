@@ -9,7 +9,7 @@ import capstone.dbfis.chatbot.domain.community.repository.HashtagRepository;
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,8 +22,7 @@ import java.util.Map;
 @Service
 public class BoardService {
 
-    @Autowired
-    private BoardRepository boardRepository;
+    private final BoardRepository boardRepository;
     private final MemberRepository memberRepository;
     private final TokenProvider tokenProvider;
     private final HashtagRepository hashtagRepository;
@@ -41,9 +40,7 @@ public class BoardService {
         return boardRepository.findAll();
     }
 
-    public String authMember(String authorizationHeader) {
-
-        String token = authorizationHeader.startsWith("Bearer ") ? authorizationHeader.substring(7) : authorizationHeader;
+    public String authMember(String token) {
 
         // 토큰에서 Member ID 추출
         String memberId = tokenProvider.getMemberId(token);
@@ -106,6 +103,7 @@ public class BoardService {
 
     }
 
+    @Transactional
     public Map<String, Object> getPostWithComments(Long id) {
         Post post = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found"));

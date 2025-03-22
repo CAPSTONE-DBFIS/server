@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팀 파일 목록</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h2 class="text-center">팀 파일 목록</h2>
+
+    <div class="mb-3">
+        <label for="teamSelect" class="form-label">팀 선택:</label>
+        <select class="form-select" id="teamSelect" onchange="loadFiles()">
+            <option value="" disabled selected>팀을 선택하세요</option>
+        </select>
+    </div>
+
+    <table class="table table-striped table-hover mt-3">
+        <thead class="table-dark">
+        <tr>
+            <th>파일 이름</th>
+            <th>파일 크기</th>
+            <th>업로드 날짜</th>
+            <th>게시자</th>
+            <th>다운로드</th>
+            <th>삭제</th> <!-- 삭제 버튼 추가 -->
+        </tr>
+        </thead>
+        <tbody id="fileTableBody">
+        <!-- 파일 목록이 동적으로 추가될 자리 -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        loadUserTeams();
+    });
+
+    function loadUserTeams() {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+        }
+
+        fetch("http://localhost:8080/api/teams/my-teams", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(teams => {
+                const teamSelect = document.getElementById("teamSelect");
+                teamSelect.innerHTML = '<option value="" disabled selected>팀을 선택하세요</option>';
+
+                teams.forEach(team => {
+                    const option = document.createElement("option");
+                    option.value = team.teamId;
+                    option.textContent = team.teamName;
+                    teamSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error("팀 목록 로드 실패:", error);
+                alert("팀 목록을 불러오지 못했습니다. 다시 로그인해주세요.");
+            });
+    }
+
+    function loadFiles() {
+        const token = localStorage.getItem("accessToken");
+        const teamId = document.getElementById("teamSelect").value;
+
+        if (!teamId) {
+            return;
+        }
+
+        fetch(`http://localhost:8080/api/files/list?teamId=${teamId}`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(files => {
+                const fileTableBody = document.getElementById("fileTableBody");
+                fileTableBody.innerHTML = "";
+
+                files.forEach(file => {
+                    const fileSize = (file.size / 1024).toFixed(2) + " KB";
+                    const lastModified = new Date(file.lastModified).toLocaleString();
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                    <td>${file.fileName}</td>
+                    <td>${fileSize}</td>
+                    <td>${lastModified}</td>
+                    <td>${file.uploaderName}(${file.uploaderId})</td>  <!-- 게시자 추가 -->
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="downloadFile('${file.fileName}', ${teamId})">다운로드</button>
+                    </td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.fileName}', ${teamId})">삭제</button> <!-- 삭제 버튼 추가 -->
+                    </td>
+                `;
+                    fileTableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("파일 목록 로드 실패:", error);
+                alert("파일 목록을 불러오지 못했습니다.");
+            });
+    }
+
+    // 다운로드 버튼 클릭 시 호출되는 함수
+    function downloadFile(fileName, teamId) {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+        }
+
+        const url = `/api/files/download?fileName=${encodeURIComponent(fileName)}&teamId=${teamId}`;
+
+        fetch(url, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();  // 파일을 Blob 형태로 받음
+                }
+                throw new Error('파일 다운로드 실패');
+            })
+            .then(blob => {
+                // 다운로드할 파일을 Blob으로 받았으면, URL.createObjectURL로 다운로드 링크 생성
+                const link = document.createElement("a");
+                const objectURL = URL.createObjectURL(blob);
+                link.href = objectURL;
+                link.download = fileName;  // 파일명으로 다운로드
+                link.click();
+                URL.revokeObjectURL(objectURL);  // URL 객체 해제
+            })
+            .catch(error => {
+                alert("다운로드 실패: " + error.message);
+            });
+    }
+
+    // 파일 삭제 버튼 클릭 시 호출되는 함수
+    function deleteFile(fileName, teamId) {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+        }
+
+        if (confirm("정말 이 파일을 삭제하시겠습니까?")) {
+            // URL 인코딩
+            const encodedFileName = encodeURIComponent(fileName);
+
+            fetch(`http://localhost:8080/api/files/delete?teamId=${teamId}&fileName=${encodedFileName}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (response.ok) { // 서버 응답 상태 확인
+                        alert("파일이 성공적으로 삭제되었습니다.");
+                        loadFiles(); // 파일 목록 새로 고침
+                    } else {
+                        // 서버에서 반환한 오류 메시지를 파싱
+                        return response.json().then(data => {
+                            throw new Error(data.message || "파일 삭제 실패");
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("파일 삭제 실패:", error);
+                    alert("파일 삭제에 실패했습니다. 오류: " + error.message);
+                });
+        }
+    }
+</script>
+
+</body>
+</html>

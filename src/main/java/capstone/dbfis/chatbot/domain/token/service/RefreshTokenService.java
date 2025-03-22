@@ -25,21 +25,19 @@ public class RefreshTokenService {
         return refreshTokenRepository.findByRefreshToken(refreshToken);
     }
 
+    // 리프레시 토큰을 저장하는 메서드
     public void saveRefreshToken(Member member, String refreshToken) {
         refreshTokenRepository.save(new RefreshToken(member, refreshToken));
     }
 
-    // 리프레시 토큰 업데이트 메서드
-    public void updateRefreshToken(Member member, String newRefreshToken) {
-        Optional<RefreshToken> optionalRefreshToken = findByMemberId(member.getId());
-
-        // RefreshToken이 존재하는지 체크
-        if (optionalRefreshToken.isPresent()) {
-            RefreshToken refreshToken = optionalRefreshToken.get();
-            refreshToken.update(newRefreshToken); // 기존 리프레시 토큰을 새 토큰으로 업데이트
-            refreshTokenRepository.save(refreshToken); // 기존 토큰을 업데이트한 후 저장
-        } else {
-            throw new IllegalArgumentException("Invalid member ID");
-        }
+    // 리프레시 토큰이 존재하면 업데이트, 없으면 저장하는 메서드
+    public void updateOrSaveRefreshToken(Member member, String newRefreshToken) {
+        refreshTokenRepository.findByMemberId(member.getId()).ifPresentOrElse(
+                existingToken -> {
+                    existingToken.setRefreshToken(newRefreshToken);
+                    refreshTokenRepository.save(existingToken);
+                },
+                () -> saveRefreshToken(member, newRefreshToken)
+        );
     }
 }

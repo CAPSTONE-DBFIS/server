@@ -2,7 +2,7 @@ package capstone.dbfis.chatbot.config.jwt;
 
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
-import capstone.dbfis.chatbot.domain.token.dto.CreateAccessTokenRequest;
+import capstone.dbfis.chatbot.domain.token.dto.AccessTokenRequest;
 import capstone.dbfis.chatbot.domain.token.entity.RefreshToken;
 import capstone.dbfis.chatbot.domain.token.repository.RefreshTokenRepository;
 import capstone.dbfis.chatbot.global.config.jwt.JwtProperties;
@@ -70,7 +70,7 @@ public class TokenApiControllerTest {
 
         refreshTokenRepository.save(new RefreshToken(testMember, refreshToken));
 
-        CreateAccessTokenRequest req = new CreateAccessTokenRequest();
+        AccessTokenRequest req = new AccessTokenRequest();
         req.setRefreshToken(refreshToken);
         final String requestBody = objectMapper.writeValueAsString(req);
 

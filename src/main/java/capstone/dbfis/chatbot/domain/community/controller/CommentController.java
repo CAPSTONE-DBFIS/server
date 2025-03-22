@@ -3,6 +3,7 @@ package capstone.dbfis.chatbot.domain.community.controller;
 import capstone.dbfis.chatbot.domain.community.entity.Comment;
 import capstone.dbfis.chatbot.domain.community.service.CommentService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,16 +14,15 @@ import java.util.Map;
 @RequestMapping("/comment")
 public class CommentController {
     private final CommentService commentService;
-    private final TokenProvider tokenProvider;
 
 
-    public CommentController(CommentService commentService, TokenProvider tokenProvider) {
+    public CommentController(CommentService commentService) {
         this.commentService = commentService;
-        this.tokenProvider = tokenProvider;
     }
 
     // 댓글 추가
     @PostMapping("/write")
+    @Operation(summary = "댓글 추가", description = "특정 게시글에 댓글을 추가합니다. 요청 헤더에서 JWT 토큰을 통해 사용자를 인증하고, 댓글 내용을 포함한 요청을 처리합니다.")
     public ResponseEntity<Map<String, String>> addComment(@RequestHeader("Authorization") String authorizationHeader,
                                                           @RequestParam Long postId,
                                                           @RequestParam String content) {
@@ -41,6 +41,7 @@ public class CommentController {
 
     // 댓글 수정
     @PutMapping("/update/{id}")
+    @Operation(summary = "댓글 수정", description = "특정 댓글의 내용을 수정합니다. 요청 헤더에서 JWT 토큰을 통해 사용자를 인증하고, 댓글 내용만 수정할 수 있습니다. 작성자만 수정이 가능합니다.")
     public ResponseEntity<String> updateComment(@PathVariable Long id,
                                                 @RequestHeader("Authorization") String authorizationHeader,
                                                 @RequestBody Map<String, String> request) {
@@ -58,6 +59,7 @@ public class CommentController {
     }
     // 댓글 삭제
     @DeleteMapping("/delete/{id}")
+    @Operation(summary = "댓글 삭제", description = "특정 댓글을 삭제합니다. 삭제 요청자는 댓글 작성자여야 하며, JWT 토큰을 통해 사용자가 인증됩니다.")
     public ResponseEntity<String> deleteComment(@PathVariable Long id,
                                                 @RequestHeader("Authorization") String authorizationHeader) {
 

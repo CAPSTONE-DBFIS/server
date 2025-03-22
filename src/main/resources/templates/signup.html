@@ -24,38 +24,43 @@
                 <div id="signup-form-container">
                     <form id="signupForm">
                         <div class="mb-3">
-                            <label class="form-label text-white">ID</label>
+                            <label class="form-label text-white">아이디</label>
                             <input type="text" class="form-control" name="id" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Password</label>
+                            <label class="form-label text-white">비밀번호</label>
                             <input type="password" class="form-control" name="password" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Name</label>
+                            <label class="form-label text-white">이름</label>
                             <input type="text" class="form-control" name="name" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Email</label>
+                            <label class="form-label text-white">이메일</label>
                             <input type="email" class="form-control" name="email" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Phone</label>
+                            <label class="form-label text-white">핸드폰 번호</label>
                             <input type="tel" class="form-control" name="phone" required>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Nickname</label>
+                            <label class="form-label text-white">닉네임</label>
                             <input type="text" class="form-control" name="nickname">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-white">Department</label>
+                            <label class="form-label text-white">부서</label>
                             <input type="text" class="form-control" name="department" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white">직무</label>
+                            <input type="text" class="form-control" name="role" required>
                         </div>
 
                         <div class="mb-3">
@@ -104,13 +109,14 @@
                 phone: $('input[name="phone"]').val(),
                 nickname: $('input[name="nickname"]').val(),
                 department: $('input[name="department"]').val(),
+                role: $('input[name="role"]').val(),
                 interests: $('input[name="interests"]').val(),
                 persona_preset: $('input[name="persona_preset"]').val()
             };
 
             $.ajax({
                 type: 'POST',
-                url: '/signup',
+                url: 'api/signup',
                 contentType: 'application/json',
                 data: JSON.stringify(formData),
                 success: function () {
@@ -132,7 +138,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '/verify-email',
+                url: 'api/verify-email',
                 data: { verificationCode: verificationCode },
                 success: function (response) {
                     alert(response);

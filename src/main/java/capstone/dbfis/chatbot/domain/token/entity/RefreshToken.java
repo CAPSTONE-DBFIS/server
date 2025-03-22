@@ -2,12 +2,12 @@ package capstone.dbfis.chatbot.domain.token.entity;
 
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@NoArgsConstructor
-@Getter
 @Entity
+@Table(name = "refresh_token")
+@Getter
+@Setter
 public class RefreshToken {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,13 +22,10 @@ public class RefreshToken {
     @Column(name = "refresh_token", nullable = false)
     private String refreshToken;
 
+    public RefreshToken() {}
+
     public RefreshToken(Member member, String refreshToken) {
         this.member = member;
         this.refreshToken = refreshToken;
-    }
-
-    public RefreshToken update(String newRefreshToken) {
-        this.refreshToken = newRefreshToken;
-        return this;
     }
 }

@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -16,7 +17,7 @@ import java.util.Set;
 @Setter
 @Entity
 @Builder
-//@IdClass(PostId.class)
+
 public class Post {
 
     @Id
@@ -38,6 +39,9 @@ public class Post {
     @Column(name = "updatedAt")
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostEmotion> postEmotions;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "memberid")
     private Member member;
@@ -45,6 +49,9 @@ public class Post {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hashtag_id")
     private Hashtag hashtag;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> comments;
 
     public Post(String title, String content, Member member, Hashtag hashtag) {
         this.title = title;

@@ -18,7 +18,7 @@ public class Comment {
     @JoinColumn(name = "post_id")
     private Post post;  // 어떤 게시글인지
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "member_id")
     private Member member;  // 댓글 작성자
 

@@ -17,7 +17,7 @@ import java.util.Collections;
 @Getter
 @Setter
 @Entity
-@Builder
+@Builder(toBuilder = true)
 public class Member implements UserDetails {
     @Id
     @Column(name = "id", updatable = false)
@@ -40,6 +40,9 @@ public class Member implements UserDetails {
 
     @Column(name = "department", nullable = false)
     private String department;
+
+    @Column(name = "role", nullable = false)
+    private String role;
 
     @Column(name = "interests")
     private String interests;
