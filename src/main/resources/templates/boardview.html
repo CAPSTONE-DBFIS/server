@@ -174,7 +174,8 @@
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ postId: postId, content: content })
         })
             .then(response => {
                 if (!response.ok) {
@@ -184,11 +185,13 @@
             })
             .then(data => {
                 alert(data.message);
-                location.reload();  // 페이지 새로고침
+                if (data.redirectUrl) {
+                    window.location.href = data.redirectUrl; // 서버에서 전달한 리다이렉트 URL로 이동
+                }
             })
             .catch(error => {
                 console.error('에러 발생:', error);
-                alert(error.message); // 사용자에게 오류 메시지 출력
+                alert(error.message);
             });
     });
 
