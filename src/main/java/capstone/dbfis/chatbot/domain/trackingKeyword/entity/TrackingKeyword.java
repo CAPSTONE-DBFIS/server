@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -31,14 +32,11 @@ public class TrackingKeyword {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Builder.Default
     @Column(name = "created_at")
-    private LocalDate createdAt;
+    private LocalDate createdAt = LocalDate.now();
 
     @OneToMany(mappedBy = "trackingKeyword", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrackingResult> trackingResults;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDate.now();
-    }
+    @Builder.Default
+    private List<TrackingResult> trackingResults = new ArrayList<>();
 }

@@ -162,6 +162,69 @@
             width: 400px;
             height: 200px;
         }
+
+        .icon-btn {
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 5px;
+            font-size: 1.2rem;
+        }
+
+        .icon-btn.edit {
+            color: #007bff; /* 파란색 - 수정 버튼 */
+        }
+
+        .icon-btn.delete {
+            color: #e74c3c; /* 빨간색 - 삭제 버튼 */
+        }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* 모달의 넓이를 넓게 설정 */
+            max-width: 500px; /* 최대 너비 설정 */
+            border-radius: 10px;
+            box-sizing: border-box; /* padding 포함해서 크기를 계산하게 설정 */
+        }
+
+        input[type="date"] {
+            width: calc(100% - 20px); /* 패딩을 고려하여 전체 너비를 사용하도록 설정 */
+            padding: 10px;
+            border: 1px solid #d1d8e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +244,30 @@
         <button type="submit">🔍 추적 키워드 추가하기</button>
     </form>
     <div id="keywordList"></div>
+</div>
+
+<!-- 키워드 수정 모달 -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>키워드 수정</h3>
+        <label>새로운 시작 일자:</label>
+        <input type="date" id="newStartDate">
+        <label>새로운 종료 일자:</label>
+        <input type="date" id="newEndDate">
+        <button id="saveChanges">저장</button>
+    </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>키워드 삭제 확인</h3>
+        <p>정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
+        <button id="confirmDelete">삭제하기</button>
+        <button id="cancelDelete">취소</button>
+    </div>
 </div>
 
 <script>
@@ -253,11 +340,125 @@
             });
 
             const keywords = await response.json();
+
             displayKeywords(keywords);
         } catch (error) {
             console.error("서버 오류:", error);
         }
     }
+
+    // 삭제 함수
+    async function deleteKeyword(keywordId) {
+        const token = localStorage.getItem("accessToken");
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/tracking-keywords/${keywordId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                showMessage("키워드 삭제 완료", "success");
+                fetchKeywords();
+            } else {
+                showMessage("삭제 오류 발생", "error");
+            }
+        } catch (error) {
+            console.error("서버 오류:", error);
+        }
+    }
+
+    // 삭제 확인 모달 관련 요소
+    const deleteModal = document.getElementById("deleteModal");
+    const confirmDeleteBtn = document.getElementById("confirmDelete");
+    const cancelDeleteBtn = document.getElementById("cancelDelete");
+
+    let currentDeleteKeywordId = null;
+
+    // 삭제 확인 모달 표시 함수
+    function showDeleteModal(keywordId) {
+        currentDeleteKeywordId = keywordId;
+        deleteModal.style.display = "block";
+    }
+
+    // 모달 닫기 버튼 클릭 시 모달 닫기
+    cancelDeleteBtn.onclick = function() {
+        deleteModal.style.display = "none";
+    }
+
+    // 모달 외부 클릭 시 모달 닫기
+    window.onclick = function(event) {
+        if (event.target === deleteModal) {
+            deleteModal.style.display = "none";
+        }
+    }
+
+    // 삭제 확인 버튼 클릭 시 실제 삭제 처리
+    confirmDeleteBtn.onclick = async function() {
+        if (currentDeleteKeywordId) {
+            await deleteKeyword(currentDeleteKeywordId);
+            deleteModal.style.display = "none";
+        }
+    }
+
+    async function updateKeyword(keywordId, startDate, endDate) {
+        try {
+            const response = await fetch(`http://localhost:8080/api/tracking-keywords/${keywordId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ startDate, endDate })
+            });
+
+            if (response.ok) {
+                showMessage("키워드 수정 완료", "success");
+                fetchKeywords();
+            } else {
+                showMessage("수정 오류 발생", "error");
+            }
+        } catch (error) {
+            console.error("서버 오류:", error);
+        }
+    }
+
+    const editModal = document.getElementById("editModal");
+    const closeModal = document.querySelector(".close");
+    const saveChangesBtn = document.getElementById("saveChanges");
+
+    let currentKeywordId;
+
+    function showEditModal(keywordId, currentStartDate, currentEndDate) {
+        currentKeywordId = keywordId;
+        document.getElementById("newStartDate").value = currentStartDate;
+        document.getElementById("newEndDate").value = currentEndDate;
+        editModal.style.display = "block";
+    }
+
+    closeModal.onclick = function() {
+        editModal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target === editModal) {
+            editModal.style.display = "none";
+        }
+    }
+
+    saveChangesBtn.onclick = async function() {
+        const newStartDate = document.getElementById("newStartDate").value;
+        const newEndDate = document.getElementById("newEndDate").value;
+
+        if (newStartDate && newEndDate) {
+            await updateKeyword(currentKeywordId, newStartDate, newEndDate); // 실제 API 요청 실행
+            editModal.style.display = "none";
+        } else {
+            alert("모든 필드를 입력해주세요.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchKeywords);
 
     let charts = {}; // 모든 차트를 저장하는 객체로 변경
 
@@ -268,7 +469,11 @@
         keywords.forEach(keywordData => {
             const card = document.createElement('div');
             card.className = 'keyword-card';
-            card.innerHTML = `<h3>🔑 ${keywordData.keyword} (${keywordData.startDate} ~ ${keywordData.endDate})</h3>`;
+            card.innerHTML = `
+                <h3>🔑 ${keywordData.keyword} (${keywordData.startDate} ~ ${keywordData.endDate})</h3>
+                <button class="icon-btn edit" onclick="event.stopPropagation(); showEditModal(${keywordData.id}, '${keywordData.startDate}', '${keywordData.endDate}')">수정</button>
+                <button class="icon-btn delete" onclick="event.stopPropagation(); showDeleteModal(${keywordData.id})">삭제</button>
+            `;
 
             const resultsDiv = document.createElement('div');
             resultsDiv.className = 'results';
