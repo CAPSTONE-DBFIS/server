@@ -2,6 +2,7 @@ package capstone.dbfis.chatbot.domain.team.service;
 
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -157,4 +155,31 @@ public class S3Service {
             throw new IllegalStateException("게시자 또는 팀 리더만 파일을 삭제할 수 있습니다.");
         }
     }
+
+
+    // 개인 트렌드 보고서 업로드 메서드
+    public String uploadPublicReport(MultipartFile file) {
+        String key = "reports/" + file.getOriginalFilename();
+
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(file.getSize());
+        metadata.setContentType(file.getContentType());
+
+        try {
+            amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
+            return key;
+        } catch (IOException e) {
+            throw new RuntimeException("파일 업로드 실패", e);
+        }
+    }
+    // 트렌드 보고서 presigned url 생성 메서드
+    public String generatePresignedUrl(String key) {
+        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7);  // 링크 7일 유효
+        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, key)
+                .withMethod(HttpMethod.GET)
+                .withExpiration(expiration);
+        return amazonS3.generatePresignedUrl(request).toString();
+    }
 }
+
+
