@@ -148,8 +148,7 @@
 <header class="header">
     <div class="logo">TRENDB</div>
     <nav class="nav-menu">
-        <a href="#">스코프</a>
-        <a href="#">쓰레드</a>
+        <a href="#" onclick="goToTracking()">키워드 추적</a>
         <a href="#">인사이트</a>
         <a href="#">커뮤니티</a>
         <a href="#" onclick="goToUpload()">파일 업로드</a>
@@ -248,6 +247,7 @@
     function goToGraphChat() { validateTokenAndRedirect("/graph_chat"); }
     function goToUpload() { validateTokenAndRedirect("/upload"); }
     function goToFileList() { validateTokenAndRedirect("/file-list"); }
+    function goToTracking() { validateTokenAndRedirect("/tracking"); }
 
     function logout() {
         localStorage.removeItem("accessToken");

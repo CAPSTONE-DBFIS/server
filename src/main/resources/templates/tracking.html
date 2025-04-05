@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>키워드 추적</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 1200px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 2rem;
+            font-weight: 600;
+            text-align: center;
+            color: #2c3e50;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #d1d8e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .keyword-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            border-left: 5px solid #007bff;
+        }
+
+        .results {
+            display: none;
+            margin-top: 15px;
+            padding: 20px;
+            background-color: #f0f8ff;
+            border-radius: 12px;
+            border: 1px solid #d0e6ff;
+        }
+
+        .article-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #d1d8e0;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .article-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #d0e6ff;
+            padding-bottom: 8px;
+        }
+
+        .article-title {
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .article-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .article-link:hover {
+            text-decoration: underline;
+        }
+
+        .description {
+            background-color: #eaf6ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #bbdefb;
+            white-space: pre-line;
+        }
+
+        .analysis-box {
+            background-color: #f1f8e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c5e1a5;
+            white-space: pre-line;
+        }
+
+        .article-item {
+            background: #eef7ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #d0e6ff;
+        }
+        .message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        .message.success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .message.error {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        canvas {
+            display: block;
+            width: 400px;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>키워드 추적</h2>
+    <form id="trackingKeywordForm">
+        <label>추적 키워드:</label>
+        <input type="text" id="keyword" required>
+
+        <label>시작 일자:</label>
+        <input type="date" id="startDate" required>
+
+        <label>종료 일자:</label>
+        <input type="date" id="endDate">
+
+        <button type="submit">🔍 추적 키워드 추가하기</button>
+    </form>
+    <div id="keywordList"></div>
+</div>
+
+<script>
+    const today = new Date().toISOString().split('T')[0];
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    startDateInput.min = today;
+    startDateInput.addEventListener('change', () => {
+        endDateInput.min = startDateInput.value;
+    });
+
+    document.getElementById('trackingKeywordForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const keyword = document.getElementById('keyword').value;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const token = localStorage.getItem("accessToken");
+
+        try {
+            const response = await fetch('http://localhost:8080/api/tracking-keywords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ keyword, startDate, endDate })
+            });
+
+            if (response.ok) {
+                showMessage("✅ 성공적으로 추가되었습니다!", "success");
+                fetchKeywords();
+                // 입력 필드 초기화
+                document.getElementById('keyword').value = '';
+                startDateInput.value = '';
+                endDateInput.value = '';
+            } else {
+                const error = await response.json();
+                showMessage(`❌ 오류: ${error.message}`, "error");
+            }
+        } catch (error) {
+            console.error("서버 오류:", error);
+            showMessage("❌ 서버 오류가 발생했습니다.", "error");
+        }
+    });
+
+    // 성공 또는 에러 메시지 표시 함수
+    function showMessage(message, type) {
+        const messageBox = document.createElement('div');
+        messageBox.innerText = message;
+        messageBox.className = type === "success" ? 'message success' : 'message error';
+        document.body.appendChild(messageBox);
+
+        // 3초 후 메시지 자동 제거
+        setTimeout(() => {
+            messageBox.remove();
+        }, 3000);
+    }
+
+    async function fetchKeywords() {
+        const token = localStorage.getItem("accessToken");
+
+        try {
+            const response = await fetch('http://localhost:8080/api/tracking-keywords', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const keywords = await response.json();
+            displayKeywords(keywords);
+        } catch (error) {
+            console.error("서버 오류:", error);
+        }
+    }
+
+    let charts = {}; // 모든 차트를 저장하는 객체로 변경
+
+    function displayKeywords(keywords) {
+        const keywordList = document.getElementById('keywordList');
+        keywordList.innerHTML = '';
+
+        keywords.forEach(keywordData => {
+            const card = document.createElement('div');
+            card.className = 'keyword-card';
+            card.innerHTML = `<h3>🔑 ${keywordData.keyword} (${keywordData.startDate} ~ ${keywordData.endDate})</h3>`;
+
+            const resultsDiv = document.createElement('div');
+            resultsDiv.className = 'results';
+            resultsDiv.style.display = 'none';
+
+            // 그래프 표시용 canvas 요소 추가
+            const canvasWrapper = document.createElement('div');
+            canvasWrapper.style.position = 'relative';
+            canvasWrapper.style.width = '100%';
+            canvasWrapper.style.height = '400px';
+
+            const canvasId = `chart-${Math.random().toString(36).substring(7)}`;
+            const canvasElement = document.createElement('canvas');
+            canvasElement.id = canvasId;
+            canvasElement.width = 800;
+            canvasElement.height = 400;
+            canvasWrapper.appendChild(canvasElement);
+
+            resultsDiv.appendChild(canvasWrapper);
+
+            // 기사 목록 추가
+            keywordData.results.forEach(result => {
+                const articleHTML = `
+            <div class="article-container">
+                <div class="article-header">
+                    <div><strong>📅 수집 날짜:</strong> ${result.collectedDate}</div>
+                    <div><strong>📰 전체 기사 수:</strong> ${result.articleCount}</div>
+                </div>
+
+                ${[1, 2, 3].map(i => `
+                    <div class="article-item">
+                        <div class="article-title">📄
+                            <a href="${result[`articleLink${i}`]}" target="_blank" class="article-link">${result[`articleTitle${i}`]}</a>
+                        </div>
+                        <div>💬 댓글 수: ${result[`commentCount${i}`] || 0}</div>
+                        <div>😀 긍정: ${result[`positiveCount${i}`] || 0} | 😡 부정: ${result[`negativeCount${i}`] || 0} | 😐 중립: ${result[`neutralCount${i}`] || 0}</div>
+                    </div>
+                `).join('')}
+
+                <div class="analysis-box">
+                    <strong>📊 AI 댓글 분석:</strong><br>${result.overallDescription}
+                </div>
+            </div>
+        `;
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = articleHTML;
+                resultsDiv.appendChild(tempDiv);
+            });
+
+            card.appendChild(resultsDiv);
+            keywordList.appendChild(card);
+
+            // 차트 그리기
+            card.addEventListener('click', (event) => {
+                if (!event.target.classList.contains('article-link')) {
+                    resultsDiv.style.display = resultsDiv.style.display === 'none' ? 'block' : 'none';
+
+                    if (resultsDiv.style.display === 'block') {
+                        if (charts[canvasId]) {
+                            // 이미 차트가 존재하면 삭제하지 않고 그대로 보여줌
+                            return;
+                        }
+
+                        const ctx = canvasElement.getContext('2d');
+                        const newChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: keywordData.results.map(result => result.collectedDate),
+                                datasets: [{
+                                    label: '수집된 기사 수',
+                                    data: keywordData.results.map(result => result.articleCount),
+                                    borderColor: '#007bff',
+                                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                                    fill: true,
+                                    tension: 0.3
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: true },
+                                    title: {
+                                        display: true,
+                                        text: '📊 날짜별 수집된 기사 수 비교',
+                                        font: { size: 16 }
+                                    }
+                                },
+                                scales: {
+                                    x: { title: { display: true, text: '수집 날짜' } },
+                                    y: { title: { display: true, text: '기사 수' }, beginAtZero: true }
+                                }
+                            }
+                        });
+
+                        charts[canvasId] = newChart; // 생성된 차트를 객체로 저장
+                    }
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchKeywords);
+</script>
+
+</body>
+</html>
