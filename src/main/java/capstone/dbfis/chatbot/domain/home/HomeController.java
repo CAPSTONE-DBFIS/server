@@ -38,4 +38,9 @@ public class HomeController {
 
     @GetMapping("/tracking")
     public String trackingPage() { return "tracking"; }
+
+    @GetMapping("/insight")
+    public String insightPage() {
+        return "insight";
+    }
 }

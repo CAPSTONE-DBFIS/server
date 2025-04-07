@@ -149,7 +149,7 @@
     <div class="logo">TRENDB</div>
     <nav class="nav-menu">
         <a href="#" onclick="goToTracking()">키워드 추적</a>
-        <a href="#">인사이트</a>
+        <a href="#" onclick="goToInsight()">인사이트</a>
         <a href="#">커뮤니티</a>
         <a href="#" onclick="goToUpload()">파일 업로드</a>
         <a href="#" onclick="goToFileList()">파일 다운로드</a>
@@ -248,6 +248,7 @@
     function goToUpload() { validateTokenAndRedirect("/upload"); }
     function goToFileList() { validateTokenAndRedirect("/file-list"); }
     function goToTracking() { validateTokenAndRedirect("/tracking"); }
+    function goToInsight() { validateTokenAndRedirect("/insight"); }
 
     function logout() {
         localStorage.removeItem("accessToken");
