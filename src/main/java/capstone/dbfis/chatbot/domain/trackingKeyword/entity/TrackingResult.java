@@ -1,7 +1,8 @@
 package capstone.dbfis.chatbot.domain.trackingKeyword.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
@@ -9,9 +10,6 @@ import java.time.LocalDate;
 @Table(name = "tracking_results")
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class TrackingResult {
 
     @Id
@@ -21,70 +19,27 @@ public class TrackingResult {
     @Column(name = "tracking_keyword_id")
     private Long trackingKeywordId;
 
-    @Column(name = "collected_date")
-    private LocalDate collectedDate;
-
     @Column(name = "article_count")
-    private Integer articleCount;
+    private int articleCount;
 
-    @Column(name = "article_title_1")
-    private String articleTitle1;
+    @Column(name = "analysis_date")
+    private LocalDate analysisDate;
 
-    @Column(name = "article_link_1", length = 500)
-    private String articleLink1;
+    @Column(name = "created_at")
+    private LocalDate createdAt;
 
-    @Column(name = "comment_count_1")
-    private Integer commentCount1;
+    @Column(name = "updated_at")
+    private LocalDate updatedAt;
 
-    @Column(name = "positive_count_1")
-    private Integer positiveCount1;
+    @Column(name = "summary_report", columnDefinition = "TEXT")
+    private String summaryReport;
 
-    @Column(name = "negative_count_1")
-    private Integer negativeCount1;
+    @Column(name = "media_companies", columnDefinition = "TEXT")
+    private String mediaCompanies;
 
-    @Column(name = "neutral_count_1")
-    private Integer neutralCount1;
+    @Column(name = "keyword")
+    private String keyword;          // 메인 키워드
 
-    @Column(name = "article_title_2")
-    private String articleTitle2;
-
-    @Column(name = "article_link_2", length = 500)
-    private String articleLink2;
-
-    @Column(name = "comment_count_2")
-    private Integer commentCount2;
-
-    @Column(name = "positive_count_2")
-    private Integer positiveCount2;
-
-    @Column(name = "negative_count_2")
-    private Integer negativeCount2;
-
-    @Column(name = "neutral_count_2")
-    private Integer neutralCount2;
-
-    @Column(name = "article_title_3")
-    private String articleTitle3;
-
-    @Column(name = "article_link_3", length = 500)
-    private String articleLink3;
-
-    @Column(name = "comment_count_3")
-    private Integer commentCount3;
-
-    @Column(name = "positive_count_3")
-    private Integer positiveCount3;
-
-    @Column(name = "negative_count_3")
-    private Integer negativeCount3;
-
-    @Column(name = "neutral_count_3")
-    private Integer neutralCount3;
-
-    @Column(name = "overall_description", columnDefinition = "TEXT")
-    private String overallDescription;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tracking_keyword_id", insertable = false, updatable = false)
-    private TrackingKeyword trackingKeyword;
+    @Column(name = "related_keyword", columnDefinition = "JSON")
+    private String relatedKeyword;   // 연관 키워드 (JSON 문자열 등)
 }
