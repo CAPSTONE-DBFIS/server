@@ -9,8 +9,7 @@ import lombok.Setter;
 @Setter
 @Data
 @AllArgsConstructor
-public class RelatedKeywordDto {
+public class WeeklyRelatedKeywordDto {
     private String relatedKeyword;
     private int frequency;
-    private Integer rank;
 }
