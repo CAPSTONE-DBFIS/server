@@ -15,7 +15,6 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
 
-
     // 새로운 채팅방 생성
     @Transactional
     public ChatRoom createChatRoom(String memberId) {
@@ -28,7 +27,7 @@ public class ChatRoomService {
 
     // 특정 사용자에 대한 채팅방 리스트 조회
     public List<ChatRoom> getChatRoomsByMemberId(String memberId) {
-        return chatRoomRepository.findAllByMemberId(memberId);
+        return chatRoomRepository.findByMemberIdOrderByIdAsc(memberId);
     }
 
 

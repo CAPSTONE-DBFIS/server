@@ -9,6 +9,6 @@ import java.util.List;
 
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
-    List<ChatMessage> findByChatRoom(ChatRoom chatRoom); // 채팅방의 모든 메시지 조회
+    List<ChatMessage> findByChatRoomOrderByCreatedAtAsc(ChatRoom chatRoom); // 채팅방의 모든 메시지 조회
     void deleteByChatRoom(ChatRoom chatRoom); // 채팅방의 모든 메시지 삭제
 }
