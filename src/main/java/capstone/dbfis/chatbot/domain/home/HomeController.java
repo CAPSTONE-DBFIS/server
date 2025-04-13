@@ -35,4 +35,12 @@ public class HomeController {
     public String graphPage() {
         return "graph_chat";
     }
+
+    @GetMapping("/tracking")
+    public String trackingPage() { return "tracking"; }
+
+    @GetMapping("/insight")
+    public String insightPage() {
+        return "insight";
+    }
 }

@@ -60,8 +60,12 @@ dependencies {
 	// macOS Netty DNS Resolver for Apple Silicon
 	runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.113.Final:osx-aarch_64'
 
-	// AWS SDK S3 의존성 추가
+	// AWS SDK S3
 	implementation 'com.amazonaws:aws-java-sdk-s3:1.12.261'
+
+	// Elasticsearch
+	implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.17.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 
 	// 테스트 의존성
 	testCompileOnly 'org.projectlombok:lombok'

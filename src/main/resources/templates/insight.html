@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>키워드 인사이트</title>
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #5B55D7;
+            display: flex;
+            align-items: center;
+        }
+        h1 img {
+            width: 24px;
+            margin-right: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .up {
+            color: red;
+        }
+        .down {
+            color: blue;
+        }
+        .new {
+            color: #5B55D7;
+        }
+        #word-cloud {
+            width: 100%;  /* 화면 너비에 맞게 확장 */
+            height: 300px;  /* 높이를 더 크게 설정 */
+            margin-top: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            position: relative;
+        }
+        #search-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #search-modal .modal-content {
+            background: white;
+            width: 80%;
+            max-width: 600px;
+            height: auto;
+            max-height: 70%;
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative; /* 닫기 버튼을 위치시키기 위한 relative */
+        }
+
+        /* X 버튼 위치 및 스타일 */
+        #close-modal-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #5B55D7;
+            background: none;
+            border: none;
+            font-weight: bold;
+        }
+        #search-results div {
+            margin-bottom: 10px;
+        }
+
+        #search-results p {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1><img src="https://img.icons8.com/ios-filled/50/5B55D7/bar-chart.png"/> 키워드 인사이트 </h1>
+    <label for="date">날짜 선택:</label>
+    <input type="date" id="date">
+    <button onclick="loadKeywords()">조회</button>
+
+    <table>
+        <thead>
+        <tr>
+            <th>순위</th>
+            <th>키워드</th>
+            <th>건수</th>
+            <th>순위변화</th>
+        </tr>
+        </thead>
+        <tbody id="keyword-table"></tbody>
+    </table>
+
+    <div id="related-keywords-container" style="margin-top: 30px;">
+        <h2>연관 검색어 순위</h2>
+        <table id="related-keywords-table">
+            <thead>
+            <tr>
+                <th>순위</th>
+                <th>연관 검색어</th>
+                <th>건수</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- 검색 결과 팝업 모달 -->
+    <div id="search-modal" style="display: none;">
+        <div class="modal-content">
+            <button id="close-modal-btn" onclick="closeModal()">X</button>
+            <h2>검색 결과</h2>
+            <div id="search-results"></div>
+        </div>
+    </div>
+
+    <div id="word-cloud"></div> <!-- 워드 클라우드를 표시할 영역 -->
+
+<script>
+    // 오늘 날짜 -1로 기본 설정
+    const today = new Date();
+    today.setDate(today.getDate() - 1);  // 하루 전으로 설정
+    const yesterday = today.toISOString().split('T')[0];
+    document.getElementById('date').value = yesterday;
+
+    let paginationIndex = 0;  // 페이지 번호 저장
+    let wordCloudInstance = null; // 워드 클라우드 인스턴스
+    let currentKeyword = ''; // 현재 클릭된 메인 키워드 저장
+    let selectedRelatedKeyword = '';  // 현재 클릭된 연관 검색어 저장용 변수
+
+    async function fetchData(date) {
+        const response = await fetch(`http://localhost:8080/api/insight?date=${date}`);
+        const data = await response.json();
+        return data.top_keywords || [];
+    }
+
+    async function fetchRelatedArticles(keyword, relatedKeyword, date, page = 0) {
+        const response = await fetch(`http://localhost:8080/api/insight/related-search?keyword=${keyword}&relatedKeyword=${relatedKeyword}&date=${date}&page=${page}`);
+        const data = await response.json();
+        return data.hits || [];
+    }
+
+    function renderTable(keywords) {
+        const table = document.getElementById('keyword-table');
+        table.innerHTML = '';
+
+        keywords.forEach((item, index) => {
+            const row = document.createElement('tr');
+
+            const rankCell = document.createElement('td');
+            rankCell.textContent = item.rank || '-';
+            row.appendChild(rankCell);
+
+            const keywordCell = document.createElement('td');
+            keywordCell.textContent = item.keyword;
+
+            keywordCell.onclick = async () => {
+                document.querySelectorAll('#keyword-table tr').forEach(tr => tr.style.backgroundColor = 'transparent');
+                row.style.backgroundColor = '#f0f0f0';
+                currentKeyword = item.keyword;
+
+                const relatedKeywords = item.relatedKeywords;
+                renderRelatedKeywordRankings(relatedKeywords);
+                renderWordCloud(item.keyword, relatedKeywords);
+            };
+
+            row.appendChild(keywordCell);
+
+            const frequencyCell = document.createElement('td');
+            frequencyCell.textContent = item.frequency || '-';
+            row.appendChild(frequencyCell);
+
+            const rankChangeCell = document.createElement('td');
+            if (item.rankChange === null) {
+                rankChangeCell.textContent = 'NEW';
+                rankChangeCell.className = 'new';
+            } else if (item.rankChange > 0) {
+                rankChangeCell.textContent = `▲ ${item.rankChange}`;
+                rankChangeCell.className = 'up';
+            } else if (item.rankChange < 0) {
+                rankChangeCell.textContent = `▼ ${Math.abs(item.rankChange)}`;
+                rankChangeCell.className = 'down';
+            } else {
+                rankChangeCell.textContent = '-';
+            }
+            row.appendChild(rankChangeCell);
+
+            table.appendChild(row);
+        });
+    }
+
+
+    function renderRelatedKeywordRankings(relatedKeywords) {
+        const tableBody = document.querySelector('#related-keywords-table tbody');
+        tableBody.innerHTML = '';
+
+        relatedKeywords.forEach((keyword) => {
+            const row = document.createElement('tr');
+
+            const rankCell = document.createElement('td');
+            rankCell.textContent = keyword.rank;
+            row.appendChild(rankCell);
+
+            const keywordCell = document.createElement('td');
+            keywordCell.textContent = keyword.relatedKeyword;
+            keywordCell.style.cursor = 'pointer';
+
+            // 클릭 이벤트 추가
+            keywordCell.onclick = async () => {
+                selectedRelatedKeyword = keyword.relatedKeyword;  // 클릭된 연관 검색어 저장
+                paginationIndex = 0;  // 페이지 번호 초기화 (새로 검색할 때마다 초기화)
+                await loadRelatedArticles(selectedRelatedKeyword);  // API 호출 함수
+                showModal();  // 검색 결과 모달 열기
+            };
+
+            row.appendChild(keywordCell);
+
+            const countCell = document.createElement('td');
+            countCell.textContent = keyword.frequency || '-';
+            row.appendChild(countCell);
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    async function loadRelatedArticles(relatedKeyword) {
+        const date = document.getElementById('date').value;
+        const relatedArticles = await fetchRelatedArticles(currentKeyword, relatedKeyword, date, paginationIndex);
+
+        if (relatedArticles.length > 0) {
+            renderSearchResults(relatedArticles, true);  // 기존 결과에 추가로 표시
+            showModal();  // 검색 결과 모달 열기
+        } else {
+            const moreButton = document.getElementById('more-button');
+            if (moreButton) {
+                moreButton.style.display = 'none';
+            }
+        }
+    }
+
+
+    function renderSearchResults(relatedArticles, append = false) {
+        const resultsDiv = document.getElementById('search-results');
+        if (!append) resultsDiv.innerHTML = '';  // append가 false일 때 기존 내용 지우기
+
+        relatedArticles.forEach(article => {
+            const articleDiv = document.createElement('div');
+            articleDiv.style.cssText = 'padding: 10px; border-bottom: 1px solid #ddd;';
+
+            const title = document.createElement('h3');
+            title.innerHTML = article.title;
+            title.style.cursor = 'pointer';
+            title.onclick = () => window.open(article.url, '_blank');
+            articleDiv.appendChild(title);
+
+            const mediaAndDate = document.createElement('p');
+            mediaAndDate.style.cssText = 'font-size: 14px; color: #777;';
+            mediaAndDate.innerHTML = `카테고리: ${article.category} | 언론사: ${article.media_company} | 게시일: ${article.date}`;
+            articleDiv.appendChild(mediaAndDate);
+
+            const snippet = document.createElement('p');
+            snippet.innerHTML = article.highlights ? article.highlights.join(' ') : '내용 미리보기를 제공하지 않습니다.';
+            snippet.style.cssText = 'font-size: 14px; color: #555;';
+            articleDiv.appendChild(snippet);
+
+            resultsDiv.appendChild(articleDiv);
+        });
+
+        let moreButton = document.getElementById('more-button');
+
+        if (!moreButton) {
+            moreButton = document.createElement('button');
+            moreButton.id = 'more-button';
+            moreButton.textContent = '더보기';
+            moreButton.onclick = loadMoreArticles;
+            moreButton.style.cssText = `
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #5B55D7;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        `;
+            moreButton.onmouseover = () => moreButton.style.backgroundColor = '#4a44b5';
+            moreButton.onmouseout = () => moreButton.style.backgroundColor = '#5B55D7';
+        }
+
+        // 더보기 버튼을 항상 마지막 기사 아래로 이동시키기
+        if (relatedArticles.length > 0) {
+            resultsDiv.appendChild(moreButton);
+        } else if (moreButton) {
+            moreButton.style.display = 'none';
+        }
+    }
+
+    async function loadMoreArticles() {
+        paginationIndex++;  // 페이지 번호 증가
+        await loadRelatedArticles(selectedRelatedKeyword);  // 기존 로드 방식 그대로 활용
+    }
+
+
+    function renderWordCloud(keyword, relatedKeywords) {
+        const wordCloudElement = document.getElementById('word-cloud');
+        const wordList = relatedKeywords.map(k => [k.relatedKeyword, k.frequency || 10]);
+
+        const maxSize = 150;
+        const minFreq = Math.min(...relatedKeywords.map(k => k.frequency));
+        const maxFreq = Math.max(...relatedKeywords.map(k => k.frequency));
+
+        if (wordCloudInstance) wordCloudInstance.stop();
+
+        wordCloudInstance = WordCloud(wordCloudElement, {
+            list: wordList,
+            gridSize: Math.round(20 * wordCloudElement.offsetWidth / 1024),
+            weightFactor: function(size) {
+                const normalizedSize = ((size - minFreq) / (maxFreq - minFreq)) * maxSize;
+                return Math.min(normalizedSize, maxSize);
+            },
+            fontFamily: 'Arial',
+            color: () => `hsl(${Math.random() * 360}, 70%, 50%)`,
+            backgroundColor: '#fff',
+            rotateRatio: 0,  // 회전 비율 0으로 설정하여 회전 없도록 함
+            rotationSteps: 0,
+        });
+    }
+
+    function showModal() {
+        document.getElementById('search-modal').style.display = 'flex'; // 모달을 화면 중앙에 띄움
+    }
+
+    function closeModal() {
+        document.getElementById('search-modal').style.display = 'none'; // 모달을 닫음
+        paginationIndex = 0;  // 페이지 번호 초기화
+        document.getElementById('search-results').innerHTML = '';  // 이전 검색 결과 초기화
+    }
+
+    // 모달 외부 클릭 시 닫히도록 추가
+    document.getElementById('search-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('search-modal')) {
+            closeModal(); // 모달 외부 클릭 시 닫기
+        }
+    });
+
+    async function loadKeywords() {
+        const date = document.getElementById('date').value;
+        const keywords = await fetchData(date);
+
+        renderTable(keywords);
+
+        if (keywords.length > 0) {
+            currentKeyword = keywords[0].keyword;
+            const relatedKeywords = keywords[0].relatedKeywords;
+            renderRelatedKeywordRankings(relatedKeywords);
+            renderWordCloud(currentKeyword, relatedKeywords);
+        }
+
+        // 문제 해결: 모달을 초기 로딩 시 자동으로 열리지 않도록 함
+        closeModal();  // 페이지 로드 시 모달 닫기
+    }
+
+    loadKeywords();
+</script>
+</body>
+</html>
