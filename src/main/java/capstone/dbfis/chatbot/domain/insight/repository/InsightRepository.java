@@ -2,6 +2,8 @@ package capstone.dbfis.chatbot.domain.insight.repository;
 
 import capstone.dbfis.chatbot.domain.insight.dto.KeywordInsightDto;
 import capstone.dbfis.chatbot.domain.insight.dto.RelatedKeywordDto;
+import capstone.dbfis.chatbot.domain.insight.dto.WeeklyKeywordInsightDto;
+import capstone.dbfis.chatbot.domain.insight.dto.WeeklyRelatedKeywordDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -57,10 +59,12 @@ public class InsightRepository {
         return topKeywords;
     }
 
+
     // 연관 키워드를 가져오는 메소드
     public List<RelatedKeywordDto> getRelatedKeywords(Long keywordId, Date date) {
         String query = """
-    SELECT ka.related_keyword,
+    
+                SELECT ka.related_keyword,
            ka.frequency,
            ka.rank
     FROM keyword_analysis ka
@@ -78,5 +82,62 @@ public class InsightRepository {
         });
 
         return relatedKeywords;
+    }
+
+
+    public List<WeeklyKeywordInsightDto> getTopKeywordsInRange(String startDate, String endDate) {
+        LocalDate startLocalDate = LocalDate.parse(startDate);
+        LocalDate endLocalDate = LocalDate.parse(endDate);
+        Date sqlStartDate = Date.valueOf(startLocalDate);
+        Date sqlEndDate = Date.valueOf(endLocalDate);
+
+        String query =
+                """
+            SELECT kf.
+                keyword,
+                   SUM(kf.frequency) AS
+                total_frequency,
+                   MIN(kf.id) AS id
+            FROM
+                keyword_frequencies kf
+                        WHERE kf.date BETWEEN ? AND
+                ?
+            GROUP BY kf.keyword
+            ORDER BY
+                total_frequency DESC
+            LIMIT 10;
+        """;
+
+        return jdbcTemplate.query(query, new Object[]{sqlStartDate, sqlEndDate}, (rs, rowNum) -> {
+            Long keywordId = rs.getLong("id");
+            String keyword = rs.getString("keyword");
+            int totalFrequency = rs.getInt("total_frequency");
+
+            // 누적된 연관 키워드 불러오기 (7일간)
+            List<WeeklyRelatedKeywordDto> relatedKeywords = getAccumulatedRelatedKeywordsByKeyword(keyword, sqlStartDate, sqlEndDate);
+
+            // 변화량 제거 → null
+            return new WeeklyKeywordInsightDto(keywordId, keyword, totalFrequency, relatedKeywords);
+        });
+    }
+
+    public List<WeeklyRelatedKeywordDto> getAccumulatedRelatedKeywordsByKeyword(String keyword, Date startDate, Date endDate) {
+        String query = """
+        SELECT ka.related_keyword,
+               SUM(ka.frequency) AS total_frequency
+        FROM keyword_analysis ka
+        JOIN keyword_frequencies kf ON ka.keyword_id = kf.id
+        WHERE kf.keyword = ?
+          AND ka.date BETWEEN ? AND ?
+        GROUP BY ka.related_keyword
+        ORDER BY total_frequency DESC
+        LIMIT 10;
+    """;
+
+        return jdbcTemplate.query(query, new Object[]{keyword, startDate, endDate}, (rs, rowNum) -> {
+            String relatedKeyword = rs.getString("related_keyword");
+            int totalFrequency = rs.getInt("total_frequency");
+            return new WeeklyRelatedKeywordDto(relatedKeyword, totalFrequency);
+        });
     }
 }

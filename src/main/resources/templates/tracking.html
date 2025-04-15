@@ -1,584 +1,476 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
+    <meta charset="UTF-8">
     <title>키워드 추적</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-ENjdO4Dr2bkBIFxQpeoFm0N6r5bLr9/4pZl1M9jLLNJv1z3+0VR10aW1+4CWpL65"
+          crossorigin="anonymous">
     <style>
+        /* 기본 설정 */
         body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f0f4f8;
+            background: #f7f9fc;
+            font-family: 'Roboto', sans-serif;
+            color: #333;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 1200px;
-            margin-bottom: 30px;
-        }
-        h2 {
-            margin-bottom: 20px;
-            font-size: 2rem;
-            font-weight: 600;
-            text-align: center;
-            color: #2c3e50;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #34495e;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #d1d8e0;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 1rem;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .keyword-card {
-            background-color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 15px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            border-left: 5px solid #007bff;
+            padding-top: 70px; /* 헤더 높이 고려 */
         }
 
-        .results {
-            display: none;
-            margin-top: 15px;
-            padding: 20px;
-            background-color: #f0f8ff;
-            border-radius: 12px;
-            border: 1px solid #d0e6ff;
-        }
-
-        .article-container {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #d1d8e0;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .article-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #d0e6ff;
-            padding-bottom: 8px;
-        }
-
-        .article-title {
-            font-weight: 600;
-            color: #007bff;
-            margin-bottom: 5px;
-        }
-
-        .article-link {
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .article-link:hover {
-            text-decoration: underline;
-        }
-
-        .description {
-            background-color: #eaf6ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            border: 1px solid #bbdefb;
-            white-space: pre-line;
-        }
-
-        .analysis-box {
-            background-color: #f1f8e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #c5e1a5;
-            white-space: pre-line;
-        }
-
-        .article-item {
-            background: #eef7ff;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border: 1px solid #d0e6ff;
-        }
-        .message {
+        /* 상단 헤더 */
+        .app-header {
             position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            z-index: 1000;
-            transition: opacity 0.3s;
-        }
-
-        .message.success {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        .message.error {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        canvas {
-            display: block;
-            width: 400px;
-            height: 200px;
-        }
-
-        .icon-btn {
-            border: none;
-            background: none;
-            cursor: pointer;
-            padding: 5px;
-            margin-left: 5px;
-            font-size: 1.2rem;
-        }
-
-        .icon-btn.edit {
-            color: #007bff; /* 파란색 - 수정 버튼 */
-        }
-
-        .icon-btn.delete {
-            color: #e74c3c; /* 빨간색 - 삭제 버튼 */
-        }
-
-        /* 모달 스타일 */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 10;
-            left: 0;
             top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #4a90e2, #145dbf);
+            color: #fff;
+            text-align: center;
+            padding: 20px 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; /* 모달의 넓이를 넓게 설정 */
-            max-width: 500px; /* 최대 너비 설정 */
-            border-radius: 10px;
-            box-sizing: border-box; /* padding 포함해서 크기를 계산하게 설정 */
-        }
-
-        input[type="date"] {
-            width: calc(100% - 20px); /* 패딩을 고려하여 전체 너비를 사용하도록 설정 */
-            padding: 10px;
-            border: 1px solid #d1d8e0;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
+        .app-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
             font-weight: bold;
         }
+        .app-header p {
+            font-size: 14px;
+            margin: 0;
+        }
 
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
+        /* 사이드바 */
+        .sidebar {
+            position: fixed;
+            top: 70px; /* 헤더 높이 */
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: #fff;
+            border-right: 1px solid #e6e6e6;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .sidebar h5 {
+            font-size: 18px;
+            color: #4a90e2;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .sidebar .list-group-item {
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            background: #fdfdfd;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .sidebar .list-group-item:hover {
+            background: #f1f8ff;
             cursor: pointer;
+        }
+        .sidebar .list-group-item strong {
+            font-size: 16px;
+            color: #333;
+        }
+        .sidebar .list-group-item small {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* 우측 컨텐츠 영역 */
+        .content {
+            margin-left: 300px;
+            padding: 20px;
+            max-width: calc(100% - 320px);
+        }
+        .content .card {
+            margin-bottom: 20px;
+            background: #fff;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .content .card-header {
+            background: #f1f5f9;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .content .card-body {
+            padding: 20px;
+        }
+
+        /* 인사이트 섹션 */
+        .insight-section {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .insight-box {
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 6px;
+            padding: 15px;
+            flex: 1 1 250px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .insight-box h5 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #145dbf;
+            font-weight: bold;
+        }
+        .insight-box p {
+            font-size: 14px;
+            color: #666;
+            margin: 0;
+        }
+
+        /* 결과 카드 (div 기반) */
+        .result-item {
+            margin-bottom: 15px;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 6px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .result-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+        .result-item .card-body {
+            padding: 15px;
+        }
+        .result-item .card-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        .result-item .card-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+        }
+        .result-item p.label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #145dbf;
+        }
+
+        /* 수정/삭제 버튼 스타일 */
+        .btn-sm {
+            margin-left: 5px;
+        }
+
+        /* 폼 요소 */
+        .form-label {
+            font-weight: 500;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
+<!-- 상단 헤더 -->
+<header class="app-header fixed-top">
+    <h1>키워드 추적</h1>
+</header>
 
-<div class="container">
-    <h2>키워드 추적</h2>
-    <form id="trackingKeywordForm">
-        <label>추적 키워드:</label>
-        <input type="text" id="keyword" required>
+<!-- 좌측 사이드바 -->
+<aside class="sidebar">
+    <h5>내 키워드 목록</h5>
+    <ul class="list-group" id="keywordList">
+        <!-- 키워드 목록이 동적으로 추가됩니다 -->
+    </ul>
+    <div id="keywordListResponse" class="mt-3 text-center text-muted"></div>
+</aside>
 
-        <label>시작 일자:</label>
-        <input type="date" id="startDate" required>
-
-        <label>종료 일자:</label>
-        <input type="date" id="endDate">
-
-        <button type="submit">🔍 추적 키워드 추가하기</button>
-    </form>
-    <div id="keywordList"></div>
-</div>
-
-<!-- 키워드 수정 모달 -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3>키워드 수정</h3>
-        <label>새로운 시작 일자:</label>
-        <input type="date" id="newStartDate">
-        <label>새로운 종료 일자:</label>
-        <input type="date" id="newEndDate">
-        <button id="saveChanges">저장</button>
+<!-- 우측 컨텐츠 영역 -->
+<main class="content">
+    <!-- 상단: "핵심 트렌드 인사이트" 섹션 -->
+    <div class="insight-section mb-4">
+        <div class="insight-box">
+            <h5>키워드 언급량</h5>
+            <p class="text-muted">키워드 언급량을 종합적으로 요약합니다.</p>
+        </div>
+        <div class="insight-box">
+            <h5>언급 분포</h5>
+            <p class="text-muted">언급 분포 등을 시각화해도 좋습니다.</p>
+        </div>
     </div>
-</div>
 
-<!-- 삭제 확인 모달 -->
-<div id="deleteModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3>키워드 삭제 확인</h3>
-        <p>정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
-        <button id="confirmDelete">삭제하기</button>
-        <button id="cancelDelete">취소</button>
+    <!-- 새 키워드 등록 카드 -->
+    <div class="card">
+        <div class="card-header">
+            새 키워드 등록
+        </div>
+        <div class="card-body">
+            <form id="createKeywordForm" class="row g-3">
+                <div class="col-md-3">
+                    <label for="newKeyword" class="form-label">키워드</label>
+                    <input type="text" class="form-control" id="newKeyword" placeholder="예: 삼성" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="newStartDate" class="form-label">시작일</label>
+                    <input type="date" class="form-control" id="newStartDate" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="newEndDate" class="form-label">종료일</label>
+                    <input type="date" class="form-control" id="newEndDate" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="newInterval" class="form-label">수집 주기 (일)</label>
+                    <input type="number" class="form-control" id="newInterval" placeholder="예: 7" min="1" required>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success w-100">등록</button>
+                </div>
+            </form>
+            <div id="createResponse" class="mt-2"></div>
+        </div>
     </div>
-</div>
 
-<script>
-    const today = new Date().toISOString().split('T')[0];
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-
-    startDateInput.min = today;
-    startDateInput.addEventListener('change', () => {
-        endDateInput.min = startDateInput.value;
-    });
-
-    document.getElementById('trackingKeywordForm').addEventListener('submit', async function(event) {
-        event.preventDefault();
-
-        const keyword = document.getElementById('keyword').value;
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-        const token = localStorage.getItem("accessToken");
-
-        try {
-            const response = await fetch('http://localhost:8080/api/tracking-keywords', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ keyword, startDate, endDate })
-            });
-
-            if (response.ok) {
-                showMessage("✅ 성공적으로 추가되었습니다!", "success");
-                fetchKeywords();
-                // 입력 필드 초기화
-                document.getElementById('keyword').value = '';
-                startDateInput.value = '';
-                endDateInput.value = '';
-            } else {
-                const error = await response.json();
-                showMessage(`❌ 오류: ${error.message}`, "error");
-            }
-        } catch (error) {
-            console.error("서버 오류:", error);
-            showMessage("❌ 서버 오류가 발생했습니다.", "error");
-        }
-    });
-
-    // 성공 또는 에러 메시지 표시 함수
-    function showMessage(message, type) {
-        const messageBox = document.createElement('div');
-        messageBox.innerText = message;
-        messageBox.className = type === "success" ? 'message success' : 'message error';
-        document.body.appendChild(messageBox);
-
-        // 3초 후 메시지 자동 제거
-        setTimeout(() => {
-            messageBox.remove();
-        }, 3000);
-    }
-
-    async function fetchKeywords() {
-        const token = localStorage.getItem("accessToken");
-
-        try {
-            const response = await fetch('http://localhost:8080/api/tracking-keywords', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            const keywords = await response.json();
-
-            displayKeywords(keywords);
-        } catch (error) {
-            console.error("서버 오류:", error);
-        }
-    }
-
-    // 삭제 함수
-    async function deleteKeyword(keywordId) {
-        const token = localStorage.getItem("accessToken");
-
-        try {
-            const response = await fetch(`http://localhost:8080/api/tracking-keywords/${keywordId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                showMessage("키워드 삭제 완료", "success");
-                fetchKeywords();
-            } else {
-                showMessage("삭제 오류 발생", "error");
-            }
-        } catch (error) {
-            console.error("서버 오류:", error);
-        }
-    }
-
-    // 삭제 확인 모달 관련 요소
-    const deleteModal = document.getElementById("deleteModal");
-    const confirmDeleteBtn = document.getElementById("confirmDelete");
-    const cancelDeleteBtn = document.getElementById("cancelDelete");
-
-    let currentDeleteKeywordId = null;
-
-    // 삭제 확인 모달 표시 함수
-    function showDeleteModal(keywordId) {
-        currentDeleteKeywordId = keywordId;
-        deleteModal.style.display = "block";
-    }
-
-    // 모달 닫기 버튼 클릭 시 모달 닫기
-    cancelDeleteBtn.onclick = function() {
-        deleteModal.style.display = "none";
-    }
-
-    // 모달 외부 클릭 시 모달 닫기
-    window.onclick = function(event) {
-        if (event.target === deleteModal) {
-            deleteModal.style.display = "none";
-        }
-    }
-
-    // 삭제 확인 버튼 클릭 시 실제 삭제 처리
-    confirmDeleteBtn.onclick = async function() {
-        if (currentDeleteKeywordId) {
-            await deleteKeyword(currentDeleteKeywordId);
-            deleteModal.style.display = "none";
-        }
-    }
-
-    async function updateKeyword(keywordId, startDate, endDate) {
-        try {
-            const response = await fetch(`http://localhost:8080/api/tracking-keywords/${keywordId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ startDate, endDate })
-            });
-
-            if (response.ok) {
-                showMessage("키워드 수정 완료", "success");
-                fetchKeywords();
-            } else {
-                showMessage("수정 오류 발생", "error");
-            }
-        } catch (error) {
-            console.error("서버 오류:", error);
-        }
-    }
-
-    const editModal = document.getElementById("editModal");
-    const closeModal = document.querySelector(".close");
-    const saveChangesBtn = document.getElementById("saveChanges");
-
-    let currentKeywordId;
-
-    function showEditModal(keywordId, currentStartDate, currentEndDate) {
-        currentKeywordId = keywordId;
-        document.getElementById("newStartDate").value = currentStartDate;
-        document.getElementById("newEndDate").value = currentEndDate;
-        editModal.style.display = "block";
-    }
-
-    closeModal.onclick = function() {
-        editModal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-        if (event.target === editModal) {
-            editModal.style.display = "none";
-        }
-    }
-
-    saveChangesBtn.onclick = async function() {
-        const newStartDate = document.getElementById("newStartDate").value;
-        const newEndDate = document.getElementById("newEndDate").value;
-
-        if (newStartDate && newEndDate) {
-            await updateKeyword(currentKeywordId, newStartDate, newEndDate); // 실제 API 요청 실행
-            editModal.style.display = "none";
-        } else {
-            alert("모든 필드를 입력해주세요.");
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', fetchKeywords);
-
-    let charts = {}; // 모든 차트를 저장하는 객체로 변경
-
-    function displayKeywords(keywords) {
-        const keywordList = document.getElementById('keywordList');
-        keywordList.innerHTML = '';
-
-        keywords.forEach(keywordData => {
-            const card = document.createElement('div');
-            card.className = 'keyword-card';
-            card.innerHTML = `
-                <h3>🔑 ${keywordData.keyword} (${keywordData.startDate} ~ ${keywordData.endDate})</h3>
-                <button class="icon-btn edit" onclick="event.stopPropagation(); showEditModal(${keywordData.id}, '${keywordData.startDate}', '${keywordData.endDate}')">수정</button>
-                <button class="icon-btn delete" onclick="event.stopPropagation(); showDeleteModal(${keywordData.id})">삭제</button>
-            `;
-
-            const resultsDiv = document.createElement('div');
-            resultsDiv.className = 'results';
-            resultsDiv.style.display = 'none';
-
-            // 그래프 표시용 canvas 요소 추가
-            const canvasWrapper = document.createElement('div');
-            canvasWrapper.style.position = 'relative';
-            canvasWrapper.style.width = '100%';
-            canvasWrapper.style.height = '400px';
-
-            const canvasId = `chart-${Math.random().toString(36).substring(7)}`;
-            const canvasElement = document.createElement('canvas');
-            canvasElement.id = canvasId;
-            canvasElement.width = 800;
-            canvasElement.height = 400;
-            canvasWrapper.appendChild(canvasElement);
-
-            resultsDiv.appendChild(canvasWrapper);
-
-            // 기사 목록 추가
-            keywordData.results.forEach(result => {
-                const articleHTML = `
-            <div class="article-container">
-                <div class="article-header">
-                    <div><strong>📅 수집 날짜:</strong> ${result.collectedDate}</div>
-                    <div><strong>📰 전체 기사 수:</strong> ${result.articleCount}</div>
-                </div>
-
-                ${[1, 2, 3].map(i => `
-                    <div class="article-item">
-                        <div class="article-title">📄
-                            <a href="${result[`articleLink${i}`]}" target="_blank" class="article-link">${result[`articleTitle${i}`]}</a>
-                        </div>
-                        <div>💬 댓글 수: ${result[`commentCount${i}`] || 0}</div>
-                        <div>😀 긍정: ${result[`positiveCount${i}`] || 0} | 😡 부정: ${result[`negativeCount${i}`] || 0} | 😐 중립: ${result[`neutralCount${i}`] || 0}</div>
-                    </div>
-                `).join('')}
-
-                <div class="analysis-box">
-                    <strong>📊 AI 댓글 분석:</strong><br>${result.overallDescription}
-                </div>
+    <!-- 키워드 결과 카드 -->
+    <div class="card">
+        <!-- 키워드 결과 카드 -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                키워드 결과
             </div>
-        `;
+            <div class="card-body">
+                <div id="resultResponse" class="mb-3"></div>
+                <!-- 기존 table 대신 결과를 담을 컨테이너 div 추가 -->
+                <div id="resultContainer"></div>
+            </div>
+        </div>
+    </div>
+</main>
 
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = articleHTML;
-                resultsDiv.appendChild(tempDiv);
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-q2ky6t3DAAsOvXDgI4fzAh6wIrLCN77H39Lx0/IoF86OyXC7nEA+NxlU8KG1V8Q+"
+        crossorigin="anonymous"></script>
+<script>
+    // localStorage에서 JWT 토큰 가져오기
+    const token = localStorage.getItem("accessToken");
+
+    // 페이지 로드시 키워드 목록 로드
+    document.addEventListener("DOMContentLoaded", loadKeywordList);
+
+    // 1. 새 키워드 등록
+    document.getElementById("createKeywordForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const payload = {
+            keyword: document.getElementById("newKeyword").value.trim(),
+            startDate: document.getElementById("newStartDate").value,
+            endDate: document.getElementById("newEndDate").value,
+            trackingInterval: parseInt(document.getElementById("newInterval").value)
+        };
+        fetch("/api/tracking-keywords", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("createResponse").innerText = "등록 성공: " + JSON.stringify(data);
+                loadKeywordList();
+            })
+            .catch(err => {
+                document.getElementById("createResponse").innerText = "에러: " + err.message;
             });
+    });
 
-            card.appendChild(resultsDiv);
-            keywordList.appendChild(card);
-
-            // 차트 그리기
-            card.addEventListener('click', (event) => {
-                if (!event.target.classList.contains('article-link')) {
-                    resultsDiv.style.display = resultsDiv.style.display === 'none' ? 'block' : 'none';
-
-                    if (resultsDiv.style.display === 'block') {
-                        if (charts[canvasId]) {
-                            // 이미 차트가 존재하면 삭제하지 않고 그대로 보여줌
-                            return;
-                        }
-
-                        const ctx = canvasElement.getContext('2d');
-                        const newChart = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: keywordData.results.map(result => result.collectedDate),
-                                datasets: [{
-                                    label: '수집된 기사 수',
-                                    data: keywordData.results.map(result => result.articleCount),
-                                    borderColor: '#007bff',
-                                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                                    fill: true,
-                                    tension: 0.3
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: true },
-                                    title: {
-                                        display: true,
-                                        text: '📊 날짜별 수집된 기사 수 비교',
-                                        font: { size: 16 }
-                                    }
-                                },
-                                scales: {
-                                    x: { title: { display: true, text: '수집 날짜' } },
-                                    y: { title: { display: true, text: '기사 수' }, beginAtZero: true }
-                                }
-                            }
-                        });
-
-                        charts[canvasId] = newChart; // 생성된 차트를 객체로 저장
-                    }
+    // 2. 키워드 목록 로드
+    function loadKeywordList() {
+        fetch("/api/tracking-keywords", {
+            method: "GET",
+            headers: {
+                "Authorization": token
+            }
+        })
+            .then(response => response.json())
+            .then(keywords => {
+                const list = document.getElementById("keywordList");
+                list.innerHTML = "";
+                if (keywords.length === 0) {
+                    document.getElementById("keywordListResponse").innerText = "등록된 키워드가 없습니다.";
+                    return;
                 }
+                document.getElementById("keywordListResponse").innerText = "";
+                keywords.forEach(item => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex justify-content-between align-items-center";
+                    li.innerHTML = `
+                  <div>
+                    <strong>${item.keyword}</strong>
+                    <br>
+                    <small>${item.startDate} ~ ${item.endDate} / 수집주기: ${item.trackingInterval}일</small>
+                  </div>
+                `;
+                    li.style.cursor = "pointer";
+                    li.addEventListener("click", function() {
+                        loadTrackingResults(item.id, item.keyword);
+                    });
+
+                    // 수정/삭제 버튼 그룹
+                    const btnGroup = document.createElement("div");
+                    // 수정 버튼: (키워드는 수정 불가, startDate/endDate/trackingInterval만 수정)
+                    const editBtn = document.createElement("button");
+                    editBtn.className = "btn btn-sm btn-warning";
+                    editBtn.innerText = "수정";
+                    editBtn.addEventListener("click", function(e) {
+                        e.stopPropagation();
+                        editKeyword(item);
+                    });
+                    // 삭제 버튼
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "btn btn-sm btn-danger";
+                    deleteBtn.innerText = "삭제";
+                    deleteBtn.addEventListener("click", function(e) {
+                        e.stopPropagation();
+                        if(confirm("정말 삭제하시겠습니까?")) {
+                            deleteKeyword(item.id);
+                        }
+                    });
+                    btnGroup.appendChild(editBtn);
+                    btnGroup.appendChild(deleteBtn);
+                    li.appendChild(btnGroup);
+                    list.appendChild(li);
+                });
+            })
+            .catch(error => {
+                document.getElementById("keywordListResponse").innerText = "에러: " + error.message;
             });
-        });
     }
 
-    document.addEventListener('DOMContentLoaded', fetchKeywords);
-</script>
+    // 3. 키워드 수정 함수 (키워드는 수정 불가)
+    function editKeyword(item) {
+        alert(`키워드는 "${item.keyword}"로 고정됩니다. 시작일/종료일/수집주기만 수정 가능합니다.`);
+        const newStart = prompt("새 시작일 (YYYY-MM-DD):", item.startDate);
+        if(!newStart) return;
+        const newEnd = prompt("새 종료일 (YYYY-MM-DD):", item.endDate);
+        if(!newEnd) return;
+        const newInterval = prompt("새 수집 주기 (일):", item.trackingInterval);
+        if(!newInterval) return;
 
+        const payload = {
+            // keyword는 수정 불가하므로 보냄 X (혹은 기존 item.keyword 그대로 보냄)
+            startDate: newStart,
+            endDate: newEnd,
+            trackingInterval: parseInt(newInterval)
+        };
+        fetch(`/api/tracking-keywords/${item.id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(res => res.json())
+            .then(data => {
+                alert("수정 성공: " + JSON.stringify(data));
+                loadKeywordList();
+            })
+            .catch(err => alert("수정 에러: " + err.message));
+    }
+
+    // 4. 키워드 삭제 함수
+    function deleteKeyword(id) {
+        fetch(`/api/tracking-keywords/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": token
+            }
+        })
+            .then(response => {
+                if(response.ok) {
+                    alert("삭제 성공!");
+                    loadKeywordList();
+                } else {
+                    response.json().then(data => alert("삭제 실패: " + JSON.stringify(data)));
+                }
+            })
+            .catch(err => alert("삭제 에러: " + err.message));
+    }
+
+    // 5. 선택 키워드의 추적 결과 로드 (테이블 대신 div 카드 형태)
+    function loadTrackingResults(keywordId, keywordText) {
+        document.getElementById("resultResponse").innerText = `키워드 [${keywordText}]에 대한 결과를 불러오는 중...`;
+        const container = document.getElementById("resultContainer");
+        container.innerHTML = "";
+        fetch(`/api/tracking-results/${keywordId}`, {
+            method: "GET",
+            headers: {
+                "Authorization": token
+            }
+        })
+            .then(response => {
+                if(!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || "API 호출 실패"); });
+                }
+                return response.json();
+            })
+            .then(results => {
+                if(!Array.isArray(results) || results.length === 0) {
+                    document.getElementById("resultResponse").innerText = "조회된 결과가 없습니다.";
+                    container.innerHTML = `<div class="text-center text-muted">결과 없음</div>`;
+                    return;
+                }
+                document.getElementById("resultResponse").innerText = "";
+                results.forEach((item, index) => {
+                    // related_keyword 필드를 파싱해서 표시 문자열로 변환
+                    let relatedKeywordDisplay = '-';
+                    if(item.relatedKeyword) {
+                        try {
+                            const relatedArr = JSON.parse(item.relatedKeyword);
+                            relatedKeywordDisplay = relatedArr.map(obj => `${obj.keyword}-${obj.frequency}회`).join(', ');
+                        } catch(e) {
+                            // 파싱 실패시 원본 문자열 그대로 사용
+                            relatedKeywordDisplay = item.relatedKeyword;
+                        }
+                    }
+                    // 각 결과를 카드 형태의 div로 구성합니다.
+                    const resultCard = document.createElement("div");
+                    resultCard.className = "result-item card mb-3";
+                    resultCard.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">키워드: ${item.keyword || '-'}</h5>
+                    <p class="card-text">
+                        <strong>분석일:</strong> ${item.analysisDate ? new Date(item.analysisDate).toLocaleDateString() : '-'}<br>
+                        <strong>기사 수:</strong> ${(item.articleCount != null) ? item.articleCount : '-'}<br>
+                        <strong>요약:</strong> ${item.summaryReport || '-'}<br>
+                        <strong>데이터소스:</strong> ${item.mediaCompanies || '-'}<br>
+                        <strong>연관 키워드:</strong> ${relatedKeywordDisplay}
+                    </p>
+                </div>
+            `;
+                    container.appendChild(resultCard);
+                });
+            })
+            .catch(error => {
+                document.getElementById("resultResponse").innerText = "에러 발생: " + error.message;
+            });
+    }
+</script>
 </body>
 </html>

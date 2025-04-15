@@ -323,6 +323,96 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    .tool-log {
+      font-size: 0.85em;
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-radius: 8px;
+      width: fit-content;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+
+    .tool-start {
+      background-color: #e1f5fe;
+      color: #0277bd;
+    }
+
+    .tool-end {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .intermediate-log {
+      background-color: #f5f5f5;
+      color: #757575;
+      font-style: italic;
+    }
+
+    .agent-log {
+      color: #757575;
+      font-style: italic;
+      margin-top: 4px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      word-break: break-word;
+      white-space: pre-wrap;
+      opacity: 0; /* 시작 시 투명 */
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    .chat-box pre {
+      position: relative;
+      background-color: #282c34;
+      color: #abb2bf;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+      margin: 8px 0;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .chat-box pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background-color: #0088cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.8em;
+      opacity: 0.9;
+      transition: background-color 0.3s, opacity 0.3s;
+    }
+
+    .copy-btn:hover {
+      background-color: #0077b3;
+      opacity: 1;
+    }
+
+    .copy-btn:active {
+      background-color: #005f8c;
+    }
   </style>
 </head>
 <body>
@@ -513,7 +603,8 @@
 
         const userMessage = document.createElement('div');
         userMessage.classList.add('message', 'user');
-        userMessage.textContent = msg.message;
+        // textContent 대신 markdownToHTML 함수를 이용해 innerHTML로 변환
+        userMessage.innerHTML = markdownToHTML(msg.message);
 
         userWrapper.appendChild(userMessage);
         chatBox.appendChild(userWrapper);
@@ -525,7 +616,8 @@
 
           const botMessage = document.createElement('div');
           botMessage.classList.add('message', 'bot');
-          botMessage.textContent = msg.response;
+          // 마찬가지로 마크다운 변환 적용
+          botMessage.innerHTML = markdownToHTML(msg.response);
 
           botWrapper.appendChild(botMessage);
           chatBox.appendChild(botWrapper);
@@ -533,6 +625,7 @@
       });
 
       chatBox.scrollTop = chatBox.scrollHeight; // 스크롤 자동 하단 이동
+      addCopyButtons(); // 코드 블록이 새로 추가될 때마다 실행
     } catch (error) {
       console.error("채팅방 메시지 불러오기 오류:", error);
     }
@@ -575,62 +668,139 @@
       return;
     }
 
-    const requestBody = { query: message };
-
-    console.log("전송 데이터:", requestBody);
-
-    // 사용자 메시지 출력
     displayMessage(message, "user");
+    input.value = "";
 
-    // 로딩 애니메이션 추가
-    const loadingMessage = showLoadingSpinner();
+    const loading = showLoadingSpinner();
 
     try {
-      const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/agent-query`, {
+      const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/agent-query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({ query: message })
       });
 
-      let responseText = await response.text();
-      console.log("서버 응답 원본:", responseText);
-
       if (!response.ok) {
-        console.error("서버 응답 오류:", response.status, responseText);
-        alert(`메시지 전송 실패 (HTTP ${response.status}): ${responseText}`);
+        const errorText = await response.text();
+        alert(`메시지 전송 실패 (HTTP ${response.status}): ${errorText}`);
         return;
       }
 
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (jsonError) {
-        console.error("JSON 파싱 오류:", jsonError, responseText);
-        alert(`서버 응답을 처리할 수 없습니다.\n응답 내용: ${responseText}`);
-        return;
+      removeLoadingSpinner(loading);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      const chatBox = document.getElementById('messagesContainer');
+
+      let fullResponse = "";
+      let finalMessage = "";
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message-wrapper', 'bot');
+      const bubble = document.createElement('div');
+      bubble.classList.add('message', 'bot');
+      wrapper.appendChild(bubble);
+      chatBox.appendChild(wrapper);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true }).trim();
+
+          // 여러 개의 JSON이 붙어서 올 경우를 방지하기 위해 {} 단위로 분할
+          const jsonMatches = chunk.match(/({.*?})(?=\s*{|\s*$)/gs); // g: 전역, s: 줄바꿈 포함
+
+          if (!jsonMatches) continue;
+
+          // 기존 for 루프 내에서 JSON 처리 부분 수정
+          for (const jsonStr of jsonMatches) {
+            try {
+              const json = JSON.parse(jsonStr);
+
+              if (json.token) {
+                fullResponse += json.token;
+                bubble.innerHTML = markdownToHTML(fullResponse);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                addCopyButtonsToElement(bubble); // bubble 요소만 확인
+              } else if (json.final) {
+                finalMessage = json.final;
+                if (fullResponse.trim() !== finalMessage.trim()) {
+                  console.warn("⚠️ token 누적값과 final 불일치:", fullResponse, finalMessage);
+                }
+                // 최종 응답은 이미 token 누적으로 보여주고 있으므로 따로 업데이트하지 않음
+
+              } else if (json.tool_start) {
+                // 도구 호출 메시지를 회색 로그 형태로 말풍선 내부에 추가 (DOM 요소로 생성)
+                const toolLog = document.createElement("div");
+                toolLog.classList.add("agent-log");
+                toolLog.innerHTML = `${json.tool_start} (입력: ${JSON.stringify(json.input)})`;
+                bubble.appendChild(toolLog);
+                chatBox.scrollTop = chatBox.scrollHeight;
+              } else if (json.log) {
+                // 중간 추론 로그를 회색 글씨로 말풍선 내부에 추가 (DOM 요소로 생성)
+                const intermediateLog = document.createElement("div");
+                intermediateLog.classList.add("agent-log");
+                intermediateLog.innerHTML = `${json.log}`;
+                bubble.appendChild(intermediateLog);
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+            }
+            catch (e) {
+              console.warn("JSON 파싱 실패:", jsonStr);
+            }
+          }
+        }
       }
-
-      console.log("서버 응답 파싱 완료:", responseData);
-
-      // 로딩 애니메이션 제거
-      removeLoadingSpinner(loadingMessage);
-
-      // GPT 응답 출력 (타이핑 효과 적용)
-      if (responseData.gpt_response) {  // ✅ results 대신 직접 gpt_response 접근
-        displayTypingEffect(responseData.gpt_response, "bot");
-      }
-
-      input.value = "";
     } catch (error) {
-      console.error("네트워크 오류:", error);
+      console.error("스트리밍 응답 처리 오류:", error);
       alert(`서버와 연결할 수 없습니다.\n오류 메시지: ${error.message}`);
-
-      // 오류 발생 시 로딩 애니메이션 제거
-      removeLoadingSpinner(loadingMessage);
     }
+  }
+
+  function markdownToHTML(markdown) {
+    const codeBlockRegex = /```([a-z]*)\n([\s\S]*?)```/g;
+    const codeBlockMap = new Map();
+    let i = 0;
+
+    // 코드 블럭 먼저 추출하고 escape
+    markdown = markdown.replace(codeBlockRegex, (_, lang, code) => {
+      const escaped = code
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+      const key = `__CODE_BLOCK_${i}__`;
+      const langClass = lang ? `language-${lang}` : "";
+      codeBlockMap.set(key, { html: escaped, langClass });
+      i++;
+      return key;
+    });
+
+    // 일반 마크다운 먼저 처리 (코드블럭은 이 과정에서 보호됨)
+    markdown = markdown
+            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+
+    // 코드 블럭 다시 삽입
+    codeBlockMap.forEach((val, key) => {
+      markdown = markdown.replace(
+              key,
+              `<pre><code class="${val.langClass}">${val.html}</code></pre>`
+      );
+    });
+
+    return markdown;
   }
 
   function showLoadingSpinner() {
@@ -658,33 +828,6 @@
     if (loadingMessage) {
       loadingMessage.remove(); // DOM에서 제거
     }
-  }
-
-
-  function displayTypingEffect(text, sender) {
-    const chatBox = document.getElementById('messagesContainer');
-
-    // 메시지 감싸는 div
-    const messageWrapper = document.createElement('div');
-    messageWrapper.classList.add('message-wrapper', sender);
-
-    // 메시지 말풍선 div
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', sender);
-    messageWrapper.appendChild(messageDiv);
-    chatBox.appendChild(messageWrapper);
-
-    let i = 0;
-    function typeEffect() {
-      if (i < text.length) {
-        messageDiv.textContent += text[i];
-        i++;
-        setTimeout(typeEffect, 20); // 한 글자씩 출력 (20ms 간격)
-      }
-    }
-    typeEffect();
-
-    chatBox.scrollTop = chatBox.scrollHeight; // 스크롤 자동 하단 이동
   }
 
 
@@ -723,7 +866,9 @@
       loadChatrooms();
 
       // 새 채팅방 자동 선택
-      loadChatMessages(chatroom.id);
+      loadChatMessages(chatroom.id).then(() => {
+        addCopyButtons();
+      });
 
     } catch (error) {
       console.error("새 채팅방 생성 오류:", error);
@@ -763,6 +908,52 @@
     });
   });
 
+  // 코드 블록에 복사 버튼 추가하는 함수
+  function addCopyButtons() {
+    document.querySelectorAll('.chat-box pre').forEach(pre => {
+      // 복사 버튼이 이미 추가된 경우 건너뜀
+      if (pre.querySelector('.copy-btn')) return;
+
+      const copyBtn = document.createElement('button');
+      copyBtn.classList.add('copy-btn');
+      copyBtn.textContent = '복사';
+
+      copyBtn.addEventListener('click', () => {
+        const code = pre.querySelector('code').innerText;
+        navigator.clipboard.writeText(code)
+                .then(() => {
+                  copyBtn.textContent = '복사됨!';
+                  setTimeout(() => copyBtn.textContent = '복사', 2000);
+                })
+                .catch(err => alert('복사 실패: ', err));
+      });
+
+      pre.appendChild(copyBtn);
+    });
+  }
+
+  // 특정 요소에만 복사 버튼 추가하는 함수
+  function addCopyButtonsToElement(element) {
+    element.querySelectorAll('pre').forEach(pre => {
+      if (pre.querySelector('.copy-btn')) return;
+
+      const copyBtn = document.createElement('button');
+      copyBtn.classList.add('copy-btn');
+      copyBtn.textContent = '복사';
+
+      copyBtn.addEventListener('click', () => {
+        const code = pre.querySelector('code').innerText;
+        navigator.clipboard.writeText(code)
+                .then(() => {
+                  copyBtn.textContent = '복사됨!';
+                  setTimeout(() => copyBtn.textContent = '복사', 2000);
+                })
+                .catch(err => alert('복사 실패:', err));
+      });
+
+      pre.appendChild(copyBtn);
+    });
+  }
 </script>
 
 </body>

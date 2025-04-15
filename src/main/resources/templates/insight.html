@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>키워드 인사이트</title>
+    <!-- WordCloud 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+    <!-- Chart.js 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,12 +16,13 @@
             padding: 0;
         }
         .container {
-            max-width: 800px;
-            margin: auto;
+            width: 90%;
+            max-width: 1400px;
+            margin: 30px auto;
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         h1 {
             color: #5B55D7;
@@ -29,375 +33,603 @@
             width: 24px;
             margin-right: 10px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        .up {
-            color: red;
-        }
-        .down {
-            color: blue;
-        }
-        .new {
-            color: #5B55D7;
-        }
-        #word-cloud {
-            width: 100%;  /* 화면 너비에 맞게 확장 */
-            height: 300px;  /* 높이를 더 크게 설정 */
+        .section {
             margin-top: 30px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            position: relative;
         }
-        #search-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        .charts-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .chart-container {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            height: 350px;  /* 고정 높이 지정 */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        canvas {
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-
-        #search-modal .modal-content {
-            background: white;
-            width: 80%;
-            max-width: 600px;
-            height: auto;
-            max-height: 70%;
-            overflow-y: auto;
-            padding: 20px;
+        #word-cloud {
+            height: 300px;  /* 워드 클라우드 높이 지정 */
+            background: #fff;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            position: relative; /* 닫기 버튼을 위치시키기 위한 relative */
-        }
-
-        /* X 버튼 위치 및 스타일 */
-        #close-modal-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #5B55D7;
-            background: none;
-            border: none;
-            font-weight: bold;
+            margin-top: 20px;
         }
         #search-results div {
             margin-bottom: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
         }
-
-        #search-results p {
-            margin-top: 5px;
+        /* 모달 스타일 (기사 결과용) */
+        .modal {
+            display: none; /* 기본 숨김 */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 10px;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #000;
+            text-decoration: none;
+        }
+        /* 더보기 버튼 및 컨테이너 스타일 */
+        #load-more-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        #load-more-btn {
+            background-color: #5B55D7;
+            color: #fff;
+            border-radius: 5px;
+            border: none;
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        #load-more-btn:hover {
+            background-color: #4a45c4;
+        }
+        #load-more-btn:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1><img src="https://img.icons8.com/ios-filled/50/5B55D7/bar-chart.png"/> 키워드 인사이트 </h1>
+    <h1>
+        <img src="https://img.icons8.com/ios-filled/50/5B55D7/bar-chart.png" /> 키워드 인사이트
+    </h1>
     <label for="date">날짜 선택:</label>
-    <input type="date" id="date">
-    <button onclick="loadKeywords()">조회</button>
+    <input type="date" id="date" />
+    <button onclick="loadAllData()">조회</button>
 
-    <table>
-        <thead>
-        <tr>
-            <th>순위</th>
-            <th>키워드</th>
-            <th>건수</th>
-            <th>순위변화</th>
-        </tr>
-        </thead>
-        <tbody id="keyword-table"></tbody>
-    </table>
-
-    <div id="related-keywords-container" style="margin-top: 30px;">
-        <h2>연관 검색어 순위</h2>
-        <table id="related-keywords-table">
-            <thead>
-            <tr>
-                <th>순위</th>
-                <th>연관 검색어</th>
-                <th>건수</th>
-            </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <!-- 검색 결과 팝업 모달 -->
-    <div id="search-modal" style="display: none;">
-        <div class="modal-content">
-            <button id="close-modal-btn" onclick="closeModal()">X</button>
-            <h2>검색 결과</h2>
-            <div id="search-results"></div>
+    <!-- 일간 데이터 섹션 -->
+    <div class="section" id="daily-section">
+        <h2>일간 데이터</h2>
+        <div class="charts-wrapper">
+            <div class="chart-container">
+                <canvas id="daily-keyword-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">일간 키워드</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="daily-related-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">일간 연관 키워드</p>
+            </div>
         </div>
     </div>
 
-    <div id="word-cloud"></div> <!-- 워드 클라우드를 표시할 영역 -->
+    <!-- 주간 데이터 섹션 -->
+    <div class="section" id="weekly-section">
+        <h2>주간 데이터</h2>
+        <p id="weekly-date-range" style="text-align:center; font-weight:bold;"></p>
+        <div class="charts-wrapper">
+            <div class="chart-container">
+                <canvas id="weekly-keyword-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">주간 키워드</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="weekly-related-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">주간 연관 키워드</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오른쪽 패널: 워드 클라우드 및 기사 결과 (모달 표시용) -->
+    <div class="section" id="results-section">
+        <h2>워드 클라우드</h2>
+        <div id="word-cloud"></div>
+        <h2>기사 결과</h2>
+        <p>기사 결과는 모달 창으로 표시됩니다.</p>
+    </div>
+</div>
+
+<!-- 모달 창: 기사 결과 표시 -->
+<div id="article-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <div id="modal-articles"></div>
+    </div>
+</div>
 
 <script>
-    // 오늘 날짜 -1로 기본 설정
-    const today = new Date();
-    today.setDate(today.getDate() - 1);  // 하루 전으로 설정
-    const yesterday = today.toISOString().split('T')[0];
-    document.getElementById('date').value = yesterday;
+    // 전역 변수 설정
+    let dailyChart = null,
+        dailyRelatedChart = null,
+        weeklyChart = null,
+        weeklyRelatedChart = null,
+        wordCloudInstance = null,
+        currentDailyKeyword = '',
+        currentWeeklyKeyword = '',
+        currentRelatedKeyword = '',
+        currentSearchPage = 0,
+        DAILY_DATA = [],
+        WEEKLY_DATA = {};  // { range_start, range_end, keywords: [] }
 
-    let paginationIndex = 0;  // 페이지 번호 저장
-    let wordCloudInstance = null; // 워드 클라우드 인스턴스
-    let currentKeyword = ''; // 현재 클릭된 메인 키워드 저장
-    let selectedRelatedKeyword = '';  // 현재 클릭된 연관 검색어 저장용 변수
+    const PAGE_SIZE = 10;
 
-    async function fetchData(date) {
+    // 기존 단일 날짜 API 호출 함수 (일간 데이터)
+    async function fetchDailyData(date) {
         const response = await fetch(`http://localhost:8080/api/insight?date=${date}`);
         const data = await response.json();
         return data.top_keywords || [];
     }
 
-    async function fetchRelatedArticles(keyword, relatedKeyword, date, page = 0) {
-        const response = await fetch(`http://localhost:8080/api/insight/related-search?keyword=${keyword}&relatedKeyword=${relatedKeyword}&date=${date}&page=${page}`);
+    // 주간 데이터 API 호출 함수
+    async function fetchWeeklyData(date) {
+        const response = await fetch(`http://localhost:8080/api/insight/weekly?date=${date}`);
         const data = await response.json();
-        return data.hits || [];
+        return {
+            range_start: data.range_start,
+            range_end: data.range_end,
+            keywords: data.top_weekly_keywords || []
+        };
     }
 
-    function renderTable(keywords) {
-        const table = document.getElementById('keyword-table');
-        table.innerHTML = '';
+    // 새 범위 기반 기사 API 호출 함수 (새 엔드포인트 연동)
+    async function fetchRelatedArticlesRange(keyword, relatedKeyword, startDate, endDate, page = 0) {
+        try {
+            const response = await fetch(`http://localhost:8080/api/insight/related-search-range?keyword=${keyword}&relatedKeyword=${relatedKeyword}&startDate=${startDate}&endDate=${endDate}&page=${page}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            return data.hits || [];
+        } catch (error) {
+            console.error("Failed to fetch related articles (range):", error);
+            return [];
+        }
+    }
 
-        keywords.forEach((item, index) => {
-            const row = document.createElement('tr');
+    // 일간 키워드 막대 그래프 렌더링
+    function renderDailyKeywordChart(keywords) {
+        const ctx = document.getElementById('daily-keyword-chart').getContext('2d');
+        const labels = keywords.map(item => item.keyword);
+        const data = keywords.map(item => item.frequency);
 
-            const rankCell = document.createElement('td');
-            rankCell.textContent = item.rank || '-';
-            row.appendChild(rankCell);
+        if (dailyChart) dailyChart.destroy();
 
-            const keywordCell = document.createElement('td');
-            keywordCell.textContent = item.keyword;
-
-            keywordCell.onclick = async () => {
-                document.querySelectorAll('#keyword-table tr').forEach(tr => tr.style.backgroundColor = 'transparent');
-                row.style.backgroundColor = '#f0f0f0';
-                currentKeyword = item.keyword;
-
-                const relatedKeywords = item.relatedKeywords;
-                renderRelatedKeywordRankings(relatedKeywords);
-                renderWordCloud(item.keyword, relatedKeywords);
-            };
-
-            row.appendChild(keywordCell);
-
-            const frequencyCell = document.createElement('td');
-            frequencyCell.textContent = item.frequency || '-';
-            row.appendChild(frequencyCell);
-
-            const rankChangeCell = document.createElement('td');
-            if (item.rankChange === null) {
-                rankChangeCell.textContent = 'NEW';
-                rankChangeCell.className = 'new';
-            } else if (item.rankChange > 0) {
-                rankChangeCell.textContent = `▲ ${item.rankChange}`;
-                rankChangeCell.className = 'up';
-            } else if (item.rankChange < 0) {
-                rankChangeCell.textContent = `▼ ${Math.abs(item.rankChange)}`;
-                rankChangeCell.className = 'down';
-            } else {
-                rankChangeCell.textContent = '-';
+        dailyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '건수',
+                    data: data,
+                    backgroundColor: 'rgba(91,85,215,0.6)',
+                    borderColor: 'rgba(91,85,215,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: Math.ceil(Math.max(...data) / 10) } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const freq = context.parsed.y;
+                                const rankChange = keywords[context.dataIndex].rankChange;
+                                let rankStr = '';
+                                if (rankChange === null) rankStr = " (NEW)";
+                                else if (rankChange === 0) rankStr = " (-)";
+                                else if (rankChange > 0) rankStr = ` (▲ ${rankChange})`;
+                                else if (rankChange < 0) rankStr = ` (▼ ${Math.abs(rankChange)})`;
+                                return `건수: ${freq}${rankStr}`;
+                            }
+                        },
+                        backgroundColor: '#fff',
+                        borderColor: '#5B55D7',
+                        borderWidth: 2,
+                        titleFont: { size: 16, weight: 'bold' },
+                        bodyFont: { size: 14, weight: 'bold' },
+                        titleColor: '#000',
+                        bodyColor: '#000',
+                        displayColors: false
+                    }
+                },
+                onClick: (evt, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        currentDailyKeyword = keywords[idx].keyword;
+                        // 일간 메인 키워드 클릭 시, 일간 연관 키워드 그래프와 워드 클라우드 업데이트
+                        renderDailyRelatedChart(keywords[idx].relatedKeywords);
+                        renderWordCloud(currentDailyKeyword, keywords[idx].relatedKeywords);
+                    }
+                }
             }
-            row.appendChild(rankChangeCell);
-
-            table.appendChild(row);
         });
     }
 
+    // 일간 연관 키워드 막대 그래프 렌더링
+    function renderDailyRelatedChart(relatedKeywords) {
+        const ctx = document.getElementById('daily-related-chart').getContext('2d');
+        if (!relatedKeywords || relatedKeywords.length === 0) {
+            if (dailyRelatedChart) dailyRelatedChart.destroy();
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.font = "16px Arial";
+            ctx.fillText("일간 연관 키워드 데이터가 없습니다.", 10, 50);
+            return;
+        }
+        const labels = relatedKeywords.map(item => item.relatedKeyword);
+        const data = relatedKeywords.map(item => item.frequency);
 
-    function renderRelatedKeywordRankings(relatedKeywords) {
-        const tableBody = document.querySelector('#related-keywords-table tbody');
-        tableBody.innerHTML = '';
+        if (dailyRelatedChart) dailyRelatedChart.destroy();
 
-        relatedKeywords.forEach((keyword) => {
-            const row = document.createElement('tr');
-
-            const rankCell = document.createElement('td');
-            rankCell.textContent = keyword.rank;
-            row.appendChild(rankCell);
-
-            const keywordCell = document.createElement('td');
-            keywordCell.textContent = keyword.relatedKeyword;
-            keywordCell.style.cursor = 'pointer';
-
-            // 클릭 이벤트 추가
-            keywordCell.onclick = async () => {
-                selectedRelatedKeyword = keyword.relatedKeyword;  // 클릭된 연관 검색어 저장
-                paginationIndex = 0;  // 페이지 번호 초기화 (새로 검색할 때마다 초기화)
-                await loadRelatedArticles(selectedRelatedKeyword);  // API 호출 함수
-                showModal();  // 검색 결과 모달 열기
-            };
-
-            row.appendChild(keywordCell);
-
-            const countCell = document.createElement('td');
-            countCell.textContent = keyword.frequency || '-';
-            row.appendChild(countCell);
-
-            tableBody.appendChild(row);
-        });
-    }
-
-    async function loadRelatedArticles(relatedKeyword) {
-        const date = document.getElementById('date').value;
-        const relatedArticles = await fetchRelatedArticles(currentKeyword, relatedKeyword, date, paginationIndex);
-
-        if (relatedArticles.length > 0) {
-            renderSearchResults(relatedArticles, true);  // 기존 결과에 추가로 표시
-            showModal();  // 검색 결과 모달 열기
-        } else {
-            const moreButton = document.getElementById('more-button');
-            if (moreButton) {
-                moreButton.style.display = 'none';
+        dailyRelatedChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '건수',
+                    data: data,
+                    backgroundColor: 'rgba(255,159,64,0.6)',
+                    borderColor: 'rgba(255,159,64,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: Math.ceil(Math.max(...data) / 10) } }
+                },
+                plugins: { legend: { display: false } },
+                onClick: (evt, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        currentRelatedKeyword = relatedKeywords[idx].relatedKeyword;
+                        // 일간 메인 + 연관 키워드 선택 시, 범위 기반 기사 검색 (날짜를 같은 값으로 사용)
+                        const date = document.getElementById('date').value;
+                        currentSearchPage = 0;
+                        fetchRelatedArticlesRange(currentDailyKeyword, currentRelatedKeyword, date, date, currentSearchPage)
+                            .then(newArticles => renderModalArticles(newArticles, false));
+                    }
+                }
             }
-        }
-    }
-
-
-    function renderSearchResults(relatedArticles, append = false) {
-        const resultsDiv = document.getElementById('search-results');
-        if (!append) resultsDiv.innerHTML = '';  // append가 false일 때 기존 내용 지우기
-
-        relatedArticles.forEach(article => {
-            const articleDiv = document.createElement('div');
-            articleDiv.style.cssText = 'padding: 10px; border-bottom: 1px solid #ddd;';
-
-            const title = document.createElement('h3');
-            title.innerHTML = article.title;
-            title.style.cursor = 'pointer';
-            title.onclick = () => window.open(article.url, '_blank');
-            articleDiv.appendChild(title);
-
-            const mediaAndDate = document.createElement('p');
-            mediaAndDate.style.cssText = 'font-size: 14px; color: #777;';
-            mediaAndDate.innerHTML = `카테고리: ${article.category} | 언론사: ${article.media_company} | 게시일: ${article.date}`;
-            articleDiv.appendChild(mediaAndDate);
-
-            const snippet = document.createElement('p');
-            snippet.innerHTML = article.highlights ? article.highlights.join(' ') : '내용 미리보기를 제공하지 않습니다.';
-            snippet.style.cssText = 'font-size: 14px; color: #555;';
-            articleDiv.appendChild(snippet);
-
-            resultsDiv.appendChild(articleDiv);
         });
-
-        let moreButton = document.getElementById('more-button');
-
-        if (!moreButton) {
-            moreButton = document.createElement('button');
-            moreButton.id = 'more-button';
-            moreButton.textContent = '더보기';
-            moreButton.onclick = loadMoreArticles;
-            moreButton.style.cssText = `
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin-top: 20px;
-            background-color: #5B55D7;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        `;
-            moreButton.onmouseover = () => moreButton.style.backgroundColor = '#4a44b5';
-            moreButton.onmouseout = () => moreButton.style.backgroundColor = '#5B55D7';
-        }
-
-        // 더보기 버튼을 항상 마지막 기사 아래로 이동시키기
-        if (relatedArticles.length > 0) {
-            resultsDiv.appendChild(moreButton);
-        } else if (moreButton) {
-            moreButton.style.display = 'none';
-        }
     }
 
-    async function loadMoreArticles() {
-        paginationIndex++;  // 페이지 번호 증가
-        await loadRelatedArticles(selectedRelatedKeyword);  // 기존 로드 방식 그대로 활용
+    // 주간 키워드 막대 그래프 렌더링
+    function renderWeeklyKeywordChart(weeklyData) {
+        const ctx = document.getElementById('weekly-keyword-chart').getContext('2d');
+        const labels = weeklyData.keywords.map(item => item.keyword);
+        const data = weeklyData.keywords.map(item => item.totalFrequency);
+
+        document.getElementById('weekly-date-range').textContent =
+            `${weeklyData.range_start} ~ ${weeklyData.range_end}`;
+
+        if (weeklyChart) weeklyChart.destroy();
+
+        weeklyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '총 빈도수',
+                    data: data,
+                    backgroundColor: 'rgba(75,192,192,0.6)',
+                    borderColor: 'rgba(75,192,192,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: Math.ceil(Math.max(...data) / 10) } }
+                },
+                plugins: { legend: { display: false } },
+                onClick: (evt, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        currentWeeklyKeyword = weeklyData.keywords[idx].keyword;
+                        // 주간 메인 키워드 클릭 시, 주간 연관 키워드 그래프와 워드 클라우드 업데이트,
+                        // 그리고 범위 기반 기사 검색: WEEKLY_DATA의 범위 사용
+                        renderWeeklyRelatedChart(weeklyData.keywords[idx].relatedKeywords);
+                        renderWordCloud(currentWeeklyKeyword, weeklyData.keywords[idx].relatedKeywords);
+                    }
+                }
+            }
+        });
     }
 
+    // 주간 연관 키워드 막대 그래프 렌더링
+    function renderWeeklyRelatedChart(relatedKeywords) {
+        const ctx = document.getElementById('weekly-related-chart').getContext('2d');
+        if (!relatedKeywords || relatedKeywords.length === 0) {
+            if (weeklyRelatedChart) weeklyRelatedChart.destroy();
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.font = "16px Arial";
+            ctx.fillText("주간 연관 키워드 데이터가 없습니다.", 10, 50);
+            return;
+        }
+        const labels = relatedKeywords.map(item => item.relatedKeyword);
+        const data = relatedKeywords.map(item => item.frequency);
 
+        if (weeklyRelatedChart) weeklyRelatedChart.destroy();
+
+        weeklyRelatedChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '건수',
+                    data: data,
+                    backgroundColor: 'rgba(153,102,255,0.6)',
+                    borderColor: 'rgba(153,102,255,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: Math.ceil(Math.max(...data) / 10) } }
+                },
+                plugins: { legend: { display: false } },
+                onClick: (evt, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        currentRelatedKeyword = relatedKeywords[idx].relatedKeyword;
+                        // 주간 메인 + 연관 키워드 선택 시, 범위 기반 기사 검색 (WEEKLY_DATA 범위 사용)
+                        const { range_start, range_end } = WEEKLY_DATA;
+                        currentSearchPage = 0;
+                        fetchRelatedArticlesRange(currentWeeklyKeyword, currentRelatedKeyword, range_start, range_end, currentSearchPage)
+                            .then(newArticles => renderModalArticles(newArticles, false));
+                    }
+                }
+            }
+        });
+    }
+
+    // 워드 클라우드 렌더링
     function renderWordCloud(keyword, relatedKeywords) {
         const wordCloudElement = document.getElementById('word-cloud');
+        if (!relatedKeywords || relatedKeywords.length === 0) {
+            wordCloudElement.innerHTML = '<p>워드 클라우드 데이터가 없습니다.</p>';
+            return;
+        }
         const wordList = relatedKeywords.map(k => [k.relatedKeyword, k.frequency || 10]);
-
-        const maxSize = 150;
-        const minFreq = Math.min(...relatedKeywords.map(k => k.frequency));
-        const maxFreq = Math.max(...relatedKeywords.map(k => k.frequency));
-
+        const minSize = 30, maxSize = 100;
+        const freqs = relatedKeywords.map(k => k.frequency);
+        const minFreq = Math.min(...freqs);
+        const maxFreq = Math.max(...freqs);
+        const weightFactorFn = function(size) {
+            if (maxFreq === minFreq) return (minSize + maxSize) / 2;
+            const normalized = (size - minFreq) / (maxFreq - minFreq);
+            return minSize + normalized * (maxSize - minSize);
+        };
         if (wordCloudInstance) wordCloudInstance.stop();
-
         wordCloudInstance = WordCloud(wordCloudElement, {
             list: wordList,
             gridSize: Math.round(20 * wordCloudElement.offsetWidth / 1024),
-            weightFactor: function(size) {
-                const normalizedSize = ((size - minFreq) / (maxFreq - minFreq)) * maxSize;
-                return Math.min(normalizedSize, maxSize);
-            },
+            weightFactor: weightFactorFn,
             fontFamily: 'Arial',
-            color: () => `hsl(${Math.random() * 360}, 70%, 50%)`,
+            color: () => `hsl(${Math.random()*360}, 70%, 50%)`,
             backgroundColor: '#fff',
-            rotateRatio: 0,  // 회전 비율 0으로 설정하여 회전 없도록 함
+            rotateRatio: 0,
             rotationSteps: 0,
         });
     }
 
-    function showModal() {
-        document.getElementById('search-modal').style.display = 'flex'; // 모달을 화면 중앙에 띄움
+    // 모달 창을 이용한 기사 결과 렌더링 (더보기 버튼 포함)
+    function renderModalArticles(articles, append = false) {
+        const modalArticlesDiv = document.getElementById("modal-articles");
+
+        // 항상 loadMoreContainer를 제거하여 새로 위치시킵니다.
+        let existingContainer = document.getElementById('load-more-container');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+
+        if (!append) {
+            modalArticlesDiv.innerHTML = '';
+        }
+
+        // 새 기사들을 추가
+        articles.forEach(article => {
+            const articleDiv = document.createElement('div');
+            articleDiv.style.display = 'flex';
+            articleDiv.style.alignItems = 'center';
+            articleDiv.style.marginBottom = '20px';
+            articleDiv.style.padding = '10px';
+            articleDiv.style.border = '1px solid #ddd';
+            articleDiv.style.borderRadius = '10px';
+
+            if (article.image_url) {
+                const imgDiv = document.createElement('div');
+                imgDiv.style.marginRight = '20px';
+                imgDiv.style.flexShrink = '0';
+                const img = document.createElement('img');
+                img.src = article.image_url;
+                img.alt = article.title;
+                img.style.width = '200px';
+                img.style.height = '150px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '8px';
+                imgDiv.appendChild(img);
+                articleDiv.appendChild(imgDiv);
+            }
+
+            const textDiv = document.createElement('div');
+            textDiv.style.flex = '1';
+            const title = document.createElement('h3');
+            title.innerHTML = article.title;
+            title.style.cursor = 'pointer';
+            title.onclick = () => window.open(article.url, '_blank');
+            textDiv.appendChild(title);
+            const meta = document.createElement('p');
+            meta.style.fontSize = '13px';
+            meta.style.color = '#999';
+            meta.style.marginBottom = '10px';
+            meta.innerHTML = `언론사: ${article.media_company} | 게시일: ${article.date}`;
+            textDiv.appendChild(meta);
+            const snippet = document.createElement('p');
+            snippet.innerHTML = article.highlights.join(' ');
+            snippet.style.fontSize = '14px';
+            snippet.style.color = '#555';
+            textDiv.appendChild(snippet);
+            articleDiv.appendChild(textDiv);
+
+            modalArticlesDiv.appendChild(articleDiv);
+        });
+
+        // 더보기 버튼 및 컨테이너 생성 (항상 새로 생성해서 맨 하단에 위치시키기)
+        const loadMoreContainer = document.createElement('div');
+        loadMoreContainer.id = 'load-more-container';
+        loadMoreContainer.style.display = 'flex';
+        loadMoreContainer.style.justifyContent = 'flex-end';
+        loadMoreContainer.style.marginTop = '20px';
+
+        // 새로 불러온 기사 수가 PAGE_SIZE 이상이면 버튼을 보여줌
+        if (articles.length >= PAGE_SIZE) {
+            let loadMoreBtn = document.createElement('button');
+            loadMoreBtn.id = 'load-more-btn';
+            loadMoreBtn.textContent = '더보기';
+            loadMoreBtn.style.backgroundColor = '#5B55D7';
+            loadMoreBtn.style.color = '#fff';
+            loadMoreBtn.style.borderRadius = '5px';
+            loadMoreBtn.style.border = 'none';
+            loadMoreBtn.style.padding = '8px 15px';
+            loadMoreBtn.style.fontSize = '14px';
+            loadMoreBtn.style.cursor = 'pointer';
+            loadMoreBtn.style.transition = 'background-color 0.3s ease, transform 0.2s ease';
+            loadMoreBtn.addEventListener('click', () => {
+                currentSearchPage++;
+                const date = document.getElementById('date').value;
+                // 여기서는 일간 데이터를 기준으로 호출 (필요에 따라 주간 데이터로 변경 가능)
+                fetchRelatedArticlesRange(currentDailyKeyword, currentRelatedKeyword, date, date, currentSearchPage)
+                    .then(newArticles => renderModalArticles(newArticles, true));
+            });
+            loadMoreContainer.appendChild(loadMoreBtn);
+        }
+
+        // loadMoreContainer를 항상 맨 아래에 붙임
+        modalArticlesDiv.appendChild(loadMoreContainer);
+
+        // 모달 창 열기
+        openModal();
+    }
+
+    // 모달 열기/닫기 함수 및 이벤트 리스너
+    function openModal() {
+        document.getElementById("article-modal").style.display = "block";
     }
 
     function closeModal() {
-        document.getElementById('search-modal').style.display = 'none'; // 모달을 닫음
-        paginationIndex = 0;  // 페이지 번호 초기화
-        document.getElementById('search-results').innerHTML = '';  // 이전 검색 결과 초기화
+        document.getElementById("article-modal").style.display = "none";
     }
 
-    // 모달 외부 클릭 시 닫히도록 추가
-    document.getElementById('search-modal').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('search-modal')) {
-            closeModal(); // 모달 외부 클릭 시 닫기
-        }
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById('date').value = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        loadAllData();
+        const closeBtn = document.querySelector(".close-btn");
+        closeBtn.addEventListener("click", closeModal);
+        window.addEventListener("click", function(event) {
+            const modal = document.getElementById("article-modal");
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
     });
 
-    async function loadKeywords() {
+    // 전체 데이터 로드: 일간 및 주간 데이터 각각 불러와 차트 업데이트
+    async function loadAllData() {
         const date = document.getElementById('date').value;
-        const keywords = await fetchData(date);
-
-        renderTable(keywords);
-
-        if (keywords.length > 0) {
-            currentKeyword = keywords[0].keyword;
-            const relatedKeywords = keywords[0].relatedKeywords;
-            renderRelatedKeywordRankings(relatedKeywords);
-            renderWordCloud(currentKeyword, relatedKeywords);
+        // 일간 데이터
+        DAILY_DATA = await fetchDailyData(date);
+        renderDailyKeywordChart(DAILY_DATA);
+        if (DAILY_DATA.length > 0) {
+            currentDailyKeyword = DAILY_DATA[0].keyword;
+            renderDailyRelatedChart(DAILY_DATA[0].relatedKeywords);
+            renderWordCloud(currentDailyKeyword, DAILY_DATA[0].relatedKeywords);
+        } else {
+            if (dailyChart) dailyChart.destroy();
+            if (dailyRelatedChart) dailyRelatedChart.destroy();
         }
-
-        // 문제 해결: 모달을 초기 로딩 시 자동으로 열리지 않도록 함
-        closeModal();  // 페이지 로드 시 모달 닫기
+        // 주간 데이터
+        WEEKLY_DATA = await fetchWeeklyData(date);
+        renderWeeklyKeywordChart(WEEKLY_DATA);
+        if (WEEKLY_DATA.keywords.length > 0) {
+            currentWeeklyKeyword = WEEKLY_DATA.keywords[0].keyword;
+            renderWeeklyRelatedChart(WEEKLY_DATA.keywords[0].relatedKeywords);
+        } else {
+            if (weeklyChart) weeklyChart.destroy();
+            if (weeklyRelatedChart) weeklyRelatedChart.destroy();
+        }
     }
 
-    loadKeywords();
+    // 워드 클라우드 렌더링
+    function renderWordCloud(keyword, relatedKeywords) {
+        const wordCloudElement = document.getElementById('word-cloud');
+        if (!relatedKeywords || relatedKeywords.length === 0) {
+            wordCloudElement.innerHTML = '<p>워드 클라우드 데이터가 없습니다.</p>';
+            return;
+        }
+        const wordList = relatedKeywords.map(k => [k.relatedKeyword, k.frequency || 10]);
+        const minSize = 30, maxSize = 100;
+        const freqs = relatedKeywords.map(k => k.frequency);
+        const minFreq = Math.min(...freqs);
+        const maxFreq = Math.max(...freqs);
+        const weightFactorFn = function(size) {
+            if (maxFreq === minFreq) return (minSize + maxSize) / 2;
+            const normalized = (size - minFreq) / (maxFreq - minFreq);
+            return minSize + normalized * (maxSize - minSize);
+        };
+        if (wordCloudInstance) wordCloudInstance.stop();
+        wordCloudInstance = WordCloud(wordCloudElement, {
+            list: wordList,
+            gridSize: Math.round(20 * wordCloudElement.offsetWidth / 1024),
+            weightFactor: weightFactorFn,
+            fontFamily: 'Arial',
+            color: () => `hsl(${Math.random()*360}, 70%, 50%)`,
+            backgroundColor: '#fff',
+            rotateRatio: 0,
+            rotationSteps: 0,
+        });
+    }
 </script>
 </body>
 </html>

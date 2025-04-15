@@ -1,5 +1,6 @@
 package capstone.dbfis.chatbot.domain.member.dto;
 
+import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
 import lombok.*;
 
 import java.util.List;
@@ -38,6 +39,7 @@ public class MyPageResponse {
         private String teamName;
         private String teamDescription;
         private List<MemberResponse> members;
+        private List<ProjectResponse> projects;
     }
 
     @Getter

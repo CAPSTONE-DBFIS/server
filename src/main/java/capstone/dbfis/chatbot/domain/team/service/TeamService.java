@@ -8,6 +8,9 @@ import capstone.dbfis.chatbot.domain.team.dto.AddTeamMemberRequest;
 import capstone.dbfis.chatbot.domain.team.dto.UpdateTeamRequest;
 import capstone.dbfis.chatbot.domain.team.entity.Team;
 import capstone.dbfis.chatbot.domain.team.entity.TeamMember;
+import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.team.project.entity.Project;
+import capstone.dbfis.chatbot.domain.team.project.repository.ProjectRepository;
 import capstone.dbfis.chatbot.domain.team.repository.TeamMemberRepository;
 import capstone.dbfis.chatbot.domain.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ public class TeamService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final MemberRepository memberRepository;
+    private final ProjectRepository projectRepository;
 
     // 팀 추가 메서드
     @Transactional
@@ -207,6 +211,7 @@ public class TeamService {
                 .teamName(team.getName())
                 .teamDescription(team.getDescription())
                 .members(getTeamMembers(team.getId()))
+                .projects(getTeamProjects(team.getId()))
                 .build()).collect(Collectors.toList());
     }
 
@@ -225,4 +230,11 @@ public class TeamService {
                 .collect(Collectors.toList());
     }
 
+    // 팀 프로젝트 조회 목록
+    private List<ProjectResponse> getTeamProjects(Long teamId) {
+        List<Project> projects = projectRepository.findByTeam_Id(teamId);
+        return projects.stream().map(p -> new ProjectResponse(
+                p.getId(), p.getName(), p.getDescription(), p.getTeam().getId()
+        )).collect(Collectors.toList());
+    }
 }
