@@ -1,6 +1,6 @@
-package capstone.dbfis.chatbot.domain.team.controller;
+package capstone.dbfis.chatbot.domain.filesharing.controller;
 
-import capstone.dbfis.chatbot.domain.team.service.S3Service;
+import capstone.dbfis.chatbot.domain.filesharing.service.FileSharingService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/files")
-public class FileApiController {
+public class FileSharingApiController {
 
-    private final S3Service s3Service;
+    private final FileSharingService fileSharingService;
     private final TokenProvider tokenProvider;
 
     // 파일 업로드
@@ -35,7 +35,7 @@ public class FileApiController {
                                              @RequestParam("teamId") Long teamId) {
         String uploaderId = tokenProvider.getMemberId(token);
         try {
-            String fileUrl = s3Service.uploadFile(file, teamId, uploaderId);
+            String fileUrl = fileSharingService.uploadFile(file, teamId, uploaderId);
             return ResponseEntity.ok("파일 업로드 성공: " + fileUrl);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 업로드 실패: " + e.getMessage());
@@ -48,7 +48,7 @@ public class FileApiController {
             description = "JWT 토큰을 통해 사용자의 팀 접근 권한을 검증하고, 해당 팀의 파일 목록을 조회합니다. 파일 목록에는 파일 이름, 크기, 마지막 수정 날짜, 게시자 ID 및 게시자 이름 등이 포함됩니다. 사용자는 팀에 속해 있어야만 파일 목록을 조회할 수 있습니다.")
     public ResponseEntity<List<Map<String, Object>>> listFiles(@RequestHeader("Authorization") String token, @RequestParam Long teamId) {
         String viewerId = tokenProvider.getMemberId(token);
-        List<Map<String, Object>> files = s3Service.listFiles(teamId, viewerId);
+        List<Map<String, Object>> files = fileSharingService.listFiles(teamId, viewerId);
         return ResponseEntity.ok(files);
     }
 
@@ -61,9 +61,9 @@ public class FileApiController {
                                                  @RequestParam Long teamId) {
         String downloaderId = tokenProvider.getMemberId(token);
         // s3에서 파일 가져오기
-        Resource resource = s3Service.downloadFile(teamId, fileName, downloaderId);
+        Resource resource = fileSharingService.downloadFile(teamId, fileName, downloaderId);
         // 파일의 content type 가져오기
-        String contentType = s3Service.getFileContentType(fileName);
+        String contentType = fileSharingService.getFileContentType(fileName);
         try {
             String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
             return ResponseEntity.ok()
@@ -89,7 +89,7 @@ public class FileApiController {
             String decodedFileName = URLDecoder.decode(fileName, "UTF-8");
 
             // s3에서 파일 삭제
-            s3Service.deleteFile(teamId, decodedFileName, requesterId);
+            fileSharingService.deleteFile(teamId, decodedFileName, requesterId);
             response.put("message", "파일 삭제 성공");
             return ResponseEntity.ok(response);
         } catch (UnsupportedEncodingException e) {

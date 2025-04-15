@@ -1,8 +1,8 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.service;
+package capstone.dbfis.chatbot.domain.trackingkeyword.service;
 
-import capstone.dbfis.chatbot.domain.trackingKeyword.dto.*;
-import capstone.dbfis.chatbot.domain.trackingKeyword.entity.*;
-import capstone.dbfis.chatbot.domain.trackingKeyword.repository.*;
+import capstone.dbfis.chatbot.domain.trackingkeyword.dto.*;
+import capstone.dbfis.chatbot.domain.trackingkeyword.entity.*;
+import capstone.dbfis.chatbot.domain.trackingkeyword.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

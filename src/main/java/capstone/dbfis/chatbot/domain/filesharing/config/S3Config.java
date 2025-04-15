@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.team.config;
+package capstone.dbfis.chatbot.domain.filesharing.config;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;

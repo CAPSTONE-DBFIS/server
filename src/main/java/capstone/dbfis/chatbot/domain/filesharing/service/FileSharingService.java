@@ -1,7 +1,8 @@
-package capstone.dbfis.chatbot.domain.team.service;
+package capstone.dbfis.chatbot.domain.filesharing.service;
 
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import capstone.dbfis.chatbot.domain.team.service.TeamService;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
@@ -19,7 +20,7 @@ import java.util.*;
 
 @RequiredArgsConstructor
 @Service
-public class S3Service {
+public class FileSharingService {
     private final AmazonS3 amazonS3;
     @Value("${aws.s3.bucket}")
     private String bucketName;

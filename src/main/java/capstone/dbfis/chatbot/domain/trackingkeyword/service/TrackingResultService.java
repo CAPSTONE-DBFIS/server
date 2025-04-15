@@ -1,10 +1,9 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.service;
+package capstone.dbfis.chatbot.domain.trackingkeyword.service;
 
-import capstone.dbfis.chatbot.domain.trackingKeyword.dto.TrackingResultResponse;
-import capstone.dbfis.chatbot.domain.trackingKeyword.entity.TrackingKeyword;
-import capstone.dbfis.chatbot.domain.trackingKeyword.entity.TrackingResult;
-import capstone.dbfis.chatbot.domain.trackingKeyword.repository.TrackingKeywordRepository;
-import capstone.dbfis.chatbot.domain.trackingKeyword.repository.TrackingResultRepository;
+import capstone.dbfis.chatbot.domain.trackingkeyword.dto.TrackingResultResponse;
+import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingKeyword;
+import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingKeywordRepository;
+import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +20,7 @@ public class TrackingResultService {
     public List<TrackingResultResponse> getResultsByKeywordId(String memberId, Long keywordId) {
         // 요청한 키워드가 요청자에게 속하는지 검증
         TrackingKeyword keyword = trackingKeywordRepository.findById(keywordId)
-                .orElseThrow(() -> new RuntimeException("Tracking keyword not found."));
+                .orElseThrow(() -> new RuntimeException("추적 키워드를 찾을 수 없습니다."));
         if (!keyword.getRequesterId().equals(memberId)) {
             throw new RuntimeException("조회 권한이 없습니다.");
         }

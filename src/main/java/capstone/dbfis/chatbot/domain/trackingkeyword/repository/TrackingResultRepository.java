@@ -1,6 +1,6 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.repository;
+package capstone.dbfis.chatbot.domain.trackingkeyword.repository;
 
-import capstone.dbfis.chatbot.domain.trackingKeyword.entity.TrackingResult;
+import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

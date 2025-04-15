@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.entity;
+package capstone.dbfis.chatbot.domain.trackingkeyword.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

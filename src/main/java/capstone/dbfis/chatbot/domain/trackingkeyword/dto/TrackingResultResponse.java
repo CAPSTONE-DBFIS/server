@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.dto;
+package capstone.dbfis.chatbot.domain.trackingkeyword.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

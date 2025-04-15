@@ -98,11 +98,11 @@ public class InsightController {
 
     @GetMapping("/related-search-range")
     @Operation(
-            summary = "Search articles by related keywords with date range",
-            description = "Search articles using main and related keywords between the specified startDate and endDate.",
+            summary = "관련 키워드로 기간 내 기사 검색",
+            description = "지정된 시작 날짜와 종료 날짜 사이에 주요 키워드 및 관련 키워드를 사용하여 기사를 검색합니다.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Successfully retrieved articles"),
-                    @ApiResponse(responseCode = "400", description = "Invalid parameters or date range")
+                    @ApiResponse(responseCode = "200", description = "기사 검색 성공"),
+                    @ApiResponse(responseCode = "400", description = "잘못된 매개변수 또는 날짜 범위")
             }
     )
     public ResponseEntity<String> searchRelatedKeywordsRange(

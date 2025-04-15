@@ -1,4 +1,4 @@
-package capstone.dbfis.chatbot.domain.insight.util;
+package capstone.dbfis.chatbot.domain.insight.config;
 
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;

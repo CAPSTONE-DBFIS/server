@@ -1,7 +1,7 @@
-package capstone.dbfis.chatbot.domain.trackingKeyword.controller;
+package capstone.dbfis.chatbot.domain.trackingkeyword.controller;
 
-import capstone.dbfis.chatbot.domain.trackingKeyword.dto.*;
-import capstone.dbfis.chatbot.domain.trackingKeyword.service.TrackingKeywordService;
+import capstone.dbfis.chatbot.domain.trackingkeyword.dto.*;
+import capstone.dbfis.chatbot.domain.trackingkeyword.service.TrackingKeywordService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
