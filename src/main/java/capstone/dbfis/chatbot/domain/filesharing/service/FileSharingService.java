@@ -1,7 +1,12 @@
 package capstone.dbfis.chatbot.domain.filesharing.service;
 
-import capstone.dbfis.chatbot.domain.member.entity.Member;
-import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import capstone.dbfis.chatbot.domain.filesharing.dto.FileDto;
+import capstone.dbfis.chatbot.domain.filesharing.dto.FolderDto;
+import capstone.dbfis.chatbot.domain.filesharing.dto.S3DownloadResult;
+import capstone.dbfis.chatbot.domain.filesharing.entity.File;
+import capstone.dbfis.chatbot.domain.filesharing.entity.Folder;
+import capstone.dbfis.chatbot.domain.filesharing.repository.FileRepository;
+import capstone.dbfis.chatbot.domain.filesharing.repository.FolderRepository;
 import capstone.dbfis.chatbot.domain.team.service.TeamService;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
@@ -9,156 +14,192 @@ import com.amazonaws.services.s3.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class FileSharingService {
+
     private final AmazonS3 amazonS3;
-    @Value("${aws.s3.bucket}")
-    private String bucketName;
     private final TeamService teamService;
-    private final MemberRepository memberRepository;
+    private final FolderRepository folderRepository;
+    private final FileRepository fileRepository;
+    private final RagService ragService;
 
+    @Value("${aws.s3.bucket}")
+    private String bucketName; // S3 버킷 이름
 
-    // 파일 업로드 메서드
-    public String uploadFile(MultipartFile file, Long teamId, String uploaderId) {
-        // 팀에 속해 있는지 검증
-        if (!teamService.isUserInTeam(teamId, uploaderId)) {
-            throw new IllegalArgumentException("사용자가 해당 팀에 속해있지 않습니다.");
-        }
-
-        String fileName = teamId + "/" + file.getOriginalFilename();  // 팀별 폴더에 저장
-
-        try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize()); // 파일 크기
-            metadata.setContentType(file.getContentType()); // 파일 타입
-            metadata.addUserMetadata("uploader", URLEncoder.encode(uploaderId, "UTF-8")); // 업로더 ID 추가: UTF-8로 인코딩하지 않을시 오류 발생
-
-            amazonS3.putObject(new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata));
-        } catch (IOException e) {
-            throw new IllegalStateException("파일 업로드 실패", e);
-        }
-
-        return amazonS3.getUrl(bucketName, fileName).toString();  // 파일 URL 반환
+    // 팀 접근 권한 체크 메서드
+    private void checkTeamAccess(Long teamId, String memberId) {
+        if (!teamService.isUserInTeam(teamId, memberId)) // 팀에 속한 멤버인지 확인
+            throw new IllegalArgumentException("팀 접근 권한이 없습니다.");
     }
 
-    // 파일 다운 메서드
-    public Resource downloadFile(Long teamId, String fileName, String downloaderId) {
-        // 팀에 속해 있는지 검증
-        if (!teamService.isUserInTeam(teamId, downloaderId)) {
-            throw new IllegalArgumentException("사용자가 해당 팀에 속해있지 않습니다.");
-        }
+    // 가상 폴더 생성
+    @Transactional
+    public FolderDto createFolder(Long teamId, Long parentId, String name, String memberId) {
+        // 팀 접근 권한 체크
+        checkTeamAccess(teamId, memberId);
 
-        try {
-            // 파일명 URL 디코딩
-            String decodedFileName = URLDecoder.decode(fileName, "UTF-8");
+        // 부모 폴더 조회
+        Folder parent = (parentId != null)
+                ? folderRepository.findById(parentId).orElseThrow(() -> new IllegalArgumentException("부모 폴더가 없습니다."))
+                : null;
 
-            // S3에서 파일 가져오기
-            S3Object s3Object = amazonS3.getObject(new GetObjectRequest(bucketName, decodedFileName));
+        Folder folder = Folder.builder()
+                .teamId(teamId)
+                .parent(parent) // 부모 폴더 설정 (nullable)
+                .name(name)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-            // S3 객체에서 InputStream을 가져오기
-            InputStream inputStream = s3Object.getObjectContent();
+        // DB 저장
+        folder = folderRepository.save(folder);
 
-            return new InputStreamResource(inputStream);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("파일명 URL 디코딩 실패", e);
-        }
+        return new FolderDto(folder.getId(), folder.getName(),
+                parent != null ? parent.getId() : null,
+                folder.getCreatedAt());
     }
 
-    // 파일의 Content-Type을 가져오는 메서드
-    public String getFileContentType(String fileName) {
-        try {
-            String decodedFileName = URLDecoder.decode(fileName, "UTF-8");
-            S3Object s3Object = amazonS3.getObject(new GetObjectRequest(bucketName, decodedFileName));
-            return s3Object.getObjectMetadata().getContentType();
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("파일명 URL 디코딩 실패", e);
-        }
+    // 하위 폴더 목록 조회 메서드
+    @Transactional(readOnly = true)
+    public List<FolderDto> listFolders(Long teamId, Long parentId, String memberId) {
+        // 팀 접근 권한 체크
+        checkTeamAccess(teamId, memberId);
+
+        List<Folder> folders = (parentId == null)
+                ? folderRepository.findByTeamIdAndParentIsNull(teamId) // 루트 폴더 조회
+                : folderRepository.findByTeamIdAndParentId(teamId, parentId); // 하위 폴더 조회
+
+        return folders.stream()
+                .map(f -> new FolderDto(
+                        f.getId(),
+                        f.getName(),
+                        f.getParent() != null ? f.getParent().getId() : null,
+                        f.getCreatedAt()))
+                .collect(Collectors.toList()); // FolderDto 리스트 반환
     }
 
-    // 버킷 내 파일 목록 가져오는 메서드
-    public List<Map<String, Object>> listFiles(Long teamId, String viewerId) {
-        // 팀에 속해 있는지 검증
-        if (!teamService.isUserInTeam(teamId, viewerId)) {
-            throw new IllegalArgumentException("사용자가 해당 팀에 속해있지 않습니다.");
-        }
+    // 팀 파일 업로드 (S3 + RAG + DB 저장)
+    @Transactional
+    public FileDto uploadTeamFile(MultipartFile file, Long teamId, Long folderId, String memberId) throws IOException {
+        // 팀 접근 권한 체크
+        checkTeamAccess(teamId, memberId);
 
-        String prefix = teamId + "/";  // 팀별 폴더 경로 지정
-        ListObjectsV2Request request = new ListObjectsV2Request()
-                .withBucketName(bucketName)
-                .withPrefix(prefix);
+        // 원본 파일명
+        String original = file.getOriginalFilename();
 
-        ListObjectsV2Result result = amazonS3.listObjectsV2(request);
-        List<S3ObjectSummary> summaries = result.getObjectSummaries();
+        // 중복 파일명 방지 처리
+        String key = teamId + "/" + folderId + "/" + resolveDuplicate(Objects.requireNonNull(original), teamId, folderId);
 
-        List<Map<String, Object>> fileList = new ArrayList<>();
-        for (S3ObjectSummary summary : summaries) {
-            Map<String, Object> fileMetadata = new HashMap<>();
-            fileMetadata.put("fileName", summary.getKey());  // 파일 이름
-            fileMetadata.put("size", summary.getSize());  // 파일 크기
-            fileMetadata.put("lastModified", summary.getLastModified());  // 마지막 수정 날짜
+        ObjectMetadata meta = new ObjectMetadata();
+        meta.setContentLength(file.getSize());
+        meta.setContentType(file.getContentType());
 
-            // 게시자 정보를 메타데이터에서 가져오기
-            ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, summary.getKey());
-            String uploaderId = metadata.getUserMetadata().get("uploader");
+        // S3 업로드
+        amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), meta));
 
-            // 게시자 이름 가져오기
-            String uploaderName = memberRepository.findById(uploaderId)
-                    .map(Member::getName)
-                    .orElse("undefined");  // 존재하지 않을 경우 undefined
+        // FastApi로 RAG 동기 요청
+        ragService.sendToRagSync("team", key, file.getBytes(), memberId, teamId);
 
-            fileMetadata.put("uploaderId", uploaderId);  // 게시자 ID
-            fileMetadata.put("uploaderName", uploaderName);  // 게시자 이름
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("업로드 대상 폴더가 없습니다."));
 
-            fileList.add(fileMetadata);
-        }
+        File entity = File.builder()
+                .teamId(teamId)
+                .folder(folder)
+                .s3Key(key)
+                .originalName(original)
+                .size(file.getSize())
+                .uploaderId(memberId)
+                .uploadedAt(LocalDateTime.now())
+                .build();
 
-        return fileList;
+        // DB에 파일 메타데이터 저장
+        entity = fileRepository.save(entity);
+
+        return new FileDto(entity.getId(), entity.getOriginalName(), entity.getSize(),
+                entity.getUploadedAt(), entity.getUploaderId(), 0); // 응답 DTO
     }
 
-    // 파일 삭제 메서드
-    public void deleteFile(Long teamId, String fileName, String requesterId) {
-        // 팀에 속해 있는지 확인
-        if (!teamService.isUserInTeam(teamId, requesterId)) {
-            throw new IllegalArgumentException("사용자가 해당 팀에 속해있지 않습니다.");
-        }
+    // 특정 폴더 내 파일 목록 조회
+    @Transactional(readOnly = true)
+    public List<FileDto> listFiles(Long teamId, Long folderId, String memberId, String sortDirection) {
+        // 팀 접근 권한 체크
+        checkTeamAccess(teamId, memberId);
 
-        // 메타데이터 가져오기
-        GetObjectMetadataRequest metadataRequest = new GetObjectMetadataRequest(bucketName, fileName);
-        ObjectMetadata metadata;
-        try {
-            metadata = amazonS3.getObjectMetadata(metadataRequest);
-        } catch (AmazonS3Exception e) {
-            throw new IllegalStateException("파일 메타데이터를 가져오는 중 오류 발생", e);
-        }
+        // Spring Data JPA 의 Sort 객체 생성
+        Sort sort = Sort.by("uploadedAt");
+        sort = "asc".equalsIgnoreCase(sortDirection) ? sort.ascending() : sort.descending();
 
-        // 파일 메타데이터에서 업로더 ID 확인
-        String uploaderId = metadata.getUserMetadata().get("uploader");
+        // repository 에 Sort 파라미터 넘기기
+        List<File> entities =
+                fileRepository.findByTeamIdAndFolderId(teamId, folderId, sort);
 
-        // 팀 리더이거나 게시자 본인만 삭제 가능
-        if (uploaderId.equals(requesterId) || teamService.isUserTeamLeader(teamId, requesterId)) {
-            // S3에서 파일 삭제
-            try {
-                amazonS3.deleteObject(new DeleteObjectRequest(bucketName, fileName));
-            } catch (AmazonS3Exception e) {
-                throw new IllegalStateException("파일 삭제 실패: S3에서 오류 발생", e);
-            }
-        } else {
-            throw new IllegalStateException("게시자 또는 팀 리더만 파일을 삭제할 수 있습니다.");
-        }
+        // DTO 변환
+        return entities.stream()
+                .map(e -> new FileDto(
+                        e.getId(),
+                        e.getOriginalName(),
+                        e.getSize(),
+                        e.getUploadedAt(),
+                        e.getUploaderId(),
+                        e.getDownloadCount()))
+                .collect(Collectors.toList());
     }
 
+    // 파일 다운로드
+    @Transactional
+    public S3DownloadResult downloadFile(Long teamId, Long fileId, String memberId) {
+        // 팀 접근 권한 체크
+        checkTeamAccess(teamId, memberId);
 
-    // 개인 트렌드 보고서 업로드 메서드
+        // DB에서 메타 조회
+        File entity = fileRepository.findById(fileId)
+                .orElseThrow(() -> new IllegalArgumentException("파일이 없습니다."));
+
+        // S3에서 객체 가져오기
+        S3Object obj = amazonS3.getObject(bucketName, entity.getS3Key());
+        String contentType = obj.getObjectMetadata().getContentType();
+        InputStreamResource resource = new InputStreamResource(obj.getObjectContent());
+
+        // 다운로드 카운트 증가 및 저장
+        entity.setDownloadCount(entity.getDownloadCount() + 1);
+        fileRepository.save(entity);
+
+        // Resource, Content-Type, 그리고 원본 이름을 함께 반환
+        return new S3DownloadResult(resource, contentType, entity.getOriginalName());
+    }
+
+    // 원본 파일명 반환 메서드 (다운로드 시 사용)
+    public String getOriginalName(Long fileId) {
+        return fileRepository.findById(fileId)
+                .map(File::getOriginalName)
+                .orElse(""); // 존재하지 않으면 빈 문자열
+    }
+
+    // 파일 삭제 (S3 + FastApi Milvus 파이프라인 + DB)
+    @Transactional
+    public void deleteFile(Long teamId, Long fileId, String memberId) {
+        checkTeamAccess(teamId, memberId); // 권한 체크
+
+        File e = fileRepository.findById(fileId)
+                .orElseThrow(() -> new IllegalArgumentException("파일이 없습니다."));
+
+        amazonS3.deleteObject(bucketName, e.getS3Key()); // S3 삭제
+        ragService.deleteTeamFileEmbeddingSync(e.getOriginalName(), teamId); // RAG에서 삭제
+        fileRepository.deleteById(fileId); // DB에서 삭제
+    }
+
+    // 개인 트렌드 보고서 업로드
     public String uploadPublicReport(MultipartFile file) {
         String key = "reports/" + file.getOriginalFilename();
 
@@ -167,20 +208,89 @@ public class FileSharingService {
         metadata.setContentType(file.getContentType());
 
         try {
-            amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata));
-            return key;
+            amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata)); // 업로드
+            return key; // 저장된 키 반환
         } catch (IOException e) {
-            throw new RuntimeException("파일 업로드 실패", e);
+            throw new RuntimeException("공개 리포트 업로드 실패", e);
         }
     }
-    // 트렌드 보고서 presigned url 생성 메서드
-    public String generatePresignedUrl(String key) {
-        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7);  // 링크 7일 유효
+
+    // 챗봇 tool - 트렌드 보고서용 presigned URL 생성
+    public String generatePublicReportPresignedUrl(String key) {
+        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7); // 7일 유효
+
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, key)
                 .withMethod(HttpMethod.GET)
                 .withExpiration(expiration);
+
         return amazonS3.generatePresignedUrl(request).toString();
     }
+
+    // 중복된 파일명 방지 로직
+    private String resolveDuplicate(String original, Long teamId, Long folderId) {
+        String base = original, ext = "";
+        int dot = original.lastIndexOf('.');
+
+        if (dot >= 0) {
+            base = original.substring(0, dot);
+            ext = original.substring(dot);
+        }
+
+        String key = teamId + "/" + folderId + "/" + original;
+        int cnt = 1;
+
+        while (amazonS3.doesObjectExist(bucketName, key)) {
+            String name = String.format("%s(%d)%s", base, cnt++, ext);  // ex. 파일(1).pdf
+            key = teamId + "/" + folderId + "/" + name;
+        }
+
+        // 중복 방지 처리된 파일명 반환
+        return key.substring((teamId + "/" + folderId + "/").length());
+    }
+
+    // 전체 경로에서 가장 많이 다운된 파일 4개를 반환하는 메서드
+    @Transactional(readOnly = true)
+    public List<FileDto> recommendFiles(Long teamId, String memberId) {
+        checkTeamAccess(teamId, memberId);
+        List<File> top = fileRepository
+                .findTop4ByTeamIdOrderByDownloadCountDesc(teamId);
+        return top.stream()
+                .map(e -> new FileDto(
+                        e.getId(),
+                        e.getOriginalName(),
+                        e.getSize(),
+                        e.getUploadedAt(),
+                        e.getUploaderId(),
+                        e.getDownloadCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteFolder(Long teamId, Long folderId, String memberId) {
+        // 접근 권한 검사
+        checkTeamAccess(teamId, memberId);
+
+        // 폴더 존재 확인
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("삭제할 폴더가 없습니다."));
+
+        // 이 폴더에 속한 파일 먼저 삭제 (S3, RAG, DB)
+        List<File> files = fileRepository.findByTeamIdAndFolderId(teamId, folderId, null);
+        for (File f : files) {
+            // S3 삭제
+            amazonS3.deleteObject(bucketName, f.getS3Key());
+            // Milvus(RAG) 삭제
+            ragService.deleteTeamFileEmbeddingSync(f.getOriginalName(), teamId);
+        }
+        fileRepository.deleteAll(files);
+
+        // 자식 폴더들을 재귀적으로 삭제
+        List<Folder> children = folderRepository.findByParentId(folderId);
+        for (Folder child : children) {
+            deleteFolder(teamId, child.getId(), memberId);
+        }
+
+        // 해당 폴더를 DB에서 삭제
+        folderRepository.delete(folder);
+    }
 }
-
-

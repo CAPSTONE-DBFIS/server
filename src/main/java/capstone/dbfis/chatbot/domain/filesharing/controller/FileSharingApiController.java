@@ -1,21 +1,21 @@
 package capstone.dbfis.chatbot.domain.filesharing.controller;
 
+import capstone.dbfis.chatbot.domain.filesharing.dto.CreateFolderRequest;
+import capstone.dbfis.chatbot.domain.filesharing.dto.FileDto;
+import capstone.dbfis.chatbot.domain.filesharing.dto.FolderDto;
 import capstone.dbfis.chatbot.domain.filesharing.service.FileSharingService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.util.Map;
-import java.util.HashMap;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -26,81 +26,136 @@ public class FileSharingApiController {
     private final FileSharingService fileSharingService;
     private final TokenProvider tokenProvider;
 
-    // 파일 업로드
-    @PostMapping("/upload")
-    @Operation(summary = "파일 업로드",
-            description = "JWT 토큰을 통해 사용자의 팀 접근 권한을 검증하고, 해당 팀의 파일을 S3에 업로드합니다. 업로드된 파일은 팀별로 폴더에 저장되며, 파일의 메타데이터에는 업로더의 정보가 포함됩니다. 업로드가 성공하면 파일 URL이 반환됩니다.")
-    public ResponseEntity<String> uploadFile(@RequestHeader("Authorization") String token,
-                                             @RequestParam("file") MultipartFile file,
-                                             @RequestParam("teamId") Long teamId) {
-        String uploaderId = tokenProvider.getMemberId(token);
-        try {
-            String fileUrl = fileSharingService.uploadFile(file, teamId, uploaderId);
-            return ResponseEntity.ok("파일 업로드 성공: " + fileUrl);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 업로드 실패: " + e.getMessage());
-        }
+    @PostMapping("/folders")
+    @Operation(summary = "새 폴더 생성",
+            description = "지정된 팀(teamId) 내에서 parentId 하위에 새로운 가상 폴더를 생성합니다.\n" +
+                        "1) Authorization 헤더의 토큰으로 사용자 권한을 확인합니다.\n" +
+                        "2) 팀에 속한 멤버만 폴더를 생성할 수 있습니다.\n" +
+                        "3) 생성된 폴더의 ID, 이름, 부모 ID, 생성 시간이 반환됩니다.")
+    public ResponseEntity<FolderDto> createFolder(@RequestHeader("Authorization") String auth,
+                                                  @RequestBody CreateFolderRequest req) {
+        String userId = tokenProvider.getMemberId(auth);
+        FolderDto folder = fileSharingService.createFolder(req.getTeamId(), req.getParentId(), req.getName(), userId);
+        return ResponseEntity.ok(folder);
     }
 
-    // 팀 파일 목록 조회
-    @GetMapping("/list")
-    @Operation(summary = "팀 파일 목록 조회",
-            description = "JWT 토큰을 통해 사용자의 팀 접근 권한을 검증하고, 해당 팀의 파일 목록을 조회합니다. 파일 목록에는 파일 이름, 크기, 마지막 수정 날짜, 게시자 ID 및 게시자 이름 등이 포함됩니다. 사용자는 팀에 속해 있어야만 파일 목록을 조회할 수 있습니다.")
-    public ResponseEntity<List<Map<String, Object>>> listFiles(@RequestHeader("Authorization") String token, @RequestParam Long teamId) {
-        String viewerId = tokenProvider.getMemberId(token);
-        List<Map<String, Object>> files = fileSharingService.listFiles(teamId, viewerId);
+    @DeleteMapping("/folders")
+    @Operation(
+            summary = "폴더 및 하위 항목 삭제",
+            description = "지정된 팀(teamId)과 폴더(folderId)에 대해 해당 폴더와 그 하위 모든 파일·폴더를 재귀적으로 삭제합니다.\n" +
+                    "1) S3 스토리지, Milvus 벡터 스토어, DB 메타 데이터를 모두 제거합니다.\n" +
+                    "2) 권한이 없는 사용자는 접근할 수 없습니다."
+    )
+    public ResponseEntity<Void> deleteFolder(@RequestHeader("Authorization") String auth,
+                                             @RequestParam Long teamId,
+                                             @RequestParam Long folderId) {
+        String userId = tokenProvider.getMemberId(auth);
+        fileSharingService.deleteFolder(teamId, folderId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/folders")
+    @Operation(
+            summary = "폴더 목록 조회",
+            description = "주어진 팀(teamId)의 특정 parentId 하위에 있는 모든 가상 폴더 목록을 반환합니다.\n" +
+                    "parentId가 null이면 루트 폴더만, 인증된 사용자만 접근 가능합니다."
+    )
+    public ResponseEntity<List<FolderDto>> listFolders(@RequestHeader("Authorization") String auth,
+                                                       @RequestParam Long teamId,
+                                                       @RequestParam(required = false) Long parentId) {
+        String userId = tokenProvider.getMemberId(auth);
+        List<FolderDto> list = fileSharingService.listFolders(teamId, parentId, userId);
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping
+    @Operation(
+            summary = "파일 목록 조회",
+            description = "팀(teamId)과 폴더(folderId)에 속한 모든 파일의 메타 정보를 조회합니다.\n" +
+                    "sort 파라미터(asc/desc)로 업로드 날짜 기준 정렬 가능(기본: desc).\n" +
+                    "ID, 원본 이름, 크기, 업로드 시간, 업로더 ID, 다운로드 횟수를 반환합니다."
+    )
+    public ResponseEntity<List<FileDto>> listFiles(@RequestHeader("Authorization") String auth,
+                                                   @RequestParam Long teamId,
+                                                   @RequestParam(required = false) Long folderId,
+                                                   @RequestParam(defaultValue = "desc") String sort) {
+        String userId = tokenProvider.getMemberId(auth);
+        List<FileDto> files = fileSharingService.listFiles(teamId, folderId, userId, sort);
         return ResponseEntity.ok(files);
     }
 
-    // 파일 다운로드
-    @GetMapping("/download")
-    @Operation(summary = "팀 파일 다운로드",
-            description = "JWT 토큰을 통해 사용자의 팀 접근 권한을 검증하고, 해당 팀의 파일을 다운로드합니다. 다운로드 시 파일 이름을 URL 인코딩하여 전송하며, 파일은 'Content-Disposition' 헤더를 통해 자동으로 다운로드됩니다.")
-    public ResponseEntity<Resource> downloadFile(@RequestHeader("Authorization") String token,
-                                                 @RequestParam String fileName,
-                                                 @RequestParam Long teamId) {
-        String downloaderId = tokenProvider.getMemberId(token);
-        // s3에서 파일 가져오기
-        Resource resource = fileSharingService.downloadFile(teamId, fileName, downloaderId);
-        // 파일의 content type 가져오기
-        String contentType = fileSharingService.getFileContentType(fileName);
-        try {
-            String encodedFileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
-                    .header(HttpHeaders.CONTENT_TYPE, contentType)
-                    .body(resource);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("파일명 URL 인코딩 실패", e);
-        }
+    @PostMapping("/upload")
+    @Operation(
+            summary = "파일 업로드",
+            description = "사용자가 선택한 문서 파일을 지정된 팀(teamId)과 폴더(folderId)에 업로드합니다.\n" +
+                    "1) S3에 파일 저장\n" +
+                    "2) FastAPI 서버에 임베딩 변환 요청\n" +
+                    "3) Milvus 벡터 스토어에 임베딩 저장\n" +
+                    "4) DB에 메타 정보 저장\n" +
+                    "성공 시 FileDto 반환."
+    )
+
+    public ResponseEntity<FileDto> uploadFile(@RequestHeader("Authorization") String auth,
+                                              @RequestParam Long teamId,
+                                              @RequestParam Long folderId,
+                                              @RequestParam("file") MultipartFile file) throws Exception {
+        String userId = tokenProvider.getMemberId(auth);
+        FileDto dto = fileSharingService.uploadTeamFile(file, teamId, folderId, userId);
+        return ResponseEntity.ok(dto);
     }
 
-    // 파일 삭제
-    @DeleteMapping("/delete")
-    @Operation(summary = "파일 삭제",
-            description = "JWT 토큰을 통해 사용자의 팀 접근 권한을 검증하고, 해당 팀의 파일을 삭제합니다. 파일 삭제는 파일의 업로더 ID 또는 팀 리더 권한을 가진 사용자만 할 수 있습니다. 삭제 성공 시 파일이 시스템에서 제거됩니다.")
-    public ResponseEntity<Map<String, String>> deleteFile(@RequestHeader("Authorization") String token,
-                                                          @RequestParam Long teamId,
-                                                          @RequestParam String fileName) {
-        String requesterId = tokenProvider.getMemberId(token);
-        Map<String, String> response = new HashMap<>();
-        try {
-            // 파일 이름 URL 디코딩
-            String decodedFileName = URLDecoder.decode(fileName, "UTF-8");
 
-            // s3에서 파일 삭제
-            fileSharingService.deleteFile(teamId, decodedFileName, requesterId);
-            response.put("message", "파일 삭제 성공");
-            return ResponseEntity.ok(response);
-        } catch (UnsupportedEncodingException e) {
-            response.put("message", "파일 이름 디코딩 실패");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        } catch (IllegalStateException e) {
-            response.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-        } catch (Exception e) {
-            response.put("message", "파일 삭제 실패: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
+
+    @GetMapping("/download")
+    @Operation(
+            summary = "파일 다운로드",
+            description = "1) S3에서 fileId에 해당하는 파일을 읽어옵니다.\n" +
+                    "2) DB의 다운로드 카운트를 1 증가시킵니다.\n" +
+                    "3) Content-Disposition 헤더에 원본 파일명을 설정하여 다운로드를 제공합니다."
+    )
+    public ResponseEntity<Resource> downloadFile(@RequestHeader("Authorization") String auth,
+                                                 @RequestParam Long teamId,
+                                                 @RequestParam Long fileId) throws Exception {
+        String userId = tokenProvider.getMemberId(auth);
+        var result = fileSharingService.downloadFile(teamId, fileId, userId);
+        // 파일명 URL 인코딩
+        String encodedName = URLEncoder
+                .encode(result.originalFilename(), StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                // Content-Type 헤더 설정
+                .contentType(MediaType.parseMediaType(result.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
+                .body(result.resource());
+    }
+
+    @DeleteMapping("/delete")
+    @Operation(
+            summary = "파일 삭제",
+            description = "지정된 파일(fileId)을 S3, Milvus, RDB에서 모두 삭제합니다.\n" +
+                    "1) S3 객체 삭제\n" +
+                    "2) Milvus 임베딩 삭제\n" +
+                    "3) DB 메타 삭제"
+    )
+    public ResponseEntity<Void> deleteFile(@RequestHeader("Authorization") String auth,
+                                           @RequestParam Long teamId,
+                                           @RequestParam Long fileId) {
+        String userId = tokenProvider.getMemberId(auth);
+        fileSharingService.deleteFile(teamId, fileId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/recommend")
+    @Operation(
+            summary = "추천 파일 조회",
+            description = "팀(teamId) 저장소에서 다운로드 수 상위 4개의 파일을 조회하여 반환합니다.\n" +
+                    "사용자가 가장 자주 다운로드한 주요 파일을 빠르게 확인할 수 있습니다."
+    )
+    public ResponseEntity<List<FileDto>> recommendFiles(@RequestHeader("Authorization") String auth,
+                                                        @RequestParam Long teamId) {
+        String memberId = tokenProvider.getMemberId(auth);
+        List<FileDto> recs = fileSharingService.recommendFiles(teamId, memberId);
+        return ResponseEntity.ok(recs);
     }
 }
