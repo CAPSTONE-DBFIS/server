@@ -22,7 +22,7 @@ public class PublicReportController {
     @Operation(summary = "트렌드 리포트 업로드", description = "새로운 트렌드 리포트를 업로드합니다.")
     public ResponseEntity<Map<String, String>> uploadReport(@RequestParam("file") MultipartFile file) {
         String key = fileSharingService.uploadPublicReport(file);
-        String url = fileSharingService.generatePresignedUrl(key);
+        String url = fileSharingService.generatePublicReportPresignedUrl(key);
         return ResponseEntity.ok(Map.of("url", url));
     }
 }
