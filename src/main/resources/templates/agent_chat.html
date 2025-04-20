@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+  <!-- SSE 폴리필 추가 -->
+  <script src="https://unpkg.com/event-source-polyfill/dist/event-source-polyfill.min.js"></script>
   <style>
     /* 기본 스타일 */
     * {
@@ -413,6 +415,47 @@
     .copy-btn:active {
       background-color: #005f8c;
     }
+
+    .initial-plan {
+      background-color: #e0f7fa;
+      color: #006064;
+      font-style: italic;
+      padding: 4px 8px;
+      border-radius: 8px;
+      margin: 4px 0;
+    }
+    .search-query {
+      background-color: #fff3e0;
+      color: #ef6c00;
+      padding: 4px 8px;
+      border-radius: 8px;
+      margin: 4px 0;
+    }
+    .search-result {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    .links {
+      margin: 4px 0;
+    }
+    .links a {
+      color: #1e88e5;
+      text-decoration: none;
+      margin-right: 10px;
+    }
+    .links a:hover {
+      text-decoration: underline;
+    }
+    .reasoning-intent {
+      background-color: #f3e5f5;
+      color: #6a1b9a;
+      padding: 6px 10px;
+      border-radius: 8px;
+      margin: 6px 0;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -444,6 +487,7 @@
     <div class="chat-input">
       <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
       <button onclick="sendMessage()">전송</button>
+      <button id="researchBtn" onclick="startResearch()">리서치</button>
     </div>
   </div>
 </div>
@@ -668,19 +712,20 @@
       return;
     }
 
+    // 사용자가 보낸 메시지 화면에 추가
     displayMessage(message, "user");
     input.value = "";
 
+    // 로딩 스피너 표시
     const loading = showLoadingSpinner();
 
     try {
-      const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/agent-query`, {
-        method: "POST",
+      const encodedQuery = encodeURIComponent(message);
+      const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/agent-query?query=${encodedQuery}`, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ query: message })
+        }
       });
 
       if (!response.ok) {
@@ -689,7 +734,9 @@
         return;
       }
 
+      // 스피너 제거
       removeLoadingSpinner(loading);
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       const chatBox = document.getElementById('messagesContainer');
@@ -697,6 +744,7 @@
       let fullResponse = "";
       let finalMessage = "";
 
+      // 봇 응답 말풍선 준비
       const wrapper = document.createElement('div');
       wrapper.classList.add('message-wrapper', 'bot');
       const bubble = document.createElement('div');
@@ -706,63 +754,143 @@
       chatBox.scrollTop = chatBox.scrollHeight;
 
       let done = false;
+      let buffer = ""; // 👈 누적 버퍼
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
 
         if (value) {
-          const chunk = decoder.decode(value, { stream: true }).trim();
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
 
-          // 여러 개의 JSON이 붙어서 올 경우를 방지하기 위해 {} 단위로 분할
-          const jsonMatches = chunk.match(/({.*?})(?=\s*{|\s*$)/gs); // g: 전역, s: 줄바꿈 포함
+          // `\n\n` 기준으로 나눔 (FastAPI SSE 기본 형식)
+          let parts = buffer.split("\n\n");
 
-          if (!jsonMatches) continue;
+          // 마지막은 아직 미완성일 수 있으므로 버퍼에 남겨둠
+          buffer = parts.pop();
 
-          // 기존 for 루프 내에서 JSON 처리 부분 수정
-          for (const jsonStr of jsonMatches) {
+          for (const part of parts) {
+            const clean = part.replace(/^data:\s*/, "").trim();
+            if (!clean) continue;
+
             try {
-              const json = JSON.parse(jsonStr);
+              const json = JSON.parse(clean);
 
               if (json.token) {
                 fullResponse += json.token;
                 bubble.innerHTML = markdownToHTML(fullResponse);
                 chatBox.scrollTop = chatBox.scrollHeight;
+                addCopyButtonsToElement(bubble);
 
-                addCopyButtonsToElement(bubble); // bubble 요소만 확인
+              } else if (json.thoughts) {
+                json.thoughts.forEach(step => {
+                  const stepDiv = document.createElement("div");
+                  stepDiv.classList.add("intermediate-log");
+                  stepDiv.textContent = `[생각] ${typeof step === "string" ? step : JSON.stringify(step)}`;
+                  bubble.appendChild(stepDiv);
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                });
+
               } else if (json.final) {
                 finalMessage = json.final;
                 if (fullResponse.trim() !== finalMessage.trim()) {
                   console.warn("⚠️ token 누적값과 final 불일치:", fullResponse, finalMessage);
                 }
-                // 최종 응답은 이미 token 누적으로 보여주고 있으므로 따로 업데이트하지 않음
+
+              } else if (json.initial_plan) {
+                const planDiv = document.createElement("div");
+                planDiv.classList.add("initial-plan");
+                planDiv.textContent = `초기 계획: ${json.initial_plan}`;
+                bubble.appendChild(planDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
 
               } else if (json.tool_start) {
-                // 도구 호출 메시지를 회색 로그 형태로 말풍선 내부에 추가 (DOM 요소로 생성)
-                const toolLog = document.createElement("div");
-                toolLog.classList.add("agent-log");
-                toolLog.innerHTML = `${json.tool_start} (입력: ${JSON.stringify(json.input)})`;
-                bubble.appendChild(toolLog);
+                const toolDiv = document.createElement("div");
+                toolDiv.classList.add("tool-log", "tool-start");
+                toolDiv.textContent = `${json.tool_start}`;
+                bubble.appendChild(toolDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
+
+              } else if (json.search_query) {
+                const queryDiv = document.createElement("div");
+                queryDiv.classList.add("search-query");
+                queryDiv.textContent = `검색 쿼리: ${json.search_query}`;
+                bubble.appendChild(queryDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+              } else if (json.search_result) {
+                const resultDiv = document.createElement("div");
+                resultDiv.classList.add("search-result");
+                resultDiv.textContent = `검색 결과: ${json.search_result}`;
+                bubble.appendChild(resultDiv);
+                if (json.links) {
+                  const linksDiv = document.createElement("div");
+                  linksDiv.classList.add("links");
+                  json.links.forEach(link => {
+                    const a = document.createElement("a");
+                    a.href = link;
+                    a.target = "_blank";
+                    a.textContent = link;
+                    linksDiv.appendChild(a);
+                  });
+                  bubble.appendChild(linksDiv);
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
+
               } else if (json.log) {
-                // 중간 추론 로그를 회색 글씨로 말풍선 내부에 추가 (DOM 요소로 생성)
-                const intermediateLog = document.createElement("div");
-                intermediateLog.classList.add("agent-log");
-                intermediateLog.innerHTML = `${json.log}`;
-                bubble.appendChild(intermediateLog);
+                const logDiv = document.createElement("div");
+                logDiv.classList.add("agent-log");
+                logDiv.textContent = json.log;
+                bubble.appendChild(logDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
-            }
-            catch (e) {
-              console.warn("JSON 파싱 실패:", jsonStr);
+
+            } catch (e) {
+              console.warn("JSON 파싱 실패:", clean);
             }
           }
         }
       }
+
     } catch (error) {
       console.error("스트리밍 응답 처리 오류:", error);
       alert(`서버와 연결할 수 없습니다.\n오류 메시지: ${error.message}`);
     }
+  }
+
+  function startResearch() {
+    const query = document.getElementById('userInput').value.trim();
+    if (!query) {
+      return alert('리서치할 내용을 입력하세요');
+    }
+    const token = getAuthToken();
+    if (!token) {
+      return alert('로그인이 필요합니다.');
+    }
+
+    const chatBox = document.getElementById('messagesContainer');
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('message-wrapper', 'bot');
+    const bubble = document.createElement('div');
+    bubble.classList.add('message', 'bot');
+    wrapper.appendChild(bubble);
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const url = `/api/chatbot/multi/stream?topic=${encodeURIComponent(query)}&steps=3&top_k=5`;
+    const evt = new EventSourcePolyfill(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    evt.onmessage = e => {
+      bubble.innerHTML += e.data + '<br>';
+      chatBox.scrollTop = chatBox.scrollHeight;
+    };
+    evt.onerror = err => {
+      console.error('리서치 SSE 오류:', err);
+      evt.close();
+    };
   }
 
   function markdownToHTML(markdown) {
