@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     List<TeamMember> findByTeam_Id(Long teamId); // 특정 팀에 속한 모든 멤버를 조회
+    List<TeamMember> findByMember_Id(String memberId);
     Optional<TeamMember> findByTeam_IdAndMember_Id(Long teamId, String memberId); // 팀 id와 멤버 id로 특정 팀에 속한 멤버를 조회
     boolean existsByTeam_IdAndMember_Id(Long teamId, String memberId); // 팀 id와 멤버 id로 특정 팀에 멤버가 속해 있는지 확인
     long countByTeam_Id(Long teamId); // 특정 팀에 속한 멤버 수를 반환

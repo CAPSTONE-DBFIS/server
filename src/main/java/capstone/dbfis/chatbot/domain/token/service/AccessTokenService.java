@@ -32,7 +32,7 @@ public class AccessTokenService {
         // 멤버 ID를 사용하여 멤버 정보를 조회
         Member member = memberService.findById(memberId);
 
-        // 멤버 정보를 기반으로 새로운 액세스 토큰 생성 및 반환 (2시간 유효)
-        return tokenProvider.generateToken(member, Duration.ofHours(2));
+        // 멤버 정보를 기반으로 새로운 액세스 토큰 생성 및 반환
+        return tokenProvider.generateToken(member, Duration.ofDays(365));
     }
 }

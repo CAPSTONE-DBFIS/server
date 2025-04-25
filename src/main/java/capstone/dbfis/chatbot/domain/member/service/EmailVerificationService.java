@@ -53,7 +53,7 @@ public class EmailVerificationService {
     }
 
     // 회원가입 이메일 전송 메서드
-    private void sendSignUpMail(String email, String verificationCode) {
+    public void sendSignUpMail(String email, String verificationCode) {
         MimeMessage message = javaMailSender.createMimeMessage();
         try {
             message.setFrom(senderEmail);

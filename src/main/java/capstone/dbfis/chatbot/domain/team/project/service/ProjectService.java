@@ -1,15 +1,18 @@
 package capstone.dbfis.chatbot.domain.team.project.service;
 
-import capstone.dbfis.chatbot.domain.team.entity.Team;
-import capstone.dbfis.chatbot.domain.team.entity.TeamMember;
+import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
 import capstone.dbfis.chatbot.domain.team.project.dto.UpdateProjectRequest;
 import capstone.dbfis.chatbot.domain.team.project.entity.Project;
 import capstone.dbfis.chatbot.domain.team.project.repository.ProjectRepository;
+import capstone.dbfis.chatbot.domain.team.entity.Team;
+import capstone.dbfis.chatbot.domain.team.entity.TeamMember;
 import capstone.dbfis.chatbot.domain.team.repository.TeamMemberRepository;
 import capstone.dbfis.chatbot.domain.team.repository.TeamRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -84,5 +87,23 @@ public class ProjectService {
         }
 
         projectRepository.delete(project);
+    }
+
+    @Transactional
+    public List<ProjectResponse> getProjectsByMember(String memberId) {
+        List<Team> teams = teamMemberRepository.findByMember_Id(memberId)
+                .stream()
+                .map(TeamMember::getTeam)
+                .toList();
+
+        return teams.stream()
+                .flatMap(team -> projectRepository.findByTeam_Id(team.getId()).stream())
+                .map(project -> new ProjectResponse(
+                        project.getId(),
+                        project.getName(),
+                        project.getDescription(),
+                        project.getTeam().getId()
+                ))
+                .toList();
     }
 }
