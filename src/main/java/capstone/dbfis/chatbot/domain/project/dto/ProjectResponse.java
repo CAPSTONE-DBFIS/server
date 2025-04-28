@@ -1,8 +1,10 @@
-package capstone.dbfis.chatbot.domain.team.project.dto;
+package capstone.dbfis.chatbot.domain.project.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDate;
 
 @AllArgsConstructor
 @Getter
@@ -12,4 +14,6 @@ public class ProjectResponse {
     private String name;
     private String description;
     private Long teamId;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

@@ -1,5 +1,5 @@
-package capstone.dbfis.chatbot.domain.team.project.repository;
-import capstone.dbfis.chatbot.domain.team.project.entity.Project;
+package capstone.dbfis.chatbot.domain.project.repository;
+import capstone.dbfis.chatbot.domain.project.entity.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
