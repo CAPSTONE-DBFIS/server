@@ -1,6 +1,6 @@
 package capstone.dbfis.chatbot.domain.member.dto;
 
-import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
 import lombok.*;
 
 import java.util.List;
@@ -10,6 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class MyPageResponse {
+    private String id;
     private String name;
     private String nickname;
     private String phone;

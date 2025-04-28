@@ -15,11 +15,8 @@ public class HomeController {
         return "mypage";
     }
 
-    @GetMapping("/upload")
-    public String uploadPage() { return "upload"; }
-
     @GetMapping("/file-list")
-    public String fileListPage() { return "file-list"; }
+    public String fileListPage() { return "file-sharing"; }
 
     @GetMapping("/chat")
     public String chatPage() {
