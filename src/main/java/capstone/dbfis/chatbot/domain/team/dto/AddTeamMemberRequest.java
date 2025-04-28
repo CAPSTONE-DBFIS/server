@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class AddTeamMemberRequest {  // 이름 변경
+public class AddTeamMemberRequest {
     private String memberId;
     private String role;
     private String teamRole;
