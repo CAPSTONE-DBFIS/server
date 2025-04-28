@@ -28,11 +28,6 @@ public class HomeController {
         return "agent_chat";
     }
 
-    @GetMapping("/graph_chat")
-    public String graphPage() {
-        return "graph_chat";
-    }
-
     @GetMapping("/tracking")
     public String trackingPage() { return "tracking"; }
 

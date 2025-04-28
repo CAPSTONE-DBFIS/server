@@ -7,7 +7,6 @@ import capstone.dbfis.chatbot.domain.project.entity.Project;
 import capstone.dbfis.chatbot.domain.project.service.ProjectService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
