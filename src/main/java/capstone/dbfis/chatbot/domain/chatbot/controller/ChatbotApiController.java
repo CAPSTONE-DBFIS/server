@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -137,6 +138,7 @@ public class ChatbotApiController {
     public Flux<String> proxyStream(
             @PathVariable @Min(1) Long chatroomId,
             @RequestParam @NotBlank String query,
+            @RequestParam(required = false) Long personaId,
             @RequestHeader("Authorization") @NotBlank String token) {
 
         String memberId = tokenProvider.getMemberId(token);
@@ -149,12 +151,13 @@ public class ChatbotApiController {
                 .bodyValue(Map.of(
                         "query", query,
                         "chat_room_id", chatroomId,
-                        "member_id", memberId))
+                        "member_id", memberId,
+                        "persona_id", personaId))
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(),
+                .onStatus(HttpStatusCode::is4xxClientError,
                         resp -> resp.bodyToMono(String.class)
                                 .map(msg -> new ResponseStatusException(resp.statusCode(), "FAST API 4xx 오류: " + msg)))
-                .onStatus(status -> status.is5xxServerError(),
+                .onStatus(HttpStatusCode::is5xxServerError,
                         resp -> Mono.error(new ResponseStatusException(
                                 HttpStatus.BAD_GATEWAY, "FAST API 5xx 오류")))
                 .bodyToFlux(String.class)
