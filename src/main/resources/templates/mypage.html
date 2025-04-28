@@ -163,6 +163,10 @@
                 <input type="text" id="edit-project-name" class="form-control">
                 <label>프로젝트 설명</label>
                 <input type="text" id="edit-project-description" class="form-control">
+                <label>시작일</label>
+                <input type="date" id="edit-project-start" class="form-control">
+                <label>종료일</label>
+                <input type="date" id="edit-project-end" class="form-control">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="updateProject()">저장</button>
@@ -186,6 +190,7 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById("user-info").innerHTML = `
+                <strong>ID:</strong> ${data.id} <br>
                 <strong>이름:</strong> ${data.name} <br>
                 <strong>닉네임:</strong> ${data.nickname} <br>
                 <strong>부서:</strong> ${data.department} <br>
@@ -253,10 +258,32 @@
 
                     <!-- 프로젝트 생성 -->
                     <div class="mt-4">
-                        <h6>프로젝트 생성</h6>
-                        <input type="text" id="project-name-${team.teamId}" class="form-control mb-2" placeholder="프로젝트 이름">
-                        <input type="text" id="project-description-${team.teamId}" class="form-control mb-2" placeholder="프로젝트 설명">
-                        <button class="btn btn-info btn-sm btn-block" onclick="createProject(${team.teamId})">프로젝트 생성</button>
+                      <h6>프로젝트 생성</h6>
+                      <input
+                        type="text"
+                        id="project-name-${team.teamId}"
+                        class="form-control mb-2"
+                        placeholder="프로젝트 이름">
+                      <input
+                        type="text"
+                        id="project-description-${team.teamId}"
+                        class="form-control mb-2"
+                        placeholder="프로젝트 설명">
+                      <label>시작일</label>
+                      <input
+                        type="date"
+                        id="project-start-${team.teamId}"
+                        class="form-control mb-2">
+                      <label>종료일</label>
+                      <input
+                        type="date"
+                        id="project-end-${team.teamId}"
+                        class="form-control mb-2">
+                      <button
+                        class="btn btn-info btn-sm btn-block"
+                        onclick="createProject(${team.teamId})">
+                        프로젝트 생성
+                      </button>
                     </div>
                     `;
 
@@ -268,14 +295,26 @@
                                 <ul class="list-group">
                                     ${team.projects.map(project => `
                                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>${project.name}</strong>
-                                                <p class="mb-0 text-muted">${project.description}</p>
-                                            </div>
-                                            <div>
-                                                <button class="btn btn-sm btn-warning mr-2" onclick="showEditProjectModal(${project.id}, '${project.name}', '${project.description}')">수정</button>
-                                                <button class="btn btn-sm btn-danger" onclick="deleteProject(${project.id})">삭제</button>
-                                            </div>
+                                          <div>
+                                            <strong>${project.name}</strong>
+                                            <p class="mb-0 text-muted">${project.description}</p>
+                                            <small class="text-muted">
+                                              시작: ${project.startDate} | 종료: ${project.endDate}
+                                            </small>
+                                          </div>
+                                          <div>
+                                            <button class="btn btn-sm btn-warning mr-2"
+                                                    onclick="showEditProjectModal(
+                                                      ${project.id},
+                                                      '${project.name}',
+                                                      '${project.description}',
+                                                      '${project.startDate}',
+                                                      '${project.endDate}'
+                                                    )">
+                                              수정
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteProject(${project.id})">삭제</button>
+                                          </div>
                                         </li>
                                     `).join('')}
                                 </ul>
@@ -558,12 +597,14 @@
     }
 
     function createProject(teamId) {
-        const token = localStorage.getItem("accessToken");
-        const name = document.getElementById(`project-name-${teamId}`).value.trim();
+        const token       = localStorage.getItem("accessToken");
+        const name        = document.getElementById(`project-name-${teamId}`).value.trim();
         const description = document.getElementById(`project-description-${teamId}`).value.trim();
+        const startDate   = document.getElementById(`project-start-${teamId}`).value;
+        const endDate     = document.getElementById(`project-end-${teamId}`).value;
 
-        if (!name || !description ) {
-            alert("프로젝트 이름, 설명을 모두 입력하세요.");
+        if (!name || !description || !startDate || !endDate) {
+            alert("프로젝트 이름, 설명, 시작일, 종료일을 모두 입력하세요.");
             return;
         }
 
@@ -571,21 +612,23 @@
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Content-Type":  "application/json"
             },
             body: JSON.stringify({
-                teamId: teamId,
-                name: name,
+                teamId:      teamId,
+                name:        name,
                 description: description,
+                startDate:   startDate,   // 추가
+                endDate:     endDate      // 추가
             })
         })
             .then(response => {
-                if (!response.ok) return response.text().then(err => { throw new Error(err); });
+                if (!response.ok) return response.text().then(err => { throw new Error(err) });
                 return response.json();
             })
             .then(data => {
                 alert("프로젝트가 생성되었습니다.");
-                console.log(data); // 생성된 프로젝트 정보
+                console.log(data);
                 window.location.reload();
             })
             .catch(error => {
@@ -593,21 +636,25 @@
             });
     }
 
-    function showEditProjectModal(projectId, name, description) {
-        document.getElementById("edit-project-id").value = projectId;
-        document.getElementById("edit-project-name").value = name;
+    function showEditProjectModal(id, name, description, startDate, endDate) {
+        document.getElementById("edit-project-id").value          = id;
+        document.getElementById("edit-project-name").value        = name;
         document.getElementById("edit-project-description").value = description;
+        document.getElementById("edit-project-start").value       = startDate || '';
+        document.getElementById("edit-project-end").value         = endDate   || '';
         $('#editProjectModal').modal('show');
     }
 
     function updateProject() {
-        const token = localStorage.getItem("accessToken");
-        const projectId = document.getElementById("edit-project-id").value;
-        const name = document.getElementById("edit-project-name").value.trim();
+        const token       = localStorage.getItem("accessToken");
+        const projectId   = document.getElementById("edit-project-id").value;
+        const name        = document.getElementById("edit-project-name").value.trim();
         const description = document.getElementById("edit-project-description").value.trim();
+        const startDate   = document.getElementById("edit-project-start").value;
+        const endDate     = document.getElementById("edit-project-end").value;
 
-        if (!name || !description) {
-            alert("프로젝트 이름과 설명을 모두 입력하세요.");
+        if (!name || !description || !startDate || !endDate) {
+            alert("모든 필드를 입력하세요.");
             return;
         }
 
@@ -615,9 +662,14 @@
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Content-Type":  "application/json"
             },
-            body: JSON.stringify({ name, description })
+            body: JSON.stringify({
+                name:        name,
+                description: description,
+                startDate:   startDate,
+                endDate:     endDate
+            })
         })
             .then(response => {
                 if (!response.ok) return response.text().then(err => { throw new Error(err); });
@@ -628,7 +680,7 @@
                 window.location.reload();
             })
             .catch(error => {
-                alert("🚫 프로젝트 수정 실패: " + error.message);
+                alert("프로젝트 수정 실패: " + error.message);
             });
     }
 

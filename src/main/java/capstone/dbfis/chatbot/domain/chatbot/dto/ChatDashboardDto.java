@@ -1,6 +1,6 @@
 package capstone.dbfis.chatbot.domain.chatbot.dto;
 
-import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
 import lombok.*;
 
 import java.util.List;

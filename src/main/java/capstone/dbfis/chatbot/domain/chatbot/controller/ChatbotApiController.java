@@ -7,24 +7,33 @@ import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
 import capstone.dbfis.chatbot.domain.chatbot.service.ChatMessageService;
 import capstone.dbfis.chatbot.domain.chatbot.service.ChatRoomService;
-import capstone.dbfis.chatbot.domain.team.project.dto.ProjectResponse;
-import capstone.dbfis.chatbot.domain.team.project.service.ProjectService;
+import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.project.service.ProjectService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Validated
 @RestController
 @RequestMapping("/api/chatbot")
+@Tag(name = "Chatbot API", description = "챗봇 API")
 @RequiredArgsConstructor
 public class ChatbotApiController {
     private final ProjectService projectService;
@@ -38,16 +47,12 @@ public class ChatbotApiController {
 
     @Operation(summary = "챗봇 대시보드", description = "사용자가 속해있는 프로젝트, 프로젝트별 채팅방, 개인 채팅방을 조회합니다.")
     @GetMapping("/dashboard")
-    public ChatDashboardDto getDashboard(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<ChatDashboardDto> getDashboard(
+            @RequestHeader("Authorization") @NotBlank String token) {
         String memberId = tokenProvider.getMemberId(token);
 
-        // 사용자가 속해있는 프로젝트 조회
         List<ProjectResponse> projects = projectService.getProjectsByMember(memberId);
-
-        // 사용자가 속해있는 모든 채팅방 조회
         List<ChatRoom> rooms = chatRoomService.getChatRoomsByMemberId(memberId);
-
-        // ChatRoom → ChatRoomDto 변환
         List<ChatRoomDto> roomDtos = rooms.stream()
                 .map(r -> ChatRoomDto.builder()
                         .id(r.getId())
@@ -57,80 +62,101 @@ public class ChatbotApiController {
                         .build())
                 .toList();
 
-        // 프로젝트별 채팅방 매핑
         Map<Long, List<ChatRoomDto>> projectChatrooms = roomDtos.stream()
                 .filter(dto -> dto.getProjectId() != null)
                 .collect(Collectors.groupingBy(ChatRoomDto::getProjectId));
-
-        // 개인용 채팅방 필터링
         List<ChatRoomDto> personalRooms = roomDtos.stream()
                 .filter(dto -> dto.getProjectId() == null)
-                .collect(Collectors.toList());
+                .toList();
 
-        // 최종 DTO 반환
-        return ChatDashboardDto.builder()
+        ChatDashboardDto dto = ChatDashboardDto.builder()
                 .projects(projects)
                 .projectChatrooms(projectChatrooms)
                 .personalChatrooms(personalRooms)
                 .build();
+
+        return ResponseEntity.ok(dto);
     }
 
-    @PostMapping("/chatroom")
     @Operation(summary = "새로운 채팅방 생성", description = "새로운 채팅방을 생성합니다.")
+    @PostMapping("/chatroom")
     public ResponseEntity<ChatRoomDto> createChatRoom(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") @NotBlank String token,
             @RequestParam ChatRoomType type,
-            @RequestParam(required = false) Long projectId) {
+            @RequestParam(required = false) @Min(1) Long projectId) {
+
         String memberId = tokenProvider.getMemberId(token);
         ChatRoom chatRoom = chatRoomService.createChatRoom(memberId, type, projectId);
-        ChatRoomDto chatRoomDto = ChatRoomDto.builder()
+        ChatRoomDto dto = ChatRoomDto.builder()
                 .id(chatRoom.getId())
                 .name(chatRoom.getName())
                 .type(chatRoom.getType())
                 .projectId(chatRoom.getProjectId())
                 .build();
-        return ResponseEntity.ok(chatRoomDto);
+
+        return ResponseEntity.status(201).body(dto); // 201 Created
     }
 
-    @PatchMapping("/chatroom/{chatroomId}/rename")
     @Operation(summary = "채팅방 이름 수정", description = "채팅방의 이름을 수정합니다.")
-    public ResponseEntity<String> renameChatRoom(@PathVariable Long chatroomId, @RequestParam String newChatroomName,
-                                                 @RequestHeader("Authorization") String token) {
+    @PatchMapping("/chatroom/{chatroomId}/rename")
+    public ResponseEntity<Void> renameChatRoom(
+            @PathVariable @Min(1) Long chatroomId,
+            @RequestParam @NotBlank String newChatroomName,
+            @RequestHeader("Authorization") @NotBlank String token) {
+
         String memberId = tokenProvider.getMemberId(token);
         chatRoomService.updateChatRoomName(memberId, chatroomId, newChatroomName);
-        return ResponseEntity.ok("채팅방 이름이 성공적으로 수정되었습니다.");
+        return ResponseEntity.noContent().build();   // 204 No Content
     }
 
-    @DeleteMapping("/chatroom/{chatroomId}")
     @Operation(summary = "채팅방 삭제", description = "해당 채팅방과 메시지를 모두 삭제합니다.")
-    public void deleteChatRoom(@RequestHeader("Authorization") String token, @PathVariable Long chatroomId) {
+    @DeleteMapping("/chatroom/{chatroomId}")
+    public ResponseEntity<Void> deleteChatRoom(
+            @PathVariable @Min(1) Long chatroomId,
+            @RequestHeader("Authorization") @NotBlank String token) {
+
         String memberId = tokenProvider.getMemberId(token);
         chatRoomService.deleteChatRoomAndMessages(chatroomId, memberId);
+        return ResponseEntity.noContent().build();   // 204 No Content
     }
 
-    @GetMapping("/chatroom/{chatroomId}/messages")
     @Operation(summary = "특정 채팅방의 메시지 조회", description = "특정 채팅방의 메시지 리스트를 조회합니다.")
-    public List<ChatMessage> getChatMessages(
-            @RequestHeader("Authorization") String token,
-            @PathVariable Long chatroomId) {
+    @GetMapping("/chatroom/{chatroomId}/messages")
+    public ResponseEntity<List<ChatMessage>> getChatMessages(
+            @PathVariable @Min(1) Long chatroomId,
+            @RequestHeader("Authorization") @NotBlank String token) {
+
         String memberId = tokenProvider.getMemberId(token);
-        ChatRoom chatRoom = chatRoomService.getChatRoomByIdAndMemberId(chatroomId, memberId);
-        return chatMessageService.getMessagesByChatRoom(chatRoom);
+        ChatRoom room = chatRoomService.getChatRoomByIdAndMemberId(chatroomId, memberId);
+        List<ChatMessage> messages = chatMessageService.getMessagesByChatRoom(room);
+        return ResponseEntity.ok(messages);
     }
 
+    @Operation(summary = "에이전트 스트리밍 쿼리 프록시", description = "FastAPI SSE 스트림을 프록시합니다.")
     @GetMapping(value = "/chatroom/{chatroomId}/agent-query", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> proxyStream(@PathVariable Long chatroomId,
-                                    @RequestParam String query,
-                                    @RequestHeader("Authorization") String authHeader) {
-        String memberId = tokenProvider.getMemberId(authHeader);
+    public Flux<String> proxyStream(
+            @PathVariable @Min(1) Long chatroomId,
+            @RequestParam @NotBlank String query,
+            @RequestHeader("Authorization") @NotBlank String token) {
+
+        String memberId = tokenProvider.getMemberId(token);
 
         return webClient.post()
                 .uri(fastapiUrl + "/agent/query")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.TEXT_EVENT_STREAM)
-                .header("Authorization", authHeader)
-                .bodyValue(Map.of("query", query, "chat_room_id", chatroomId, "member_id", memberId))
+                .header("Authorization", token)
+                .bodyValue(Map.of(
+                        "query", query,
+                        "chat_room_id", chatroomId,
+                        "member_id", memberId))
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                        resp -> resp.bodyToMono(String.class)
+                                .map(msg -> new ResponseStatusException(resp.statusCode(), "FAST API 4xx 오류: " + msg)))
+                .onStatus(status -> status.is5xxServerError(),
+                        resp -> Mono.error(new ResponseStatusException(
+                                HttpStatus.BAD_GATEWAY, "FAST API 5xx 오류")))
                 .bodyToFlux(String.class)
                 .filter(line -> !line.isBlank() && !line.equals("data: [DONE]"));
     }
