@@ -63,16 +63,6 @@
                             <input type="text" class="form-control" name="role" required>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label text-white">Interests</label>
-                            <input type="text" class="form-control" name="interests">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-white">Persona Preset</label>
-                            <input type="number" class="form-control" name="persona_preset">
-                        </div>
-
                         <button type="submit" class="btn btn-primary">회원 가입</button>
                     </form>
                 </div>
@@ -96,13 +86,17 @@
 </section>
 
 <script>
+    let currentSignupId = ""; // 여기에 회원가입할 때 입력한 ID 저장
+
     $(document).ready(function () {
         // 회원가입 폼 제출
         $('#signupForm').on('submit', function (e) {
             e.preventDefault();
 
+            currentSignupId = $('input[name="id"]').val(); // 아이디 저장
+
             var formData = {
-                id: $('input[name="id"]').val(),
+                id: currentSignupId,
                 password: $('input[name="password"]').val(),
                 name: $('input[name="name"]').val(),
                 email: $('input[name="email"]').val(),
@@ -110,13 +104,11 @@
                 nickname: $('input[name="nickname"]').val(),
                 department: $('input[name="department"]').val(),
                 role: $('input[name="role"]').val(),
-                interests: $('input[name="interests"]').val(),
-                persona_preset: $('input[name="persona_preset"]').val()
             };
 
             $.ajax({
                 type: 'POST',
-                url: 'api/signup',
+                url: '/api/signup',
                 contentType: 'application/json',
                 data: JSON.stringify(formData),
                 success: function () {
@@ -138,19 +130,17 @@
 
             $.ajax({
                 type: 'POST',
-                url: 'api/verify-email',
-                data: { verificationCode: verificationCode },
-                success: function (response) {
-                    alert(response);
+                url: `/api/verify-signup?memberId=${encodeURIComponent(currentSignupId)}&verificationCode=${encodeURIComponent(verificationCode)}`,
+                success: function () {
+                    alert('인증 완료! 로그인 페이지로 이동합니다.');
                     window.location.href = '/login';
                 },
                 error: function () {
-                    alert('인증번호 검증에 실패했습니다.');
+                    alert('인증번호가 올바르지 않습니다.');
                 }
             });
         });
     });
 </script>
-
 </body>
 </html>

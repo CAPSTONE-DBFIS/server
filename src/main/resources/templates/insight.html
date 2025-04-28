@@ -180,32 +180,35 @@
 </div>
 
 <script>
-    // 전역 변수 설정
-    let dailyChart = null,
-        dailyRelatedChart = null,
-        weeklyChart = null,
-        weeklyRelatedChart = null,
-        wordCloudInstance = null,
-        currentDailyKeyword = '',
-        currentWeeklyKeyword = '',
-        currentRelatedKeyword = '',
-        currentSearchPage = 0,
-        DAILY_DATA = [],
-        WEEKLY_DATA = {};  // { range_start, range_end, keywords: [] }
-
+    // 전역 변수 선언
     const PAGE_SIZE = 10;
+    let ALL_ARTICLES = [];
+    let displayedCount = 0;
 
-    // 기존 단일 날짜 API 호출 함수 (일간 데이터)
+    let dailyChart = null;
+    let dailyRelatedChart = null;
+    let weeklyChart = null;
+    let weeklyRelatedChart = null;
+    let wordCloudInstance = null;
+
+    let currentDailyKeyword = '';
+    let currentWeeklyKeyword = '';
+    let currentRelatedKeyword = '';
+
+    let DAILY_DATA = [];
+    let WEEKLY_DATA = {};
+
+    // 일간 키워드 데이터 조회
     async function fetchDailyData(date) {
-        const response = await fetch(`http://localhost:8080/api/insight?date=${date}`);
-        const data = await response.json();
+        const res = await fetch(`http://localhost:8080/api/insight?date=${date}`);
+        const data = await res.json();
         return data.top_keywords || [];
     }
 
-    // 주간 데이터 API 호출 함수
+    // 주간 키워드 데이터 조회
     async function fetchWeeklyData(date) {
-        const response = await fetch(`http://localhost:8080/api/insight/weekly?date=${date}`);
-        const data = await response.json();
+        const res = await fetch(`http://localhost:8080/api/insight/weekly?date=${date}`);
+        const data = await res.json();
         return {
             range_start: data.range_start,
             range_end: data.range_end,
@@ -213,16 +216,108 @@
         };
     }
 
-    // 새 범위 기반 기사 API 호출 함수 (새 엔드포인트 연동)
-    async function fetchRelatedArticlesRange(keyword, relatedKeyword, startDate, endDate, page = 0) {
+    // 관련 기사 전체 목록을 한 번에 가져오기
+    async function fetchRelatedArticles(keyword, relatedKeyword, startDate, endDate) {
         try {
-            const response = await fetch(`http://localhost:8080/api/insight/related-search-range?keyword=${keyword}&relatedKeyword=${relatedKeyword}&startDate=${startDate}&endDate=${endDate}&page=${page}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
+            const url = `http://localhost:8080/api/insight/related-search-range`
+                + `?keyword=${encodeURIComponent(keyword)}`
+                + `&relatedKeyword=${encodeURIComponent(relatedKeyword)}`
+                + `&startDate=${startDate}`
+                + `&endDate=${endDate}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(res.statusText);
+            const data = await res.json();
             return data.hits || [];
-        } catch (error) {
-            console.error("Failed to fetch related articles (range):", error);
+        } catch (e) {
+            console.error("관련 기사 조회 실패:", e);
             return [];
+        }
+    }
+
+    // 모달에 기사 목록을 렌더링
+    function renderModalArticles(append = false) {
+        const container = document.getElementById("modal-articles");
+        if (!append) {
+            container.innerHTML = "";
+            displayedCount = Math.min(PAGE_SIZE, ALL_ARTICLES.length);
+        }
+
+        const slice = ALL_ARTICLES.slice(append ? displayedCount - PAGE_SIZE : 0, displayedCount);
+        slice.forEach(article => {
+            const div = document.createElement("div");
+            div.style = "display:flex;align-items:center;margin-bottom:20px;padding:10px;border:1px solid #ddd;border-radius:10px;";
+            div.innerHTML = `
+                ${article.image_url ? `<img src="${article.image_url}" style="width:200px;height:150px;object-fit:cover;border-radius:8px;margin-right:20px;">` : ""}
+                <div style="flex:1">
+                    <h3 style="cursor:pointer;" onclick="window.open('${article.url}','_blank')">${article.title}</h3>
+                    <p style="font-size:13px;color:#999;margin-bottom:10px;">
+                        언론사: ${article.media_company} | 게시일: ${article.date}
+                    </p>
+                    <p style="font-size:14px;color:#555;">${article.highlights.join(' ')}</p>
+                </div>`;
+            container.appendChild(div);
+        });
+
+        // 더보기 버튼 관리
+        let btn = document.getElementById("load-more-btn");
+        if (displayedCount < ALL_ARTICLES.length) {
+            if (!btn) {
+                btn = document.createElement("button");
+                btn.id = "load-more-btn";
+                btn.textContent = "더보기";
+                btn.style = "background:#5B55D7;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;margin-top:10px;";
+                btn.onclick = () => {
+                    displayedCount = Math.min(displayedCount + PAGE_SIZE, ALL_ARTICLES.length);
+                    renderModalArticles(true);
+                };
+                container.appendChild(btn);
+            }
+        } else if (btn) {
+            btn.remove();
+        }
+    }
+
+    // 모달 열기
+    function openArticlesModal(startDate, endDate) {
+        fetchRelatedArticles(currentDailyKeyword, currentRelatedKeyword, startDate, endDate)
+            .then(hits => {
+                ALL_ARTICLES = hits;
+                renderModalArticles(false);
+                document.getElementById("article-modal").style.display = "block";
+            });
+    }
+
+    function closeModal() {
+        document.getElementById("article-modal").style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById('date').value = new Date(Date.now() - 86400000)
+            .toISOString().split('T')[0];
+        loadAllData();
+
+        document.querySelector(".close-btn").addEventListener("click", closeModal);
+        window.addEventListener("click", e => {
+            if (e.target.id === "article-modal") closeModal();
+        });
+    });
+
+    // 전체 데이터 로드
+    async function loadAllData() {
+        const date = document.getElementById('date').value;
+        DAILY_DATA = await fetchDailyData(date);
+        renderDailyKeywordChart(DAILY_DATA);
+        if (DAILY_DATA.length > 0) {
+            currentDailyKeyword = DAILY_DATA[0].keyword;
+            renderDailyRelatedChart(DAILY_DATA[0].relatedKeywords);
+            renderWordCloud(currentDailyKeyword, DAILY_DATA[0].relatedKeywords);
+        }
+
+        WEEKLY_DATA = await fetchWeeklyData(date);
+        renderWeeklyKeywordChart(WEEKLY_DATA);
+        if (WEEKLY_DATA.keywords.length > 0) {
+            currentWeeklyKeyword = WEEKLY_DATA.keywords[0].keyword;
+            renderWeeklyRelatedChart(WEEKLY_DATA.keywords[0].relatedKeywords);
         }
     }
 

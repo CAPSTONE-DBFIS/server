@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
-  <!-- SSE 폴리필 추가 -->
   <script src="https://unpkg.com/event-source-polyfill/dist/event-source-polyfill.min.js"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <style>
-    /* 기본 스타일 */
     * {
       margin: 0;
       padding: 0;
@@ -26,9 +25,6 @@
       overflow: hidden;
     }
 
-    /* ===================================
-       상단바 (Header)
-    =================================== */
     .header {
       background: white;
       display: flex;
@@ -51,7 +47,6 @@
       cursor: pointer;
     }
 
-    /* 네비게이션 메뉴 */
     .nav-menu {
       display: flex;
       list-style: none;
@@ -69,7 +64,6 @@
       color: #0a192f;
     }
 
-    /* 사용자 메뉴 */
     .user-menu {
       display: flex;
       align-items: center;
@@ -100,20 +94,16 @@
       color: #0a192f;
     }
 
-    /* ===================================
-       전체 레이아웃 (메인 컨테이너)
-    =================================== */
     .container {
       display: flex;
       flex: 1;
       width: 100%;
       height: 100vh;
-      margin-top: 70px; /* 상단바 높이만큼 아래로 내리기 */
+      margin-top: 70px;
+      margin-left: 0;
+      margin-right: 0;
     }
 
-    /* ===================================
-       사이드바
-    =================================== */
     .sidebar {
       width: 250px;
       background: #0a192f;
@@ -122,7 +112,7 @@
       flex-direction: column;
       padding: 20px;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-      height: calc(100vh - 70px); /* 상단바 제외 */
+      height: calc(100vh - 70px);
       position: relative;
     }
 
@@ -132,14 +122,12 @@
       font-weight: 600;
     }
 
-    /* 채팅방 목록 */
     .chatroom-list {
       flex-grow: 1;
       overflow-y: auto;
-      padding-bottom: 60px; /* 버튼 공간 확보 */
+      padding-bottom: 60px;
     }
 
-    /* 채팅방 항목 */
     .chatroom-item {
       padding: 12px;
       background: #1a2b50;
@@ -150,13 +138,15 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
     }
 
-    .chatroom-item:hover, .chatroom-item.active {
+    .chatroom-item:hover,
+    .chatroom-item.active {
       background: #0088cc;
     }
 
-    /* 채팅방 삭제 버튼 */
     .chatroom-item button {
       background: transparent;
       border: none;
@@ -170,7 +160,92 @@
       color: #ff2222;
     }
 
-    /* 새 채팅방 버튼 */
+    .chatroom-name {
+      flex: 1;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chatroom-name-input {
+      flex: 1;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+      outline: none;
+      background: #fff;
+      color: #333;
+    }
+
+    .edit-btn {
+      background: transparent;
+      border: none;
+      color: #00aaff;
+      font-size: 1.2em;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .edit-btn:hover {
+      color: #0077aa;
+    }
+
+    .save-btn {
+      background: transparent;
+      border: none;
+      color: #00aaff;
+      font-size: 1.2em;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .save-btn:hover {
+      color: #0077aa;
+    }
+
+    .project-label {
+      font-weight: bold;
+      margin-top: 15px;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    .project-label:hover {
+      background: #1a2b50;
+    }
+
+    .project-label.active {
+      background: #0088cc;
+    }
+
+    .project-label .add-chatroom-btn {
+      background: #00aaff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .project-label .add-chatroom-btn:hover {
+      background: #0077aa;
+    }
+
     .new-chatroom-btn {
       background: #00aaff;
       color: white;
@@ -192,20 +267,17 @@
       background: #0077aa;
     }
 
-    /* ===================================
-       채팅창
-    =================================== */
     .chat-container {
       flex: 1;
       display: flex;
       flex-direction: column;
       background: white;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      margin: auto;
-      max-width: 700px;
+      border-radius: 0;
+      box-shadow: none;
+      margin: 0 auto;
       height: calc(100vh - 70px);
+      max-width: 900px;
     }
 
     .chat-header {
@@ -215,7 +287,6 @@
       color: #333;
     }
 
-    /* 채팅 메시지 박스 */
     .chat-box {
       flex: 1;
       overflow-y: auto;
@@ -228,7 +299,6 @@
       min-height: 100px;
     }
 
-    /* 입력창 */
     .chat-input {
       display: flex;
       margin-top: 10px;
@@ -262,9 +332,6 @@
       background-color: #021024;
     }
 
-    /* ===================================
-       메시지 스타일
-    =================================== */
     .messages-container {
       display: flex;
       flex-direction: column;
@@ -276,6 +343,7 @@
       display: flex;
       justify-content: flex-start;
       width: 100%;
+      margin-bottom: 15px;
     }
 
     .message-wrapper.user {
@@ -283,14 +351,14 @@
     }
 
     .message {
-      max-width: 60%;
       min-width: 120px;
       padding: 12px 16px;
       border-radius: 15px;
       font-size: 1rem;
       word-wrap: break-word;
-      white-space: pre-wrap;
+      white-space: normal;
       display: inline-block;
+      overflow-wrap: break-word;
     }
 
     .message.user {
@@ -307,9 +375,6 @@
       border-bottom-left-radius: 5px;
     }
 
-    /* ===================================
-       로딩 스피너
-    =================================== */
     .loading-spinner {
       width: 24px;
       height: 24px;
@@ -326,30 +391,57 @@
       100% { transform: rotate(360deg); }
     }
 
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
     .tool-log {
-      font-size: 0.85em;
-      margin: 4px 0;
-      padding: 4px 8px;
+      margin-top: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+      background: #f5f5f5;
       border-radius: 8px;
-      width: fit-content;
-      max-width: 90%;
-      word-wrap: break-word;
+      padding: 8px 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .tool-start {
-      background-color: #e1f5fe;
-      color: #0277bd;
+      color: #0288d1;
+      position: relative;
+      font-weight: 600;
+    }
+    .tool-start::before {
+      content: "⚙️";
+      margin-right: 6px;
+      font-size: 1rem;
     }
 
-    .tool-end {
-      background-color: #e8f5e9;
-      color: #2e7d32;
+    .search-query {
+      color: #388e3c;
+      background: #e8f5e9;
+      border-left: 4px solid #388e3c;
+      padding: 6px 10px;
+      border-radius: 4px;
+    }
+    .search-query::before {
+      content: "🔍";
+      margin-right: 6px;
     }
 
-    .intermediate-log {
-      background-color: #f5f5f5;
-      color: #757575;
-      font-style: italic;
+    .search-result {
+      color: #7b1fa2;
+      background: #f3e5f5;
+      border-left: 4px solid #ce93d8;
+      padding: 6px 10px;
+      border-radius: 4px;
+    }
+    .search-result::before {
+      content: "📊";
+      margin-right: 6px;
     }
 
     .agent-log {
@@ -360,17 +452,23 @@
       line-height: 1.4;
       word-break: break-word;
       white-space: pre-wrap;
-      opacity: 0; /* 시작 시 투명 */
+      opacity: 0;
       animation: fadeIn 0.5s ease forwards;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
+    .links {
+      margin-top: 8px;
     }
-
-    .fade-in {
-      animation: fadeIn 0.5s ease forwards;
+    .links a {
+      display: block;
+      color: #0288d1;
+      text-decoration: none;
+      margin: 4px 0;
+      transition: color 0.3s ease;
+    }
+    .links a:hover {
+      color: #005f8c;
+      text-decoration: underline;
     }
 
     .chat-box pre {
@@ -416,45 +514,59 @@
       background-color: #005f8c;
     }
 
-    .initial-plan {
-      background-color: #e0f7fa;
-      color: #006064;
-      font-style: italic;
-      padding: 4px 8px;
+    .chat-box table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      max-width: 100%;
+      margin: 12px 0;
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       border-radius: 8px;
-      margin: 4px 0;
+      overflow: hidden;
+      table-layout: auto;
     }
-    .search-query {
-      background-color: #fff3e0;
-      color: #ef6c00;
-      padding: 4px 8px;
-      border-radius: 8px;
-      margin: 4px 0;
+
+    .chat-box th,
+    .chat-box td {
+      border: none;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.95em;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
-    .search-result {
-      background-color: #e8f5e9;
-      color: #2e7d32;
-      padding: 4px 8px;
-      border-radius: 8px;
+
+    .chat-box th {
+      background-color: #0a192f;
+      color: white;
+      font-weight: 600;
     }
-    .links {
-      margin: 4px 0;
+
+    .chat-box td {
+      background-color: #fff;
+      border-bottom: 1px solid #eee;
     }
-    .links a {
-      color: #1e88e5;
-      text-decoration: none;
-      margin-right: 10px;
+
+    .chat-box tr:last-child td {
+      border-bottom: none;
     }
-    .links a:hover {
-      text-decoration: underline;
+
+    .math-block {
+      text-align: center;
+      margin: 16px 0;
+      font-size: 1.1em;
+      line-height: 1.6;
+      display: inline-block;
+      white-space: nowrap;
+      font-family: 'Nunito', sans-serif;
     }
-    .reasoning-intent {
-      background-color: #f3e5f5;
-      color: #6a1b9a;
-      padding: 6px 10px;
-      border-radius: 8px;
-      margin: 6px 0;
-      font-weight: 500;
+
+    .MathJax, .MathJax_Display {
+      display: inline-block !important;
+      white-space: nowrap !important;
+      font-family: 'Nunito', sans-serif !important;
     }
   </style>
 </head>
@@ -473,278 +585,468 @@
   </div>
 </header>
 <div class="container">
-  <!-- 좌측 사이드바 -->
   <div class="sidebar">
     <h2>채팅방 목록</h2>
     <div class="chatroom-list" id="chatroomList"></div>
-    <button class="new-chatroom-btn" onclick="createNewChatroom()">+ 새 채팅방</button>
+    <button class="new-chatroom-btn" onclick="ChatApp.createNewPersonalChatroom()">+ 개인 채팅방</button>
   </div>
-
-  <!-- 채팅창 -->
   <div class="chat-container">
     <div class="chat-header">TRENDB</div>
     <div class="chat-box" id="messagesContainer"></div>
     <div class="chat-input">
       <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
-      <button onclick="sendMessage()">전송</button>
-      <button id="researchBtn" onclick="startResearch()">리서치</button>
+      <button onclick="ChatApp.sendMessage()">전송</button>
     </div>
   </div>
 </div>
 
-<script>
-  function getAuthToken() {
-    return localStorage.getItem("accessToken");
-  }
-
-  async function getNewAccessToken() {
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (!refreshToken) { logout(); return null; }
-
-    try {
-      const response = await fetch("http://localhost:8080/api/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (!response.ok) { logout(); return null; }
-
-      const data = await response.json();
-      localStorage.setItem("accessToken", data.accessToken);
-      return data.accessToken;
-    } catch (error) { logout(); return null; }
-  }
-
-  async function requestWithAuth(url, options = {}) {
-    let token = getAuthToken();
-    options.headers = options.headers || {};
-    options.headers["Authorization"] = `Bearer ${token}`;
-
-    let response = await fetch(url, options);
-    if (response.status === 401) {
-      token = await getNewAccessToken();
-      if (!token) return response;
-      options.headers["Authorization"] = `Bearer ${token}`;
-      response = await fetch(url, options);
+<script th:inline="none">
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      processEscapes: true,
+    },
+    chtml: {
+      fontURL: 'https://fonts.googleapis.com/css_SD2?family=Nunito:wght@300;400;600&display=swap',
+      fontFamily: 'Nunito, sans-serif'
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+      ignoreHtmlClass: 'tex2jax_ignore',
+    },
+    startup: {
+      ready: () => {
+        MathJax.startup.defaultReady();
+      }
     }
-    return response;
-  }
+  };
 
-  async function loadChatrooms() {
-    const token = getAuthToken();
-    if (!token) return alert("로그인이 필요합니다.");
+  const ChatApp = {
+    currentChatroomId: null,
+    selectedProjectId: null,
+    editingChatroomId: null,
 
-    const response = await requestWithAuth('http://localhost:8080/api/chatbot/chatrooms', {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`채팅방 로딩 실패: ${errorText}`);
-    }
+    getAuthToken() {
+      return localStorage.getItem("accessToken");
+    },
 
-    const chatrooms = await response.json();
-    const chatroomList = document.getElementById('chatroomList');
-    chatroomList.innerHTML = '';
-
-    chatrooms.forEach(chatroom => {
-      const div = document.createElement('div');
-      div.classList.add('chatroom-item');
-      div.setAttribute("data-chatroom-id", chatroom.id);
-      div.style.display = "flex";
-      div.style.alignItems = "center";
-      div.style.justifyContent = "space-between";
-
-      const chatroomText = document.createElement('span');
-      chatroomText.textContent = `채팅방 #${chatroom.id}`;
-      chatroomText.style.flex = "1";
-      chatroomText.style.cursor = "pointer";
-      chatroomText.onclick = () => loadChatMessages(chatroom.id);
-
-      // 삭제 버튼 추가 (아이콘 형태 개선)
-      const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-      deleteBtn.style.marginLeft = "10px";
-      deleteBtn.style.cursor = "pointer";
-      deleteBtn.style.border = "none";
-      deleteBtn.style.background = "transparent";
-      deleteBtn.style.color = "#ff4d4d";
-      deleteBtn.style.fontSize = "1.2em";
-      deleteBtn.style.padding = "5px";
-      deleteBtn.onclick = (event) => {
-        event.stopPropagation(); // 채팅방 클릭 이벤트 방지
-        deleteChatRoom(chatroom.id);
-      };
-
-      div.appendChild(chatroomText);
-      div.appendChild(deleteBtn);
-      chatroomList.appendChild(div);
-    });
-  }
-
-  async function deleteChatRoom(chatroomId) {
-    const token = getAuthToken();
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-
-    if (!confirm("이 채팅방과 관련된 모든 메시지가 삭제됩니다. 계속하시겠습니까?")) {
-      return;
-    }
-
-    try {
-      const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
+    async getNewAccessToken() {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        this.logout();
+        return null;
+      }
+      try {
+        const response = await fetch("http://localhost:8080/api/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!response.ok) {
+          this.logout();
+          return null;
         }
-      });
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.accessToken);
+        return data.accessToken;
+      } catch (error) {
+        this.logout();
+        return null;
+      }
+    },
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`채팅방 삭제 실패: ${errorText}`);
+    async requestWithAuth(url, options = {}) {
+      let token = this.getAuthToken();
+      options.headers = { ...options.headers, "Authorization": `Bearer ${token}` };
+      let response = await fetch(url, options);
+      if (response.status === 401) {
+        token = await this.getNewAccessToken();
+        if (!token) return response;
+        options.headers["Authorization"] = `Bearer ${token}`;
+        response = await fetch(url, options);
+      }
+      return response;
+    },
+
+    logout() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/login";
+    },
+
+    async loadSidebar() {
+      const res = await this.requestWithAuth("http://localhost:8080/api/chatbot/dashboard");
+      if (!res.ok) {
+        console.error("사이드바 로드 실패:", await res.text());
+        return;
+      }
+      const { projects, projectChatrooms, personalChatrooms } = await res.json();
+      const chatroomList = document.getElementById('chatroomList');
+      chatroomList.innerHTML = '';
+
+      if (projects.length) {
+        const projectsLabel = document.createElement('div');
+        projectsLabel.textContent = "프로젝트";
+        projectsLabel.style.fontWeight = "bold";
+        projectsLabel.style.marginTop = "15px";
+        chatroomList.appendChild(projectsLabel);
       }
 
-      alert("채팅방과 관련된 모든 메시지가 삭제되었습니다.");
-      loadChatrooms(); // 채팅방 목록 갱신
-    } catch (error) {
-      console.error("채팅방 삭제 오류:", error);
-      alert(`채팅방을 삭제할 수 없습니다.\n오류 메시지: ${error.message}`);
-    }
-  }
+      projects.forEach(project => {
+        const projectLabel = document.createElement('div');
+        projectLabel.className = 'project-label';
 
-  async function loadChatMessages(chatroomId) {
-    const token = getAuthToken();
-    if (!token) return alert("로그인이 필요합니다.");
+        const projectNameSpan = document.createElement('span');
+        projectNameSpan.textContent = `📁 ${project.name}`;
+        projectNameSpan.style.flex = '1';
+        projectNameSpan.style.cursor = 'pointer';
+        projectNameSpan.onclick = () => this.selectProject(project.id);
 
-    currentChatroomId = chatroomId;
-    document.querySelector('.chat-header').textContent = `채팅방 #${chatroomId}`;
-    document.querySelectorAll('.chatroom-item').forEach(item => item.classList.remove('active'));
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-chatroom-btn';
+        addBtn.textContent = '+';
+        addBtn.onclick = (e) => {
+          e.stopPropagation();
+          this.createNewChatroom(project.id);
+        };
 
-    const chatroomElement = document.querySelector(`[data-chatroom-id="${chatroomId}"]`);
-    if (chatroomElement) chatroomElement.classList.add('active');
+        projectLabel.appendChild(projectNameSpan);
+        projectLabel.appendChild(addBtn);
+        chatroomList.appendChild(projectLabel);
 
-    window.history.pushState(null, "", `/chat/${chatroomId}`);
-
-    try {
-      const response = await requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/messages`, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
+        const projectChats = projectChatrooms[project.id] || [];
+        projectChats.forEach(chat => {
+          chatroomList.appendChild(this.createChatroomItem(chat));
+        });
       });
 
-      if (!response.ok) throw new Error("채팅 메시지 불러오기 실패");
+      if (personalChatrooms.length) {
+        const personalLabel = document.createElement('div');
+        personalLabel.textContent = "개인 채팅";
+        personalLabel.style.fontWeight = "bold";
+        personalLabel.style.marginTop = "20px";
+        chatroomList.appendChild(personalLabel);
 
-      const messages = await response.json();
-      const chatBox = document.getElementById('messagesContainer');
-      chatBox.innerHTML = ''; // 이전 메시지 초기화
+        personalChatrooms.forEach(chat => {
+          chatroomList.appendChild(this.createChatroomItem(chat));
+        });
+      }
+    },
 
-      messages.forEach(msg => {
-        // 사용자 메시지 추가
-        const userWrapper = document.createElement('div');
-        userWrapper.classList.add('message-wrapper', 'user');
+    selectProject(projectId) {
+      this.selectedProjectId = projectId;
+      document.querySelectorAll('.project-label').forEach(label => label.classList.remove('active'));
+      const projectElement = document.querySelector(`[data-project-id="${projectId}"]`);
+      if (projectElement) projectElement.classList.add('active');
+    },
 
-        const userMessage = document.createElement('div');
-        userMessage.classList.add('message', 'user');
-        // textContent 대신 markdownToHTML 함수를 이용해 innerHTML로 변환
-        userMessage.innerHTML = markdownToHTML(msg.message);
+    createChatroomItem(chat) {
+      const div = document.createElement('div');
+      div.className = 'chatroom-item';
+      div.dataset.chatroomId = chat.id;
 
-        userWrapper.appendChild(userMessage);
-        chatBox.appendChild(userWrapper);
+      const span = document.createElement('span');
+      span.className = 'chatroom-name';
+      span.textContent = chat.name || `채팅방 #${chat.id}`;
+      span.onclick = (e) => {
+        e.stopPropagation();
+        this.loadChatMessages(chat.id, chat.name);
+      };
 
-        // 봇 응답 메시지 추가 (response가 있을 경우)
-        if (msg.response) {
-          const botWrapper = document.createElement('div');
-          botWrapper.classList.add('message-wrapper', 'bot');
+      const editBtn = document.createElement('button');
+      editBtn.className = 'edit-btn';
+      editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.startEditingChatroomName(div, chat.id, chat.name);
+      };
 
-          const botMessage = document.createElement('div');
-          botMessage.classList.add('message', 'bot');
-          // 마찬가지로 마크다운 변환 적용
-          botMessage.innerHTML = markdownToHTML(msg.response);
+      const deleteBtn = document.createElement("button");
+      deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.deleteChatRoom(chat.id);
+      };
 
-          botWrapper.appendChild(botMessage);
-          chatBox.appendChild(botWrapper);
-        }
-      });
+      div.append(span, editBtn, deleteBtn);
+      return div;
+    },
 
-      chatBox.scrollTop = chatBox.scrollHeight; // 스크롤 자동 하단 이동
-      addCopyButtons(); // 코드 블록이 새로 추가될 때마다 실행
-    } catch (error) {
-      console.error("채팅방 메시지 불러오기 오류:", error);
-    }
-  }
-
-  function displayMessage(text, sender) {
-    const chatBox = document.getElementById('messagesContainer');
-
-    // 메시지 감싸는 div
-    const messageWrapper = document.createElement('div');
-    messageWrapper.classList.add('message-wrapper', sender);
-
-    // 메시지 말풍선 div
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', sender);
-    messageDiv.textContent = text;
-
-    // messageWrapper에 메시지 추가 후, chatBox에 추가
-    messageWrapper.appendChild(messageDiv);
-    chatBox.appendChild(messageWrapper);
-
-    // 스크롤 자동 하단 이동
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const input = document.getElementById('userInput');
-    const message = input.value.trim();
-    if (!message) return;
-
-    const token = getAuthToken();
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-
-    const chatroomId = currentChatroomId;
-    if (!chatroomId) {
-      alert("채팅방을 선택하세요.");
-      return;
-    }
-
-    // 사용자가 보낸 메시지 화면에 추가
-    displayMessage(message, "user");
-    input.value = "";
-
-    // 로딩 스피너 표시
-    const loading = showLoadingSpinner();
-
-    try {
-      const encodedQuery = encodeURIComponent(message);
-      const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/agent-query?query=${encodedQuery}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        alert(`메시지 전송 실패 (HTTP ${response.status}): ${errorText}`);
+    startEditingChatroomName(chatroomItem, chatroomId, currentName) {
+      if (this.editingChatroomId) {
+        alert("이미 다른 채팅방 이름을 수정 중입니다.");
         return;
       }
 
-      // 스피너 제거
-      removeLoadingSpinner(loading);
+      this.editingChatroomId = chatroomId;
 
+      const nameSpan = chatroomItem.querySelector('.chatroom-name');
+      const editBtn = chatroomItem.querySelector('.edit-btn');
+      const deleteBtn = chatroomItem.querySelector('button:last-child');
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chatroom-name-input';
+      input.value = currentName || `채팅방 #${chatroomId}`;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          this.saveChatroomName(chatroomItem, chatroomId, input.value);
+        } else if (e.key === 'Escape') {
+          this.cancelEditingChatroomName(chatroomItem, chatroomId, currentName);
+        }
+      };
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'save-btn';
+      saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+      saveBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.saveChatroomName(chatroomItem, chatroomId, input.value);
+      };
+
+      chatroomItem.replaceChild(input, nameSpan);
+      chatroomItem.replaceChild(saveBtn, editBtn);
+      input.focus();
+    },
+
+    async saveChatroomName(chatroomItem, chatroomId, newName) {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+
+      if (!newName.trim()) {
+        alert("채팅방 이름을 입력하세요.");
+        return;
+      }
+
+      const originalName = chatroomItem.querySelector('.chatroom-name-input')?.value || '';
+
+      try {
+        const response = await this.requestWithAuth(
+                `http://localhost:8080/api/chatbot/chatroom/${chatroomId}/rename?newChatroomName=${encodeURIComponent(newName)}`,
+                { method: "PATCH" }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`이름 수정 실패: ${errorText}`);
+        }
+
+        const input = chatroomItem.querySelector('.chatroom-name-input');
+        const saveBtn = chatroomItem.querySelector('.save-btn');
+
+        if (!input || !saveBtn) {
+          console.warn("입력 요소 또는 저장 버튼을 찾을 수 없습니다. DOM이 갱신되었을 가능성이 있습니다.");
+          await this.loadSidebar();
+          this.editingChatroomId = null;
+          return;
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'chatroom-name';
+        nameSpan.textContent = newName;
+        nameSpan.onclick = (e) => {
+          e.stopPropagation();
+          this.loadChatMessages(chatroomId, newName);
+        };
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          this.startEditingChatroomName(chatroomItem, chatroomId, newName);
+        };
+
+        chatroomItem.replaceChild(nameSpan, input);
+        chatroomItem.replaceChild(editBtn, saveBtn);
+
+        if (this.currentChatroomId === chatroomId) {
+          document.querySelector('.chat-header').textContent = newName;
+        }
+
+        await this.loadSidebar();
+        this.editingChatroomId = null;
+      } catch (error) {
+        console.error("채팅방 이름 수정 오류:", error);
+        alert(`채팅방 이름 수정 실패: ${error.message}`);
+        this.cancelEditingChatroomName(chatroomItem, chatroomId, originalName);
+      }
+    },
+
+    cancelEditingChatroomName(chatroomItem, chatroomId, originalName) {
+      const input = chatroomItem.querySelector('.chatroom-name-input');
+      const saveBtn = chatroomItem.querySelector('.save-btn');
+
+      if (!input || !saveBtn) {
+        console.warn("입력 요소 또는 저장 버튼을 찾을 수 없습니다. DOM이 갱신되었을 가능성이 있습니다.");
+        this.editingChatroomId = null;
+        return;
+      }
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'chatroom-name';
+      nameSpan.textContent = originalName || `채팅방 #${chatroomId}`;
+      nameSpan.onclick = (e) => {
+        e.stopPropagation();
+        this.loadChatMessages(chatroomId, originalName);
+      };
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'edit-btn';
+      editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.startEditingChatroomName(chatroomItem, chatroomId, originalName);
+      };
+
+      chatroomItem.replaceChild(nameSpan, input);
+      chatroomItem.replaceChild(editBtn, saveBtn);
+      this.editingChatroomId = null;
+    },
+
+    async deleteChatRoom(chatroomId) {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      if (!confirm("이 채팅방과 관련된 모든 메시지가 삭제됩니다. 계속하시겠습니까?")) return;
+      try {
+        const response = await this.requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) throw new Error(`삭제 실패: ${await response.text()}`);
+        alert("채팅방이 삭제되었습니다.");
+        await this.loadSidebar();
+        if (this.currentChatroomId === chatroomId) {
+          this.currentChatroomId = null;
+          document.getElementById('messagesContainer').innerHTML = '';
+          document.querySelector('.chat-header').textContent = 'TRENDB';
+        }
+      } catch (error) {
+        console.error("채팅방 삭제 오류:", error);
+        alert(`채팅방 삭제 실패: ${error.message}`);
+      }
+    },
+
+    async createNewChatroom(projectId) {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      try {
+        const params = new URLSearchParams({ type: "PROJECT", projectId });
+        const url = `http://localhost:8080/api/chatbot/chatroom?${params.toString()}`;
+        const response = await this.requestWithAuth(url, {
+          method: "POST",
+        });
+        if (!response.ok) throw new Error(`생성 실패: ${await response.text()}`);
+        const chatroom = await response.json();
+        await this.loadSidebar();
+        await this.loadChatMessages(chatroom.id, chatroom.name);
+      } catch (error) {
+        console.error("채팅방 생성 오류:", error);
+        alert(`채팅방 생성 실패: ${error.message}`);
+      }
+    },
+
+    async createNewPersonalChatroom() {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      try {
+        const url = `http://localhost:8080/api/chatbot/chatroom?type=PERSONAL`;
+        const response = await this.requestWithAuth(url, {
+          method: "POST",
+        });
+        if (!response.ok) throw new Error(`생성 실패: ${await response.text()}`);
+        const chatroom = await response.json();
+        await this.loadSidebar();
+        await this.loadChatMessages(chatroom.id, chatroom.name);
+      } catch (error) {
+        console.error("채팅방 생성 오류:", error);
+        alert(`채팅방 생성 실패: ${error.message}`);
+      }
+    },
+
+    async loadChatMessages(chatroomId, chatroomName = '') {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      this.currentChatroomId = chatroomId;
+      document.querySelector('.chat-header').textContent = chatroomName || `채팅방 #${chatroomId}`;
+
+      document.querySelectorAll('.chatroom-item').forEach(item => item.classList.remove('active'));
+      const chatroomElement = document.querySelector(`[data-chatroom-id="${chatroomId}"]`);
+      if (chatroomElement) chatroomElement.classList.add('active');
+
+      window.history.pushState(null, "", `/chat/${chatroomId}`);
+
+      try {
+        const response = await this.requestWithAuth(`http://localhost:8080/api/chatbot/chatroom/${chatroomId}/messages`);
+        if (!response.ok) throw new Error("메시지 로드 실패");
+        const messages = await response.json();
+        const chatBox = document.getElementById('messagesContainer');
+        chatBox.innerHTML = '';
+
+        messages.forEach(msg => {
+          this.displayMessage(msg.message, 'user', true);
+          if (msg.response) this.displayMessage(msg.response, 'bot', true);
+        });
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+        this.addCopyButtons();
+      } catch (error) {
+        console.error("메시지 로드 오류:", error);
+        alert(`메시지 로드 실패: ${error.message}`);
+      }
+    },
+
+    async sendMessage() {
+      const input = document.getElementById('userInput');
+      const message = input.value.trim();
+      if (!message) return;
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      if (!this.currentChatroomId) {
+        alert("채팅방을 선택하세요.");
+        return;
+      }
+
+      this.displayMessage(message, 'user');
+      input.value = '';
+      const loading = this.showLoadingSpinner();
+
+      try {
+        const encodedQuery = encodeURIComponent(message);
+        const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${this.currentChatroomId}/agent-query?query=${encodedQuery}`, {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${this.getAuthToken()}` }
+        });
+        if (!response.ok) throw new Error(`전송 실패: ${await response.text()}`);
+
+        this.removeLoadingSpinner(loading);
+        await this.handleStreamResponse(response);
+        await this.loadSidebar();
+      } catch (error) {
+        console.error("메시지 전송 오류:", error);
+        alert(`메시지 전송 실패: ${error.message}`);
+        this.removeLoadingSpinner(loading);
+      }
+    },
+
+    async handleStreamResponse(response) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       const chatBox = document.getElementById('messagesContainer');
 
       let fullResponse = "";
-      let finalMessage = "";
-
-      // 봇 응답 말풍선 준비
       const wrapper = document.createElement('div');
       wrapper.classList.add('message-wrapper', 'bot');
       const bubble = document.createElement('div');
@@ -753,336 +1055,269 @@
       chatBox.appendChild(wrapper);
       chatBox.scrollTop = chatBox.scrollHeight;
 
-      let done = false;
-      let buffer = ""; // 👈 누적 버퍼
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let parts = buffer.split("\n\n");
+        buffer = parts.pop();
 
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
-
-          // `\n\n` 기준으로 나눔 (FastAPI SSE 기본 형식)
-          let parts = buffer.split("\n\n");
-
-          // 마지막은 아직 미완성일 수 있으므로 버퍼에 남겨둠
-          buffer = parts.pop();
-
-          for (const part of parts) {
-            const clean = part.replace(/^data:\s*/, "").trim();
-            if (!clean) continue;
-
-            try {
-              const json = JSON.parse(clean);
-
-              if (json.token) {
-                fullResponse += json.token;
-                bubble.innerHTML = markdownToHTML(fullResponse);
-                chatBox.scrollTop = chatBox.scrollHeight;
-                addCopyButtonsToElement(bubble);
-
-              } else if (json.thoughts) {
-                json.thoughts.forEach(step => {
-                  const stepDiv = document.createElement("div");
-                  stepDiv.classList.add("intermediate-log");
-                  stepDiv.textContent = `[생각] ${typeof step === "string" ? step : JSON.stringify(step)}`;
-                  bubble.appendChild(stepDiv);
-                  chatBox.scrollTop = chatBox.scrollHeight;
+        for (const part of parts) {
+          const clean = part.replace(/^data:\s*/, "").trim();
+          if (!clean) continue;
+          try {
+            const json = JSON.parse(clean);
+            if (json.token) {
+              fullResponse += json.token;
+              bubble.innerHTML = this.markdownToHTML(fullResponse);
+              this.renderMathJax(bubble);
+              this.addCopyButtonsToElement(bubble);
+              this.adjustBubbleWidth(bubble);
+            } else if (json.thoughts) {
+              json.thoughts.forEach(step => this.appendLog(bubble, `[생각] ${typeof step === "string" ? step : JSON.stringify(step)}`, 'tool-log intermediate-log'));
+            } else if (json.initial_plan) {
+              this.appendLog(bubble, `초기 계획: ${json.initial_plan}`, 'tool-log initial-plan');
+            } else if (json.tool_start) {
+              this.appendLog(bubble, json.tool_start, 'tool-log tool-start');
+            } else if (json.search_query) {
+              this.appendLog(bubble, `검색 쿼리: ${json.search_query}`, 'tool-log search-query');
+            } else if (json.search_result) {
+              this.appendLog(bubble, `검색 결과: ${json.search_result}`, 'tool-log search-result');
+              if (json.links) {
+                const linksDiv = document.createElement("div");
+                linksDiv.classList.add("links");
+                json.links.forEach(link => {
+                  const a = document.createElement("a");
+                  a.href = link;
+                  a.target = "_blank";
+                  a.textContent = link;
+                  linksDiv.appendChild(a);
                 });
-
-              } else if (json.final) {
-                finalMessage = json.final;
-                if (fullResponse.trim() !== finalMessage.trim()) {
-                  console.warn("⚠️ token 누적값과 final 불일치:", fullResponse, finalMessage);
-                }
-
-              } else if (json.initial_plan) {
-                const planDiv = document.createElement("div");
-                planDiv.classList.add("initial-plan");
-                planDiv.textContent = `초기 계획: ${json.initial_plan}`;
-                bubble.appendChild(planDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-              } else if (json.tool_start) {
-                const toolDiv = document.createElement("div");
-                toolDiv.classList.add("tool-log", "tool-start");
-                toolDiv.textContent = `${json.tool_start}`;
-                bubble.appendChild(toolDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-              } else if (json.search_query) {
-                const queryDiv = document.createElement("div");
-                queryDiv.classList.add("search-query");
-                queryDiv.textContent = `검색 쿼리: ${json.search_query}`;
-                bubble.appendChild(queryDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-              } else if (json.search_result) {
-                const resultDiv = document.createElement("div");
-                resultDiv.classList.add("search-result");
-                resultDiv.textContent = `검색 결과: ${json.search_result}`;
-                bubble.appendChild(resultDiv);
-                if (json.links) {
-                  const linksDiv = document.createElement("div");
-                  linksDiv.classList.add("links");
-                  json.links.forEach(link => {
-                    const a = document.createElement("a");
-                    a.href = link;
-                    a.target = "_blank";
-                    a.textContent = link;
-                    linksDiv.appendChild(a);
-                  });
-                  bubble.appendChild(linksDiv);
-                }
-                chatBox.scrollTop = chatBox.scrollHeight;
-
-              } else if (json.log) {
-                const logDiv = document.createElement("div");
-                logDiv.classList.add("agent-log");
-                logDiv.textContent = json.log;
-                bubble.appendChild(logDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
+                bubble.appendChild(linksDiv);
               }
-
-            } catch (e) {
-              console.warn("JSON 파싱 실패:", clean);
+            } else if (json.log) {
+              this.appendLog(bubble, json.log, 'agent-log');
             }
+            chatBox.scrollTop = chatBox.scrollHeight;
+          } catch (e) {
+            console.warn("JSON 파싱 오류:", clean);
           }
         }
       }
+    },
 
-    } catch (error) {
-      console.error("스트리밍 응답 처리 오류:", error);
-      alert(`서버와 연결할 수 없습니다.\n오류 메시지: ${error.message}`);
-    }
-  }
-
-  function startResearch() {
-    const query = document.getElementById('userInput').value.trim();
-    if (!query) {
-      return alert('리서치할 내용을 입력하세요');
-    }
-    const token = getAuthToken();
-    if (!token) {
-      return alert('로그인이 필요합니다.');
-    }
-
-    const chatBox = document.getElementById('messagesContainer');
-    const wrapper = document.createElement('div');
-    wrapper.classList.add('message-wrapper', 'bot');
-    const bubble = document.createElement('div');
-    bubble.classList.add('message', 'bot');
-    wrapper.appendChild(bubble);
-    chatBox.appendChild(wrapper);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    const url = `/api/chatbot/multi/stream?topic=${encodeURIComponent(query)}&steps=3&top_k=5`;
-    const evt = new EventSourcePolyfill(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    evt.onmessage = e => {
-      bubble.innerHTML += e.data + '<br>';
+    displayMessage(text, sender, isMarkdown = false) {
+      const chatBox = document.getElementById('messagesContainer');
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message-wrapper', sender);
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', sender);
+      messageDiv[isMarkdown ? 'innerHTML' : 'textContent'] = isMarkdown ? this.markdownToHTML(text) : text;
+      wrapper.appendChild(messageDiv);
+      chatBox.appendChild(wrapper);
       chatBox.scrollTop = chatBox.scrollHeight;
-    };
-    evt.onerror = err => {
-      console.error('리서치 SSE 오류:', err);
-      evt.close();
-    };
-  }
 
-  function markdownToHTML(markdown) {
-    const codeBlockRegex = /```([a-z]*)\n([\s\S]*?)```/g;
-    const codeBlockMap = new Map();
-    let i = 0;
+      if (isMarkdown) {
+        this.renderMathJax(messageDiv);
+      }
 
-    // 코드 블럭 먼저 추출하고 escape
-    markdown = markdown.replace(codeBlockRegex, (_, lang, code) => {
-      const escaped = code
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;");
-      const key = `__CODE_BLOCK_${i}__`;
-      const langClass = lang ? `language-${lang}` : "";
-      codeBlockMap.set(key, { html: escaped, langClass });
-      i++;
-      return key;
-    });
+      this.adjustBubbleWidth(messageDiv);
+    },
 
-    // 일반 마크다운 먼저 처리 (코드블럭은 이 과정에서 보호됨)
-    markdown = markdown
-            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
-            .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-            .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-            .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n/g, '<br>');
+    renderMathJax(element) {
+      const checkMathJax = () => {
+        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+          window.MathJax.typesetPromise([element]).then(() => {
+            this.adjustBubbleWidth(element);
+          }).catch(err => {
+            console.error("MathJax 렌더링 오류:", err);
+          });
+        } else {
+          setTimeout(checkMathJax, 100);
+        }
+      };
+      checkMathJax();
+    },
 
-    // 코드 블럭 다시 삽입
-    codeBlockMap.forEach((val, key) => {
-      markdown = markdown.replace(
-              key,
-              `<pre><code class="${val.langClass}">${val.html}</code></pre>`
-      );
-    });
+    adjustBubbleWidth(bubble) {
+      const mathElements = bubble.querySelectorAll('.math-block, .MathJax, .MathJax_Display');
+      if (mathElements.length > 0) {
+        mathElements.forEach(el => {
+          const width = el.scrollWidth;
+          bubble.style.width = `${Math.min(width + 32, window.innerWidth * 0.9)}px`;
+          bubble.style.maxWidth = '90%';
+        });
+      }
+    },
 
-    return markdown;
-  }
+    appendLog(bubble, text, className) {
+      const logDiv = document.createElement('div');
+      logDiv.className = className;
+      logDiv.textContent = text;
+      bubble.appendChild(logDiv);
+    },
 
-  function showLoadingSpinner() {
-    const chatBox = document.getElementById('messagesContainer');
+    showLoadingSpinner() {
+      const chatBox = document.getElementById('messagesContainer');
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message-wrapper', 'bot');
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', 'bot');
+      messageDiv.innerHTML = `<div class="loading-spinner"></div>`;
+      wrapper.appendChild(messageDiv);
+      chatBox.appendChild(wrapper);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return wrapper;
+    },
 
-    // 메시지 감싸는 div
-    const messageWrapper = document.createElement('div');
-    messageWrapper.classList.add('message-wrapper', 'bot');
+    removeLoadingSpinner(loadingMessage) {
+      if (loadingMessage) loadingMessage.remove();
+    },
 
-    // 로딩 스피너 div
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', 'bot');
-    messageDiv.innerHTML = `<div class="loading-spinner"></div>`;
+    markdownToHTML(markdown) {
+      // 1) 수식 블록 보호
+      const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
+      const mathBlocks  = new Map();
+      let   mathIdx     = 0;
+      markdown = markdown.replace(mathBlockRe, m => {
+        const key = `__MATH_BLOCK_${mathIdx++}__`;
+        mathBlocks.set(key, m);
+        return key;
+      });
 
-    messageWrapper.appendChild(messageDiv);
-    chatBox.appendChild(messageWrapper);
+      // 2) 코드 블록 보호
+      const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
+      const codeBlocks  = new Map();
+      let   codeIdx     = 0;
+      markdown = markdown.replace(codeBlockRe, (_, lang, code) => {
+        const escaped = code
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        const key = `__CODE_BLOCK_${codeIdx++}__`;
+        codeBlocks.set(key, { html: escaped, lang });
+        return key;
+      });
 
-    // 스크롤 자동 하단 이동
-    chatBox.scrollTop = chatBox.scrollHeight;
+      // 3) 표준 마크다운 테이블만 골라서 변환 (앞뒤 개행 보존)
+      const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
+      markdown = markdown.replace(tableRe, (_, nl, block) => {
+        const lines   = block.trim().split(/\r?\n/);
+        const headers = lines[0].slice(1,-1).split("|").map(s => s.trim());
+        const rows    = lines.slice(2);
 
-    return messageWrapper;
-  }
+        let html = "<table><thead><tr>";
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += "</tr></thead><tbody>";
 
-  function removeLoadingSpinner(loadingMessage) {
-    if (loadingMessage) {
-      loadingMessage.remove(); // DOM에서 제거
-    }
-  }
+        rows.forEach(row => {
+          const cols = row.slice(1,-1).split("|").map(s => s.trim());
+          if (cols.length === headers.length) {
+            html += "<tr>";
+            cols.forEach(c => html += `<td>${c}</td>`);
+            html += "</tr>";
+          }
+        });
 
+        html += "</tbody></table>";
+        return nl + html;
+      });
 
-  document.getElementById('userInput').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      sendMessage();
-    }
-  });
+      // 4) 나머지 기본 마크다운 처리
+      markdown = markdown
+              .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+              .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+              .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+              .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+              .replace(/^- (.*)$/gm, '<li>$1</li>')
+              .replace(/\n/g, '<br>');
 
-  async function createNewChatroom() {
-    const token = getAuthToken();
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
+      // 5) 코드 블록 복원
+      for (const [key, { html, lang }] of codeBlocks.entries()) {
+        const cls = lang ? ` class="language-${lang}"` : "";
+        markdown = markdown.replace(
+                key,
+                `<pre><code${cls}>${html}</code></pre>`
+        );
+      }
 
-    try {
-      const response = await requestWithAuth("http://localhost:8080/api/chatbot/chatroom", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+      // 6) 수식 블록 복원
+      for (const [key, raw] of mathBlocks.entries()) {
+        markdown = markdown.replace(
+                key,
+                `<div class="math-block">${raw}</div>`
+        );
+      }
+
+      return markdown;
+    },
+
+    addCopyButtons() {
+      document.querySelectorAll('.chat-box pre').forEach(pre => {
+        if (pre.querySelector('.copy-btn')) return;
+        const copyBtn = document.createElement('button');
+        copyBtn.classList.add('copy-btn');
+        copyBtn.textContent = '복사';
+        copyBtn.addEventListener('click', () => {
+          const code = pre.querySelector('code').innerText;
+          navigator.clipboard.writeText(code)
+                  .then(() => {
+                    copyBtn.textContent = '복사됨!';
+                    setTimeout(() => copyBtn.textContent = '복사', 2000);
+                  })
+                  .catch(err => alert('복사 실패: ' + err));
+        });
+        pre.appendChild(copyBtn);
+      });
+    },
+
+    addCopyButtonsToElement(element) {
+      element.querySelectorAll('pre').forEach(pre => {
+        if (pre.querySelector('.copy-btn')) return;
+        const copyBtn = document.createElement('button');
+        copyBtn.classList.add('copy-btn');
+        copyBtn.textContent = '복사';
+        copyBtn.addEventListener('click', () => {
+          const code = pre.querySelector('code').innerText;
+          navigator.clipboard.writeText(code)
+                  .then(() => {
+                    copyBtn.textContent = '복사됨!';
+                    setTimeout(() => copyBtn.textContent = '복사', 2000);
+                  })
+                  .catch(err => alert('복사 실패: ' + err));
+        });
+        pre.appendChild(copyBtn);
+      });
+    },
+
+    init() {
+      document.getElementById('userInput').addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.sendMessage();
         }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`채팅방 생성 실패: ${errorText}`);
-      }
+      document.addEventListener("DOMContentLoaded", () => {
+        const logoutButton = document.getElementById("logout-button");
+        const logo = document.querySelector(".logo");
 
-      const chatroom = await response.json();
-      console.log("새 채팅방 생성 완료:", chatroom);
+        if (this.getAuthToken()) {
+          logoutButton.style.display = "block";
+          this.loadSidebar();
+        } else {
+          window.location.href = "/login";
+        }
 
-      // 채팅방 목록 갱신
-      loadChatrooms();
-
-      // 새 채팅방 자동 선택
-      loadChatMessages(chatroom.id).then(() => {
-        addCopyButtons();
+        logoutButton.addEventListener("click", () => this.logout());
+        logo.addEventListener("click", () => window.location.href = "/");
       });
-
-    } catch (error) {
-      console.error("새 채팅방 생성 오류:", error);
-      alert(`새 채팅방을 생성할 수 없습니다.\n오류 메시지: ${error.message}`);
     }
-  }
+  };
 
-  function logout() {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    window.location.href = "/login"; // 로그아웃 후 로그인 페이지로 이동
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    const logoutButton = document.getElementById("logout-button");
-    const logo = document.querySelector(".logo");
-
-    // 로그인 상태 확인 (토큰이 있는지 체크)
-    function isLoggedIn() {
-      return localStorage.getItem("accessToken") !== null;
-    }
-
-    // 로그인 상태일 때만 로그아웃 버튼 표시
-    if (isLoggedIn()) {
-      logoutButton.style.display = "block"; // 로그아웃 버튼 보이기
-      loadChatrooms(); // 로그인 상태일 때만 채팅방 목록 로딩
-    } else {
-      window.location.href = "/login"; // 로그인 상태가 아니면 로그인 페이지로 리다이렉트
-    }
-
-    // 로그아웃 버튼 클릭 시 로그아웃 실행
-    logoutButton.addEventListener("click", logout);
-
-    // TRENDB 로고 클릭 시 홈(`/`)으로 이동
-    logo.addEventListener("click", () => {
-      window.location.href = "/";
-    });
-  });
-
-  // 코드 블록에 복사 버튼 추가하는 함수
-  function addCopyButtons() {
-    document.querySelectorAll('.chat-box pre').forEach(pre => {
-      // 복사 버튼이 이미 추가된 경우 건너뜀
-      if (pre.querySelector('.copy-btn')) return;
-
-      const copyBtn = document.createElement('button');
-      copyBtn.classList.add('copy-btn');
-      copyBtn.textContent = '복사';
-
-      copyBtn.addEventListener('click', () => {
-        const code = pre.querySelector('code').innerText;
-        navigator.clipboard.writeText(code)
-                .then(() => {
-                  copyBtn.textContent = '복사됨!';
-                  setTimeout(() => copyBtn.textContent = '복사', 2000);
-                })
-                .catch(err => alert('복사 실패: ', err));
-      });
-
-      pre.appendChild(copyBtn);
-    });
-  }
-
-  // 특정 요소에만 복사 버튼 추가하는 함수
-  function addCopyButtonsToElement(element) {
-    element.querySelectorAll('pre').forEach(pre => {
-      if (pre.querySelector('.copy-btn')) return;
-
-      const copyBtn = document.createElement('button');
-      copyBtn.classList.add('copy-btn');
-      copyBtn.textContent = '복사';
-
-      copyBtn.addEventListener('click', () => {
-        const code = pre.querySelector('code').innerText;
-        navigator.clipboard.writeText(code)
-                .then(() => {
-                  copyBtn.textContent = '복사됨!';
-                  setTimeout(() => copyBtn.textContent = '복사', 2000);
-                })
-                .catch(err => alert('복사 실패:', err));
-      });
-
-      pre.appendChild(copyBtn);
-    });
-  }
+  ChatApp.init();
 </script>
-
 </body>
 </html>

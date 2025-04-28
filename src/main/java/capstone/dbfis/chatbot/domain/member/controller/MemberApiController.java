@@ -1,117 +1,112 @@
 package capstone.dbfis.chatbot.domain.member.controller;
 
 import capstone.dbfis.chatbot.domain.member.dto.*;
-import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
 import capstone.dbfis.chatbot.domain.member.service.MemberService;
-import capstone.dbfis.chatbot.domain.member.service.EmailVerificationService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
+@Validated
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Member API", description = "멤버 관련 로직 API")
 @RequestMapping("/api")
 public class MemberApiController {
 
     private final MemberService memberService;
-    private final EmailVerificationService emailVerificationService;
     private final TokenProvider tokenProvider;
 
-    // 로그인 (JWT 발급)
     @PostMapping("/login")
-    @Operation(summary = "로그인",
-            description = "로그인을 진행합니다. 로그인 성공시 AccessToken과 RefreshToken을 발급합니다.")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        LoginResponse response = memberService.login(request);
-        return ResponseEntity.ok(response);
+    @Operation(summary = "로그인", description = "사용자의 아이디와 비밀번호로 로그인 후 AccessToken과 RefreshToken를 발급합니다.")
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody @Valid LoginRequest request) {
+        return ResponseEntity.ok(memberService.login(request));  // 200 OK
     }
 
-    // 회원 가입 (인증 불필요)
     @PostMapping("/signup")
-    @Operation(summary = "회원 가입",
-            description = "회원가입을 진행합니다. 인증 번호를 가입시 등록한 메일로 전송합니다.")
-    public ResponseEntity<String> registerMember(@RequestBody AddMemberRequest request) {
+    @Operation(summary = "회원가입", description = "회원가입 후 인증 이메일 발송.")
+    public ResponseEntity<String> registerMember(
+            @RequestBody @Valid AddMemberRequest request) {
         memberService.registerMember(request);
-        return ResponseEntity.ok("회원가입이 완료되었습니다. 인증 이메일을 확인하세요.");
+        return ResponseEntity
+                .status(HttpStatus.CREATED)       // 201 Created
+                .body("회원가입 완료. 인증 이메일을 확인하세요.");
     }
 
-    // 이메일 인증 번호 확인
-    @PostMapping("/verify-email")
-    @Operation(summary = "이메일 인증 번호 확인",
-            description = "사용자가 입력한 인증 번호의 유효성을 확인합니다.")
-    public ResponseEntity<String> verifyEmail(@RequestParam String verificationCode) {
-        boolean isVerified = emailVerificationService.verifySignUpCode(verificationCode);
-        if (isVerified) {
-            return ResponseEntity.ok("이메일 인증이 완료되었습니다.");
-        } else {
-            return ResponseEntity.badRequest().body("인증 코드가 유효하지 않습니다.");
-        }
+    @PostMapping("/resend-verification")
+    @Operation(summary = "인증 메일 재전송", description = "회원가입 인증 이메일을 다시 보냅니다.")
+    public ResponseEntity<Void> resendVerification(
+            @RequestParam @NotBlank String memberId) {
+        memberService.sendNewSignUpEmail(memberId);
+        return ResponseEntity.noContent().build();  // 204 No Content
+    }
+
+    @PostMapping("/verify-signup")
+    @Operation(summary = "회원가입 이메일 인증번호 검증", description = "사용자가 입력한 인증번호로 회원가입 이메일 인증을 완료합니다.")
+    public ResponseEntity<Void> verifySignup(
+            @RequestParam @NotBlank String memberId,
+            @RequestParam @NotBlank String verificationCode) {
+        memberService.verifySignUpCode(memberId, verificationCode);
+        return ResponseEntity.ok().build();        // 200 OK
     }
 
     @PostMapping("/find-id")
-    @Operation(summary = "아이디 찾기",
-            description = "사용자의 이메일을 통해 사용자의 아이디를 찾습니다. 사용자 Id의 앞 3글자만 보여주고 나머지는 마스킹 처리한 결과를 반환합니다..")
-    public ResponseEntity<String> forgotId(@RequestBody EmailRequest request) {
-        String maskedId = memberService.findId(request.getEmail());
-        return ResponseEntity.ok(maskedId);
+    @Operation(summary = "아이디 찾기", description = "사용자의 이메일을 통해 사용자의 아이디를 조회합니다.")
+    public ResponseEntity<String> findId(
+            @RequestBody @Valid EmailRequest request) {
+        String foundId = memberService.findId(request.getEmail());
+        return ResponseEntity.ok(foundId);         // 200 OK
     }
 
-    // 비밀번호 찾기 이메일 발송
     @PostMapping("/find-password")
-    @Operation(summary = "비밀번호 찾기",
-            description = "사용자의 이메일로 비밀번호 재설정 링크를 보냅니다. 비밀번호 재설정 토큰은 30분 동안 유효합니다.")
-    public ResponseEntity<String> forgotPassword(@RequestBody EmailRequest request) {
+    @Operation(summary = "비밀번호 재설정 링크 발송", description = "사용자의 이메일로 재설정 링크를 전송합니다.")
+    public ResponseEntity<Void> findPassword(
+            @RequestBody @Valid EmailRequest request) {
         memberService.findPassword(request.getEmail());
-        return ResponseEntity.ok("비밀번호 재설정 링크를 이메일로 전송했습니다.");
+        return ResponseEntity.noContent().build();  // 204 No Content
     }
 
-    // 비밀번호 재설정
     @PostMapping("/reset-password")
-    @Operation(summary = "비밀번호 재설정",
-            description = "비밀번호 재설정 토큰을 검증하고 새 비밀번호로 변경합니다.")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
-        try {
-            memberService.resetPassword(request);
-            return ResponseEntity.ok().body("비밀번호가 성공적으로 변경되었습니다.");
-        } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 내부 오류가 발생했습니다.");
-        }
+    @Operation(summary = "비밀번호 재설정", description = "사용자가 비밀번호 재설정 링크를 클릭했을 경우, 해당 API로 비밀번호를 변경합니다.")
+    public ResponseEntity<Void> resetPassword(
+            @RequestBody @Valid PasswordResetRequest request) {
+        memberService.resetPassword(request);
+        return ResponseEntity.ok().build();        // 200 OK
     }
 
-    // 마이페이지 회원 정보 조회
     @GetMapping("/mypage")
-    @Operation(summary = "마이페이지 회원 정보 조회", description = "사용자의 마이페이지 정보를 조회합니다.")
-    public ResponseEntity<MyPageResponse> getUserProfile(@RequestHeader("Authorization") String token) {
+    @Operation(summary = "마이페이지 조회", description = "로그인된 사용자의 정보를 반환합니다.")
+    public ResponseEntity<MyPageResponse> getMyPage(
+            @RequestHeader("Authorization") @NotBlank String token) {
         String memberId = tokenProvider.getMemberId(token);
-        return ResponseEntity.ok(memberService.getMyPageData(memberId));
+        MyPageResponse data = memberService.getMyPageData(memberId);
+        return ResponseEntity.ok(data);            // 200 OK
     }
 
     @PatchMapping("/update-profile")
-    @Operation(summary = "회원 정보 수정", description = "사용자의 프로필 정보를 수정합니다.")
-    public ResponseEntity<String> updateProfile(
-            @RequestHeader("Authorization") String token,
-            @RequestBody UpdateProfileRequest request) {
+    @Operation(summary = "프로필 수정", description = "사용자의 프로필 정보를 수정합니다.")
+    public ResponseEntity<Void> updateProfile(
+            @RequestHeader("Authorization") @NotBlank String token,
+            @RequestBody @Valid UpdateProfileRequest request) {
         String memberId = tokenProvider.getMemberId(token);
         memberService.updateProfile(memberId, request);
-        return ResponseEntity.ok("프로필 정보이 성공적으로 변경되었습니다.");
+        return ResponseEntity.noContent().build();  // 204 No Content
     }
 
     @PatchMapping("/update-password")
     @Operation(summary = "비밀번호 변경", description = "사용자의 비밀번호를 변경합니다.")
-    public ResponseEntity<String> updatePassword(
-            @RequestHeader("Authorization") String token,
-            @RequestBody UpdatePasswordRequest request) {
+    public ResponseEntity<Void> updatePassword(
+            @RequestHeader("Authorization") @NotBlank String token,
+            @RequestBody @Valid UpdatePasswordRequest request) {
         String memberId = tokenProvider.getMemberId(token);
         memberService.updatePassword(memberId, request);
-        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+        return ResponseEntity.noContent().build();  // 204 No Content
     }
-
 }

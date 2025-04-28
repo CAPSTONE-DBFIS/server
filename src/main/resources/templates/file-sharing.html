@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>TRENDB 팀 스토리지</title>
+
+    <!-- Bootstrap + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+
+    <style>
+        body{background:#f0f2f5}
+        #loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.7);display:none;align-items:center;justify-content:center;z-index:1000}
+        .sidebar{width:280px;background:#fff;border-right:1px solid #ddd}
+        .sidebar h6{margin-top:1rem;font-size:.9rem;color:#666}
+        .sidebar .nav-link{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+        .sidebar .nav-link.active{background:#e7f1ff;color:#0d6efd}
+        .main-area{flex:1;display:flex;flex-direction:column}
+        .actions .btn{min-width:90px}
+        .breadcrumb{background:transparent;padding:.5rem 1rem;margin:0}
+        .file-table th,.file-table td{vertical-align:middle;white-space:nowrap}
+        .file-table tr.folder-row:hover{background:#eef6ff;cursor:pointer}
+        .file-table tr.file-row:hover  {background:#f8f9fa}
+        .file-card{border:1px solid #ddd;border-radius:.5rem;padding:.75rem;background:#fff;text-align:center;cursor:pointer;transition:.2s}
+        .file-card:hover{background:#f5f7ff}
+        .icon-btn{border:none;background:transparent;padding:0 .25rem;font-size:1rem}
+    </style>
+</head>
+<body>
+<div id="loadingOverlay"><div class="spinner-border text-primary"></div></div>
+
+<div class="d-flex vh-100">
+    <aside class="sidebar d-flex flex-column p-3">
+        <h6>최근 팀</h6><ul class="nav nav-pills flex-column mb-3" id="recentTeams"></ul>
+        <h6>모든 프로젝트</h6><ul class="nav nav-pills flex-column mb-4" id="allTeams"></ul>
+    </aside>
+
+    <main class="main-area">
+        <div class="p-3 border-bottom d-flex align-items-center actions">
+            <h5 id="currentTeamName" class="me-4 mb-0">팀 스토리지</h5>
+            <button class="btn btn-outline-primary me-2" onclick="triggerUpload()">업로드</button>
+            <button class="btn btn-outline-success me-2" onclick="openNewFolder()">폴더 생성</button>
+            <input type="file" id="uploadInput" hidden onchange="handleUpload(event)"/>
+            <div class="input-group ms-auto" style="width:250px;">
+                <input id="searchInput" type="text" class="form-control form-control-sm" placeholder="검색"/>
+                <button class="btn btn-outline-secondary btn-sm" onclick="searchFiles()"><i class="bi-search"></i></button>
+            </div>
+        </div>
+
+        <nav aria-label="breadcrumb"><ol class="breadcrumb mb-0" id="breadcrumb"></ol></nav>
+
+        <section class="suggestion p-3 border-bottom">
+            <small class="text-muted">자주 사용하는 파일</small>
+            <div class="row g-2 mt-2" id="suggestions"></div>
+        </section>
+
+        <section class="flex-fill overflow-auto p-3">
+            <div class="d-flex align-items-center mb-2">
+                <h6 class="mb-0 me-3">All files</h6>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="setSort('desc')">최근 순</button>
+                    <button class="btn btn-outline-secondary" onclick="setSort('asc')">오래된 순</button>
+                    <button class="btn btn-outline-secondary" onclick="setSort('name')">이름 순</button>
+                </div>
+            </div>
+            <table class="table table-hover table-sm file-table">
+                <thead class="table-light"><tr><th>ID</th><th>이름</th><th>종류</th><th>크기</th><th>업로더</th><th>동작</th></tr></thead>
+                <tbody id="fileTable"></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    /* ===== 전역 ===== */
+    const API_BASE = 'http://localhost:8080/api/teams';
+    let currentTeamId = null,
+        currentFolderId = null,
+        pathStack = [],
+        currentSort = 'desc';
+
+    /* ===== 유틸 ===== */
+    const token = () => localStorage.getItem('accessToken');
+    const showLoading = on => document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+    const fmtSize = b => b < 1024 ? b + ' B' : b/1024<1024 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB';
+    const getName = o => o.name ?? o.originalName ?? o.originalFilename ?? '—';
+    const getUploader = o => o.uploaderName ?? o.uploaderNickname ?? o.uploaderId ?? o.uploader ?? '-';
+    const getFilename = disp => {
+        if (!disp) return null;
+        const utf8 = disp.match(/filename\*\=UTF-8''([^;]+)/i);
+        if (utf8) return decodeURIComponent(utf8[1]);
+        const ascii = disp.match(/filename\=\"?([^\";]+)\"?/i);
+        return ascii ? decodeURIComponent(ascii[1]) : null;
+    };
+
+    /* ===== 초기 팀 목록 ===== */
+    window.onload = async () => {
+        showLoading(true);
+        const res = await fetch('http://localhost:8080/api/teams/my-teams', {
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        const teams = await res.json();
+        ['recentTeams','allTeams'].forEach(id => document.getElementById(id).innerHTML = '');
+        teams.forEach(t => {
+            ['recentTeams','allTeams'].forEach(list => {
+                const a = document.createElement('a');
+                a.className = 'nav-link text-truncate';
+                a.textContent = t.teamName;
+                a.onclick = () => selectTeam(t.teamId, t.teamName);
+                const li = document.createElement('li');
+                li.className = 'nav-item mb-1';
+                li.append(a);
+                document.getElementById(list).append(li);
+            });
+        });
+        showLoading(false);
+    };
+
+    /* ===== 팀 선택 ===== */
+    function selectTeam(id, name) {
+        currentTeamId = id;
+        currentFolderId = null;
+        pathStack = [];
+        document.querySelectorAll('.sidebar .nav-link').forEach(a => a.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-link')
+            .forEach(a => { if (a.textContent === name) a.classList.add('active'); });
+        document.getElementById('currentTeamName').textContent = `${name} 팀 스토리지`;
+        updateBreadcrumb();
+        loadSuggestions();
+        loadFolderAndFiles();
+    }
+
+    function updateBreadcrumb() {
+        const bc = document.getElementById('breadcrumb');
+        bc.innerHTML = '<li class="breadcrumb-item"><a href="#" onclick="goRoot()">루트</a></li>';
+        pathStack.forEach((p, i) => {
+            bc.innerHTML += i < pathStack.length-1
+                ? `<li class="breadcrumb-item"><a href="#" onclick="goLevel(${i})">${p.name}</a></li>`
+                : `<li class="breadcrumb-item active">${p.name}</li>`;
+        });
+    }
+    const goRoot = () => { currentFolderId = null; pathStack = []; updateBreadcrumb(); loadFolderAndFiles(); };
+    const goLevel = i => { currentFolderId = pathStack[i].id; pathStack = pathStack.slice(0, i+1); updateBreadcrumb(); loadFolderAndFiles(); };
+
+    /* ===== 추천 파일 ===== */
+    async function loadSuggestions() {
+        if (!currentTeamId) return;
+        const url = new URL(`${API_BASE}/${currentTeamId}/files/recommend`, location);
+        const files = await fetch(url, {
+            headers: { Authorization: `Bearer ${token()}` }
+        }).then(r => r.json());
+        const row = document.getElementById('suggestions');
+        row.innerHTML = '';
+        files.slice(0,4).forEach(f => {
+            const col = document.createElement('div');
+            col.className = 'col-3';
+            col.innerHTML = `
+        <div class="file-card" onclick="downloadFile(${f.id});event.stopPropagation()">
+          <div style="font-size:2rem">${f.type==='FOLDER'?'📁':'📄'}</div>
+          <small>${getName(f)}</small>
+        </div>`;
+            row.append(col);
+        });
+    }
+
+    /* ===== 폴더+파일 통합 로드 ===== */
+    async function loadFolderAndFiles() {
+        if (!currentTeamId) return;
+        showLoading(true);
+        try {
+            let url;
+            // 루트인지 하위 폴더인지에 따라 올바른 엔드포인트 선택
+            if (currentFolderId === null) {
+                url = new URL(`${API_BASE}/${currentTeamId}/folders/contents`, location);
+            } else {
+                url = new URL(`${API_BASE}/${currentTeamId}/folders/${currentFolderId}/contents`, location);
+            }
+            url.searchParams.set('sort', currentSort);
+
+            const items = await fetch(url, {
+                headers: { Authorization: `Bearer ${token()}` }
+            }).then(r => {
+                if (!r.ok) throw new Error('목록 로드 실패');
+                return r.json();
+            });
+
+            const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+            const filtered = kw
+                ? items.filter(i => getName(i).toLowerCase().includes(kw))
+                : items;
+            renderTable(filtered);
+        } catch (e) {
+            alert('목록 로드 오류');
+            console.error(e);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function renderTable(arr) {
+        const tb = document.getElementById('fileTable');
+        tb.innerHTML = '';
+        arr.forEach(i => {
+            const tr = document.createElement('tr');
+            tr.className = i.type==='FOLDER' ? 'folder-row' : 'file-row';
+            tr.innerHTML = `
+        <td>${i.id||''}</td>
+        <td>${getName(i)}</td>
+        <td>${i.type==='FOLDER'?'폴더':'파일'}</td>
+        <td>${i.type==='FOLDER'?'-':fmtSize(i.size)}</td>
+        <td>${getUploader(i)}</td>
+        <td>
+          <button class="icon-btn" title="다운로드" ${i.type==='FOLDER'?'disabled':''}
+                  onclick="downloadFile(${i.id});event.stopPropagation()">
+            <i class="bi-download"></i>
+          </button>
+          <button class="icon-btn text-danger" title="삭제"
+                  onclick="deleteItem(${i.id},'${i.type}');event.stopPropagation()">
+            <i class="bi-trash"></i>
+          </button>
+        </td>`;
+            if (i.type==='FOLDER') {
+                tr.onclick = () => {
+                    currentFolderId = i.id;
+                    pathStack.push({ id: i.id, name: getName(i) });
+                    updateBreadcrumb();
+                    loadFolderAndFiles();
+                };
+            }
+            tb.append(tr);
+        });
+    }
+
+    /* ===== 다운로드 ===== */
+    async function downloadFile(id) {
+        showLoading(true);
+        const url = new URL(`${API_BASE}/${currentTeamId}/files/${id}`, location);
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        const blob = await res.blob();
+        const fname = getFilename(res.headers.get('Content-Disposition')) || 'download';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fname;
+        a.click();
+        showLoading(false);
+    }
+
+    /* ===== 삭제 ===== */
+    async function deleteItem(id, type) {
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        showLoading(true);
+        let url;
+        if (type === 'FOLDER') {
+            url = new URL(`${API_BASE}/${currentTeamId}/folders/${id}`, location);
+        } else {
+            url = new URL(`${API_BASE}/${currentTeamId}/files/${id}`, location);
+        }
+        await fetch(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token()}` }
+        }).catch(console.error);
+        await loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    /* ===== 업로드 ===== */
+    const triggerUpload = () => document.getElementById('uploadInput').click();
+    async function handleUpload(e) {
+        const f = e.target.files[0];
+        if (!f) return;
+        showLoading(true);
+        const fd = new FormData();
+        fd.append('file', f);
+        // 업로드 URL
+        const uploadPath = `${API_BASE}/${currentTeamId}/folders/${currentFolderId}/files`;
+        await fetch(uploadPath, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token()}` },
+            body: fd
+        });
+        e.target.value = null;
+        await loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    /* ===== 폴더 생성 ===== */
+    async function openNewFolder() {
+        const name = prompt('새 폴더 이름');
+        if (!name) return;
+        showLoading(true);
+        const req = { parentId: currentFolderId, name };
+        await fetch(`${API_BASE}/${currentTeamId}/folders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token()}`
+            },
+            body: JSON.stringify(req)
+        });
+        await loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    /* ===== 검색 & 정렬 ===== */
+    const searchFiles = () => loadFolderAndFiles();
+    const setSort = o => { currentSort = o; loadFolderAndFiles(); };
+</script>
+</body>
+</html>
