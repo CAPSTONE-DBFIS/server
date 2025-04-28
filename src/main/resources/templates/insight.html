@@ -421,8 +421,7 @@
                         currentRelatedKeyword = relatedKeywords[idx].relatedKeyword;
                         // 일간 메인 + 연관 키워드 선택 시, 범위 기반 기사 검색 (날짜를 같은 값으로 사용)
                         const date = document.getElementById('date').value;
-                        currentSearchPage = 0;
-                        fetchRelatedArticlesRange(currentDailyKeyword, currentRelatedKeyword, date, date, currentSearchPage)
+                        fetchRelatedArticles(currentDailyKeyword, currentRelatedKeyword, date, date)
                             .then(newArticles => renderModalArticles(newArticles, false));
                     }
                 }
@@ -510,8 +509,7 @@
                         currentRelatedKeyword = relatedKeywords[idx].relatedKeyword;
                         // 주간 메인 + 연관 키워드 선택 시, 범위 기반 기사 검색 (WEEKLY_DATA 범위 사용)
                         const { range_start, range_end } = WEEKLY_DATA;
-                        currentSearchPage = 0;
-                        fetchRelatedArticlesRange(currentWeeklyKeyword, currentRelatedKeyword, range_start, range_end, currentSearchPage)
+                        fetchRelatedArticles(currentWeeklyKeyword, currentRelatedKeyword, range_start, range_end)
                             .then(newArticles => renderModalArticles(newArticles, false));
                     }
                 }
