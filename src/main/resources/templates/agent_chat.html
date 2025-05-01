@@ -114,6 +114,24 @@
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
       height: calc(100vh - 70px);
       position: relative;
+      resize: horizontal;
+      min-width: 200px;
+      max-width: 400px;
+    }
+
+    .resize-handle {
+      position: absolute;
+      right: -5px;
+      top: 0;
+      width: 5px;
+      height: 100%;
+      background: #ccc;
+      cursor: ew-resize;
+      z-index: 10;
+    }
+
+    .resize-handle:hover {
+      background: #aaa;
     }
 
     .sidebar h2 {
@@ -150,14 +168,35 @@
     .chatroom-item button {
       background: transparent;
       border: none;
-      color: #ff4d4d;
       font-size: 1.2em;
       cursor: pointer;
       padding: 5px;
     }
 
-    .chatroom-item button:hover {
+    .delete-btn {
+      color: #ff4d4d;
+    }
+
+    .delete-btn:hover {
       color: #ff2222;
+    }
+
+    .favorite-btn {
+      color: #ccc;
+      font-size: 1.2em;
+      transition: color 0.3s ease;
+    }
+
+    .favorite-btn.favorited {
+      color: #ffd700;
+    }
+
+    .favorite-btn:hover {
+      color: #aaa;
+    }
+
+    .favorite-btn.favorited:hover {
+      color: #ffcc00;
     }
 
     .chatroom-name {
@@ -227,6 +266,10 @@
       background: #0088cc;
     }
 
+    .project-label i.fa-folder {
+      margin-right: 8px;
+    }
+
     .project-label .add-chatroom-btn {
       background: #00aaff;
       color: white;
@@ -280,13 +323,6 @@
       max-width: 900px;
     }
 
-    .chat-header {
-      font-size: 1.8em;
-      font-weight: 600;
-      text-align: center;
-      color: #333;
-    }
-
     .chat-box {
       flex: 1;
       overflow-y: auto;
@@ -302,7 +338,7 @@
     .chat-input {
       display: flex;
       align-items: center;
-      gap: 10px; /* 요소 간 간격을 10px로 조정 */
+      gap: 10px;
       padding: 10px;
       background: white;
       border-top: 1px solid #ddd;
@@ -311,11 +347,11 @@
     .persona-controls {
       display: flex;
       align-items: center;
-      gap: 6px; /* 페르소나 컨트롤 내부 간격 조정 */
+      gap: 6px;
     }
 
     #personaSelect {
-      height: 40px; /* 높이를 40px로 통일 */
+      height: 40px;
       font-size: 14px;
       padding: 0 8px;
       border-radius: 6px;
@@ -331,7 +367,7 @@
 
     .persona-buttons button {
       width: 28px;
-      height: 20px; /* 버튼 높이를 약간 늘림 */
+      height: 20px;
       font-size: 14px;
       border: none;
       border-radius: 4px;
@@ -349,7 +385,7 @@
 
     #userInput {
       flex: 1;
-      height: 40px; /* 높이를 40px로 통일 */
+      height: 40px;
       border-radius: 6px;
       border: 1px solid #ccc;
       padding: 0 12px;
@@ -358,25 +394,19 @@
     }
 
     .btn-send {
-      height: 40px; /* 높이를 40px로 통일 */
-      padding: 0 20px; /* 좌우 패딩 조정 */
+      height: 40px;
+      padding: 0 20px;
       background-color: #0a192f;
       color: white;
       border: none;
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
-      transition: background-color 0.3s ease; /* 부드러운 호버 효과 */
+      transition: background-color 0.3s ease;
     }
 
     .btn-send:hover {
-      background-color: #1a3c6f; /* 호버 시 더 밝은 색상으로 변경 */
-    }
-
-    /* 중복된 스타일 제거 */
-    .chat-input input,
-    .chat-input button {
-      /* 불필요한 중복 스타일 제거 */
+      background-color: #1a3c6f;
     }
 
     .messages-container {
@@ -506,21 +536,148 @@
       animation: fadeIn 0.5s ease forwards;
     }
 
-    .links {
-      margin-top: 8px;
+    /* 말풍선 내부의 출처 버튼 스타일 */
+    .message .links-button {
+      background-color: #0a192f;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 5px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.3s ease;
     }
 
-    .links a {
+    .message .links-button:hover {
+      background-color: #1a3c6f;
+    }
+
+    /* 기존 .links-container는 더 이상 필요 없으므로 스타일 제거 */
+    .links-container {
+      display: none;
+    }
+
+    /* 모달 스타일 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #555;
+    }
+
+    .modal-close:hover {
+      color: #0a192f;
+    }
+
+    .modal-header {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    /* 모달 내 출처 리스트 스타일 */
+    .links-list {
       display: block;
-      color: #0288d1;
-      text-decoration: none;
-      margin: 4px 0;
-      transition: color 0.3s ease;
+      max-height: none; /* 모달 내에서는 제한 없음 */
+      overflow-y: auto;
+      padding: 0;
     }
 
-    .links a:hover {
-      color: #005f8c;
+    .link-item {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      transition.ConcurrentModificationException: background-color 0.3s;
+    }
+
+    .link-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    .link-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .link-id {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .link-title {
+      font-size: 14px;
+      color: #1a73e8;
+      text-decoration: none;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .link-title:hover {
       text-decoration: underline;
+    }
+
+    .link-domain {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .link-content {
+      margin-top: 8px;
+      padding: 8px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .link-snippet {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .links-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .links-list::-webkit-scrollbar-thumb {
+      background-color: #888;
+      border-radius: 4px;
+    }
+
+    .links-list::-webkit-scrollbar-thumb:hover {
+      background-color: #555;
     }
 
     .chat-box pre {
@@ -640,10 +797,10 @@
   <div class="sidebar">
     <h2>채팅방 목록</h2>
     <div class="chatroom-list" id="chatroomList"></div>
+    <div class="resize-handle"></div>
     <button class="new-chatroom-btn" onclick="ChatApp.createNewPersonalChatroom()">+ 개인 채팅방</button>
   </div>
   <div class="chat-container">
-    <div class="chat-header">TRENDB</div>
     <div class="chat-box" id="messagesContainer"></div>
     <div class="chat-input">
       <div class="persona-controls">
@@ -738,6 +895,14 @@
     },
 
     async loadSidebar() {
+      if (this.editingChatroomId) {
+        const chatroomItem = document.querySelector(`[data-chatroom-id="${this.editingChatroomId}"]`);
+        if (chatroomItem) {
+          const currentName = chatroomItem.querySelector('.chatroom-name-input')?.value || '';
+          this.cancelEditingChatroomName(chatroomItem, this.editingChatroomId, currentName);
+        }
+      }
+
       const res = await this.requestWithAuth("http://localhost:8080/api/chatbot/dashboard");
       if (!res.ok) {
         console.error("사이드바 로드 실패:", await res.text());
@@ -759,11 +924,17 @@
         const projectLabel = document.createElement('div');
         projectLabel.className = 'project-label';
 
+        const projectNameContainer = document.createElement('span');
+        projectNameContainer.style.flex = '1';
+        projectNameContainer.style.cursor = 'pointer';
+
+        const folderIcon = document.createElement('i');
+        folderIcon.className = 'fas fa-folder';
         const projectNameSpan = document.createElement('span');
-        projectNameSpan.textContent = `📁 ${project.name}`;
-        projectNameSpan.style.flex = '1';
-        projectNameSpan.style.cursor = 'pointer';
-        projectNameSpan.onclick = () => this.selectProject(project.id);
+        projectNameSpan.textContent = ` ${project.name}`;
+        projectNameContainer.appendChild(folderIcon);
+        projectNameContainer.appendChild(projectNameSpan);
+        projectNameContainer.onclick = () => this.selectProject(project.id);
 
         const addBtn = document.createElement('button');
         addBtn.className = 'add-chatroom-btn';
@@ -773,7 +944,7 @@
           this.createNewChatroom(project.id);
         };
 
-        projectLabel.appendChild(projectNameSpan);
+        projectLabel.appendChild(projectNameContainer);
         projectLabel.appendChild(addBtn);
         chatroomList.appendChild(projectLabel);
 
@@ -808,6 +979,17 @@
       div.className = 'chatroom-item';
       div.dataset.chatroomId = chat.id;
 
+      const favoriteBtn = document.createElement('button');
+      favoriteBtn.className = 'favorite-btn';
+      favoriteBtn.innerHTML = '<i class="fas fa-star"></i>';
+      if (chat.favorite === true) {
+        favoriteBtn.classList.add('favorited');
+      }
+      favoriteBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleFavorite(chat.id, !chat.favorite);
+      };
+
       const span = document.createElement('span');
       span.className = 'chatroom-name';
       span.textContent = chat.name || `채팅방 #${chat.id}`;
@@ -825,14 +1007,33 @@
       };
 
       const deleteBtn = document.createElement("button");
+      deleteBtn.className = 'delete-btn';
       deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
       deleteBtn.onclick = (e) => {
         e.stopPropagation();
         this.deleteChatRoom(chat.id);
       };
 
-      div.append(span, editBtn, deleteBtn);
+      div.append(favoriteBtn, span, editBtn, deleteBtn);
       return div;
+    },
+
+    async toggleFavorite(chatroomId, favorite) {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      try {
+        const response = await this.requestWithAuth(
+                `http://localhost:8080/api/chatbot/chatroom/${chatroomId}/favorite?favorite=${favorite}`,
+                { method: "PATCH" }
+        );
+        if (!response.ok) throw new Error(`즐겨찾기 업데이트 실패: ${await response.text()}`);
+        await this.loadSidebar();
+      } catch (error) {
+        console.error("즐겨찾기 업데이트 오류:", error);
+        alert(`즐겨찾기 업데이트 실패: ${error.message}`);
+      }
     },
 
     startEditingChatroomName(chatroomItem, chatroomId, currentName) {
@@ -845,7 +1046,6 @@
 
       const nameSpan = chatroomItem.querySelector('.chatroom-name');
       const editBtn = chatroomItem.querySelector('.edit-btn');
-      const deleteBtn = chatroomItem.querySelector('button:last-child');
 
       const input = document.createElement('input');
       input.type = 'text';
@@ -883,8 +1083,6 @@
         return;
       }
 
-      const originalName = chatroomItem.querySelector('.chatroom-name-input')?.value || '';
-
       try {
         const response = await this.requestWithAuth(
                 `http://localhost:8080/api/chatbot/chatroom/${chatroomId}/rename?newChatroomName=${encodeURIComponent(newName)}`,
@@ -901,8 +1099,8 @@
 
         if (!input || !saveBtn) {
           console.warn("입력 요소 또는 저장 버튼을 찾을 수 없습니다. DOM이 갱신되었을 가능성이 있습니다.");
-          await this.loadSidebar();
           this.editingChatroomId = null;
+          await this.loadSidebar();
           return;
         }
 
@@ -925,16 +1123,12 @@
         chatroomItem.replaceChild(nameSpan, input);
         chatroomItem.replaceChild(editBtn, saveBtn);
 
-        if (this.currentChatroomId === chatroomId) {
-          document.querySelector('.chat-header').textContent = newName;
-        }
-
-        await this.loadSidebar();
         this.editingChatroomId = null;
+        await this.loadSidebar();
       } catch (error) {
         console.error("채팅방 이름 수정 오류:", error);
         alert(`채팅방 이름 수정 실패: ${error.message}`);
-        this.cancelEditingChatroomName(chatroomItem, chatroomId, originalName);
+        this.cancelEditingChatroomName(chatroomItem, chatroomId, newName);
       }
     },
 
@@ -985,7 +1179,7 @@
         if (this.currentChatroomId === chatroomId) {
           this.currentChatroomId = null;
           document.getElementById('messagesContainer').innerHTML = '';
-          document.querySelector('.chat-header').textContent = 'TRENDB';
+          document.querySelector('.chat-header').textContent = '';
         }
       } catch (error) {
         console.error("채팅방 삭제 오류:", error);
@@ -1040,7 +1234,6 @@
         return;
       }
       this.currentChatroomId = chatroomId;
-      document.querySelector('.chat-header').textContent = chatroomName || `채팅방 #${chatroomId}`;
 
       document.querySelectorAll('.chatroom-item').forEach(item => item.classList.remove('active'));
       const chatroomElement = document.querySelector(`[data-chatroom-id="${chatroomId}"]`);
@@ -1112,16 +1305,30 @@
       const decoder = new TextDecoder("utf-8");
       const chatBox = document.getElementById('messagesContainer');
 
-      let fullResponse = "";
+      // 메시지 래퍼 생성
       const wrapper = document.createElement('div');
       wrapper.classList.add('message-wrapper', 'bot');
+
+      // 메시지 본문 생성
       const bubble = document.createElement('div');
       bubble.classList.add('message', 'bot');
+
+      // 출처 버튼 생성 (모달 트리거용)
+      const linksButton = document.createElement('button');
+      linksButton.classList.add('links-button');
+      linksButton.style.display = 'none'; // 초기에는 숨김
+
+      // 메시지 본문에 추가
+      bubble.appendChild(linksButton);
       wrapper.appendChild(bubble);
+
       chatBox.appendChild(wrapper);
       chatBox.scrollTop = chatBox.scrollHeight;
 
+      let fullResponse = "";
       let buffer = "";
+      let links = [];
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -1131,15 +1338,78 @@
 
         for (const part of parts) {
           const clean = part.replace(/^data:\s*/, "").trim();
-          if (!clean) continue;
+          if (!clean || clean === "[DONE]") continue;
           try {
             const json = JSON.parse(clean);
             if (json.token) {
               fullResponse += json.token;
               bubble.innerHTML = this.markdownToHTML(fullResponse);
+              bubble.prepend(linksButton);
               this.renderMathJax(bubble);
               this.addCopyButtonsToElement(bubble);
               this.adjustBubbleWidth(bubble);
+            } else if (json.links) {
+              links = json.links;
+              const count = json.link_count || links.length;
+              if (count > 0) {
+                linksButton.style.display = 'block';
+                linksButton.innerHTML = `출처 (${count}개)`; // 간결하게 표시
+                linksButton.onclick = () => {
+                  // 모달 생성
+                  const modalOverlay = document.createElement('div');
+                  modalOverlay.classList.add('modal-overlay');
+
+                  const modalContent = document.createElement('div');
+                  modalContent.classList.add('modal-content');
+
+                  const modalHeader = document.createElement('div');
+                  modalHeader.classList.add('modal-header');
+                  modalHeader.textContent = `출처 (${count}개)`;
+
+                  const closeBtn = document.createElement('button');
+                  closeBtn.classList.add('modal-close');
+                  closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                  closeBtn.onclick = () => modalOverlay.remove();
+
+                  const linksList = document.createElement('div');
+                  linksList.classList.add('links-list');
+
+                  // 출처 리스트 렌더링
+                  links.forEach(link => {
+                    const item = document.createElement('div');
+                    item.classList.add('link-item');
+                    // 도메인 추출
+                    let domain = 'Unknown';
+                    try {
+                      domain = new URL(link.url).hostname || 'Unknown';
+                    } catch {
+                      domain = link.title.includes('Namuwiki') ? 'namu.wiki' : 'Unknown';
+                    }
+                    // XSS 방지
+                    const safeTitle = link.title ? link.title.replace(/</g, '<').replace(/>/g, '>') : 'No Title';
+                    const safeContent = link.content ? link.content.replace(/</g, '<').replace(/>/g, '>') : 'No content available';
+                    item.innerHTML = `
+                      <div class="link-header">
+                        <div class="link-id">[${link.id}]</div>
+                        <a href="${link.url}" target="_blank" class="link-title">${safeTitle}</a>
+                      </div>
+                      <div class="link-content">
+                        <div class="link-domain">${domain}</div>
+                        <p class="link-snippet">${safeContent}</p>
+                      </div>
+                    `;
+                    linksList.appendChild(item);
+                  });
+
+                  modalContent.appendChild(closeBtn);
+                  modalContent.appendChild(modalHeader);
+                  modalContent.appendChild(linksList);
+                  modalOverlay.appendChild(modalContent);
+                  document.body.appendChild(modalOverlay);
+                };
+              } else {
+                linksButton.style.display = 'none';
+              }
             } else if (json.thoughts) {
               json.thoughts.forEach(step => this.appendLog(bubble, `[생각] ${typeof step === "string" ? step : JSON.stringify(step)}`, 'tool-log intermediate-log'));
             } else if (json.initial_plan) {
@@ -1150,20 +1420,17 @@
               this.appendLog(bubble, `검색 쿼리: ${json.search_query}`, 'tool-log search-query');
             } else if (json.search_result) {
               this.appendLog(bubble, `검색 결과: ${json.search_result}`, 'tool-log search-result');
-              if (json.links) {
-                const linksDiv = document.createElement("div");
-                linksDiv.classList.add("links");
-                json.links.forEach(link => {
-                  const a = document.createElement("a");
-                  a.href = link;
-                  a.target = "_blank";
-                  a.textContent = link;
-                  linksDiv.appendChild(a);
-                });
-                bubble.appendChild(linksDiv);
-              }
             } else if (json.log) {
               this.appendLog(bubble, json.log, 'agent-log');
+            } else if (json.final) {
+              fullResponse = json.final;
+              bubble.innerHTML = this.markdownToHTML(fullResponse);
+              bubble.prepend(linksButton);
+              this.renderMathJax(bubble);
+              this.addCopyButtonsToElement(bubble);
+              this.adjustBubbleWidth(bubble);
+            } else if (json.error) {
+              bubble.innerHTML = `<em>오류 발생: ${json.error}</em>`;
             }
             chatBox.scrollTop = chatBox.scrollHeight;
           } catch (e) {
@@ -1242,7 +1509,6 @@
     },
 
     markdownToHTML(markdown) {
-      // 1) 수식 블록 보호
       const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
       const mathBlocks  = new Map();
       let   mathIdx     = 0;
@@ -1252,21 +1518,19 @@
         return key;
       });
 
-      // 2) 코드 블록 보호
       const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
       const codeBlocks  = new Map();
       let   codeIdx     = 0;
       markdown = markdown.replace(codeBlockRe, (_, lang, code) => {
         const escaped = code
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
+                .replace(/&/g, "&")
+                .replace(/</g, "<")
+                .replace(/>/g, ">");
         const key = `__CODE_BLOCK_${codeIdx++}__`;
         codeBlocks.set(key, { html: escaped, lang });
         return key;
       });
 
-      // 3) 표준 마크다운 테이블만 골라서 변환 (앞뒤 개행 보존)
       const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
       markdown = markdown.replace(tableRe, (_, nl, block) => {
         const lines   = block.trim().split(/\r?\n/);
@@ -1290,7 +1554,9 @@
         return nl + html;
       });
 
-      // 4) 나머지 기본 마크다운 처리
+      // 이미지 변환 추가: ![alt text](image_url) → <img src="image_url" alt="alt text">
+      markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;">');
+
       markdown = markdown
               .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
               .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
@@ -1303,7 +1569,6 @@
               .replace(/^- (.*)$/gm, '<li>$1</li>')
               .replace(/\n/g, '<br>');
 
-      // 5) 코드 블록 복원
       for (const [key, { html, lang }] of codeBlocks.entries()) {
         const cls = lang ? ` class="language-${lang}"` : "";
         markdown = markdown.replace(
@@ -1312,7 +1577,6 @@
         );
       }
 
-      // 6) 수식 블록 복원
       for (const [key, raw] of mathBlocks.entries()) {
         markdown = markdown.replace(
                 key,
@@ -1360,6 +1624,7 @@
         pre.appendChild(copyBtn);
       });
     },
+
     async loadPersonas() {
       try {
         const response = await this.requestWithAuth("http://localhost:8080/api/persona");
@@ -1367,7 +1632,7 @@
         const personas = await response.json();
 
         const personaSelect = document.getElementById('personaSelect');
-        personaSelect.innerHTML = '<option value="">페르소나</option>';  // 초기화
+        personaSelect.innerHTML = '<option value="">페르소나</option>';
 
         personas.forEach(persona => {
           const option = document.createElement('option');
@@ -1383,6 +1648,7 @@
         console.error("페르소나 로드 실패:", error);
       }
     },
+
     async addPersona() {
       const personaName = prompt("새 페르소나 이름을 입력하세요:");
       if (!personaName || !personaName.trim()) {
@@ -1403,19 +1669,20 @@
           body: JSON.stringify({
             name: personaName.trim(),
             prompt: personaPrompt.trim(),
-            preset: false   // 일반 사용자는 기본적으로 false
+            preset: false
           })
         });
 
         if (!response.ok) throw new Error(await response.text());
 
         alert("새 페르소나가 생성되었습니다.");
-        await this.loadPersonas(); // 생성 후 목록 갱신
+        await this.loadPersonas();
       } catch (error) {
         console.error("새 페르소나 생성 실패:", error);
         alert(`페르소나 생성 실패: ${error.message}`);
       }
     },
+
     async deleteSelectedPersona() {
       if (!this.selectedPersonaId) {
         alert("삭제할 페르소나를 선택하세요.");
@@ -1440,6 +1707,36 @@
       }
     },
 
+    setupResizeHandle() {
+      const sidebar = document.querySelector('.sidebar');
+      const resizeHandle = document.querySelector('.resize-handle');
+      let isResizing = false;
+
+      resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+      });
+
+      function resize(e) {
+        if (!isResizing) return;
+        let newWidth = e.clientX;
+        const minWidth = parseInt(getComputedStyle(sidebar).minWidth, 10);
+        const maxWidth = parseInt(getComputedStyle(sidebar).maxWidth, 10);
+
+        if (newWidth < minWidth) newWidth = minWidth;
+        if (newWidth > maxWidth) newWidth = maxWidth;
+
+        sidebar.style.width = `${newWidth}px`;
+      }
+
+      function stopResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    },
+
     init() {
       document.getElementById('userInput').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
@@ -1456,6 +1753,7 @@
           logoutButton.style.display = "block";
           this.loadSidebar();
           this.loadPersonas();
+          this.setupResizeHandle();
         } else {
           window.location.href = "/login";
         }
