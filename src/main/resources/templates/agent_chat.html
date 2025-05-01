@@ -1509,6 +1509,7 @@
     },
 
     markdownToHTML(markdown) {
+      // 수식 블록 분리
       const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
       const mathBlocks  = new Map();
       let   mathIdx     = 0;
@@ -1518,6 +1519,7 @@
         return key;
       });
 
+      // 코드 블록 분리
       const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
       const codeBlocks  = new Map();
       let   codeIdx     = 0;
@@ -1531,34 +1533,42 @@
         return key;
       });
 
+      // 표 변환
       const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
       markdown = markdown.replace(tableRe, (_, nl, block) => {
         const lines   = block.trim().split(/\r?\n/);
-        const headers = lines[0].slice(1,-1).split("|").map(s => s.trim());
+        const headers = lines[0].slice(1, -1).split("|").map(s => s.trim());
         const rows    = lines.slice(2);
 
         let html = "<table><thead><tr>";
         headers.forEach(h => html += `<th>${h}</th>`);
         html += "</tr></thead><tbody>";
-
         rows.forEach(row => {
-          const cols = row.slice(1,-1).split("|").map(s => s.trim());
+          const cols = row.slice(1, -1).split("|").map(s => s.trim());
           if (cols.length === headers.length) {
             html += "<tr>";
             cols.forEach(c => html += `<td>${c}</td>`);
             html += "</tr>";
           }
         });
-
         html += "</tbody></table>";
         return nl + html;
       });
 
-      // 이미지 변환 추가: ![alt text](image_url) → <img src="image_url" alt="alt text">
-      markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;">');
+      // **이미지** 변환: 있으면 무조건 <img> 태그로
+      markdown = markdown.replace(
+              /!\[(.*?)\]\((.*?)\)/g,
+              '<img src="$2" alt="$1" style="max-width:100%;height:auto;border-radius:8px;margin:10px 0;">'
+      );
 
+      // **링크** 변환
+      markdown = markdown.replace(
+              /\[(.*?)\]\((.*?)\)/g,
+              '<a href="$2" target="_blank">$1</a>'
+      );
+
+      // 헤딩, 볼드, 리스트, 줄바꿈 등
       markdown = markdown
-              .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
               .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
               .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
               .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
@@ -1569,6 +1579,7 @@
               .replace(/^- (.*)$/gm, '<li>$1</li>')
               .replace(/\n/g, '<br>');
 
+      // 코드 블록 복원
       for (const [key, { html, lang }] of codeBlocks.entries()) {
         const cls = lang ? ` class="language-${lang}"` : "";
         markdown = markdown.replace(
@@ -1577,6 +1588,7 @@
         );
       }
 
+      // 수식 블록 복원
       for (const [key, raw] of mathBlocks.entries()) {
         markdown = markdown.replace(
                 key,
