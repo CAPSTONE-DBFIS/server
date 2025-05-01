@@ -60,6 +60,8 @@ public class ChatbotApiController {
                         .name(r.getName())
                         .type(r.getType())
                         .projectId(r.getProjectId())
+                        .favorite(r.isFavorite())
+                        .favoriteAddedat(r.getFavoriteAddedAt())
                         .build())
                 .toList();
 
@@ -131,6 +133,18 @@ public class ChatbotApiController {
         ChatRoom room = chatRoomService.getChatRoomByIdAndMemberId(chatroomId, memberId);
         List<ChatMessage> messages = chatMessageService.getMessagesByChatRoom(room);
         return ResponseEntity.ok(messages);
+    }
+
+    @Operation(summary = "채팅방 즐겨찾기 설정", description = "채팅방을 즐겨찾기로 등록하거나 즐겨찾기를 해제합니다.")
+    @PatchMapping("/chatroom/{chatroomId}/favorite")
+    public ResponseEntity<Void> toggleFavoriteChatRoom(
+            @PathVariable @Min(1) Long chatroomId,
+            @RequestParam boolean favorite,
+            @RequestHeader("Authorization") @NotBlank String token) {
+
+        String memberId = tokenProvider.getMemberId(token);
+        chatRoomService.updateFavoriteStatus(memberId, chatroomId, favorite);
+        return ResponseEntity.noContent().build(); // 204
     }
 
     @Operation(summary = "에이전트 스트리밍 쿼리 프록시", description = "FastAPI SSE 스트림을 프록시합니다.")
