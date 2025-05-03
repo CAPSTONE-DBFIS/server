@@ -813,6 +813,7 @@
         </div>
       </div>
       <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
+      <input type="file" id="fileInput" style="max-width: 180px;" multiple>
       <button class="btn-send" onclick="ChatApp.sendMessage()">전송</button>
     </div>
   </div>
@@ -1263,7 +1264,11 @@
     async sendMessage() {
       const input = document.getElementById('userInput');
       const message = input.value.trim();
-      if (!message) return;
+      const fileInput = document.getElementById('fileInput');
+      const files = fileInput.files;
+
+      if (!message && files.length === 0) return; // 아무 입력 없으면 무시
+
       if (!this.getAuthToken()) {
         alert("로그인이 필요합니다.");
         return;
@@ -1273,18 +1278,34 @@
         return;
       }
 
-      this.displayMessage(message, 'user');
+      let displayText = message;
+      if (!displayText && files.length > 0) {
+        displayText = Array.from(files).map(f => `파일: ${f.name}`).join(', ');
+      }
+
+      this.displayMessage(displayText, 'user');
       input.value = '';
       const loading = this.showLoadingSpinner();
 
       try {
-        const params = new URLSearchParams({ query: message });
+        const formData = new FormData();
+        formData.append("query", message);
+        formData.append("chatroomId", this.currentChatroomId);
         if (this.selectedPersonaId) {
-          params.append("personaId", this.selectedPersonaId);
+          formData.append("personaId", this.selectedPersonaId);
         }
-        const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${this.currentChatroomId}/agent-query?${params.toString()}`, {
-          method: "GET",
-          headers: { "Authorization": `Bearer ${this.getAuthToken()}` }
+
+        // ✅ 여러 파일 추가
+        for (const file of files) {
+          formData.append("files", file);  // key 이름 "files"
+        }
+
+        const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${this.currentChatroomId}/agent-query`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${this.getAuthToken()}`
+          },
+          body: formData
         });
 
         if (!response.ok) throw new Error(`전송 실패: ${await response.text()}`);
