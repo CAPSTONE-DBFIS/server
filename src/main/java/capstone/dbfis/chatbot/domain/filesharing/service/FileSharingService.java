@@ -27,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -40,10 +41,13 @@ public class FileSharingService {
     private final TeamService teamService;
     private final FolderRepository folderRepository;
     private final FileRepository fileRepository;
-    private final RagService ragService;
 
     @Value("${aws.s3.bucket}")
     private String bucketName; // S3 버킷 이름
+
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
+            "pdf", "docx", "hwp", "txt", "png", "jpg", "jpeg"
+    );
 
     /**
      * 팀 접근 권한 체크 메서드
@@ -142,7 +146,7 @@ public class FileSharingService {
     }
 
     /**
-     * 팀 파일 업로드 (S3 + RAG + DB 저장)
+     * 팀 파일 업로드 (S3 + DB 저장)
      */
     @Transactional
     public FileDto uploadTeamFile(MultipartFile file, Long teamId, Long folderId, String memberId) throws IOException {
@@ -155,10 +159,22 @@ public class FileSharingService {
 
         // 원본 파일명
         String original = file.getOriginalFilename();
+        if (original == null || original.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일명이 유효하지 않습니다.");
+        }
+
+        // 파일 확장자 확인
+        String extension = getFileExtension(original).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "지원하지 않는 파일 형식입니다. 허용된 형식: " + String.join(", ", ALLOWED_EXTENSIONS)
+            );
+        }
 
         // 중복 파일명 방지 처리
         String key = teamId + "/" + folderId + "/"
-                + resolveDuplicate(Objects.requireNonNull(original), teamId, folderId);
+                + resolveDuplicate(original, teamId, folderId);
 
         ObjectMetadata meta = new ObjectMetadata();
         meta.setContentLength(file.getSize());
@@ -166,9 +182,6 @@ public class FileSharingService {
 
         // S3 업로드
         amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), meta));
-
-        // FastApi로 RAG 동기 요청
-        ragService.sendToRagSync("team", key, file.getBytes(), memberId, teamId);
 
         // 업로드 대상 폴더 조회
         Folder folder = folderRepository.findById(folderId)
@@ -195,6 +208,13 @@ public class FileSharingService {
                 entity.getUploaderId(),
                 0
         );
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
     /**
@@ -256,7 +276,7 @@ public class FileSharingService {
     }
 
     /**
-     * 파일 삭제 (S3 + FastApi Milvus 파이프라인 + DB)
+     * 파일 삭제 (S3 + DB)
      */
     @Transactional
     public void deleteFile(Long teamId, Long fileId, String memberId) {
@@ -269,9 +289,6 @@ public class FileSharingService {
 
         // S3 삭제
         amazonS3.deleteObject(bucketName, e.getS3Key());
-
-        // RAG 임베딩 삭제
-        ragService.deleteTeamFileEmbeddingSync(e.getOriginalName(), teamId);
 
         // DB 메타 삭제
         fileRepository.deleteById(fileId);
