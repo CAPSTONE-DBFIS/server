@@ -1179,7 +1179,6 @@
         if (this.currentChatroomId === chatroomId) {
           this.currentChatroomId = null;
           document.getElementById('messagesContainer').innerHTML = '';
-          document.querySelector('.chat-header').textContent = '';
         }
       } catch (error) {
         console.error("채팅방 삭제 오류:", error);
