@@ -35,4 +35,9 @@ public class HomeController {
     public String insightPage() {
         return "insight";
     }
+
+    @GetMapping("/foreign-insight")
+    public String foreignInsightPage() {
+        return "foreign-insight";
+    }
 }
