@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -52,7 +53,7 @@ public class ChatRoomService {
      * 멤버의 채팅방 리스트 조회
      */
     public List<ChatRoom> getChatRoomsByMemberId(String memberId) {
-        return chatRoomRepository.findByMemberIdOrderByIdAsc(memberId);
+        return chatRoomRepository.findByMemberIdSorted(memberId);
     }
 
     /**
@@ -80,5 +81,25 @@ public class ChatRoomService {
 
         // 채팅방 삭제
         chatRoomRepository.delete(chatRoom);
+    }
+
+    /**
+     * 채팅방 즐겨찾기 설정 또는 해제
+     */
+    @Transactional
+    public void updateFavoriteStatus(String memberId, Long chatRoomId, boolean favorite) {
+        ChatRoom chatRoom = chatRoomRepository.findByIdAndMemberId(chatRoomId, memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "채팅방을 찾을 수 없습니다."));
+
+        chatRoom.setFavorite(favorite);
+
+        // 즐겨찾기 설정 시에만 즐겨찾기 추가 시간 기록
+        if (favorite) {
+            chatRoom.setFavoriteAddedAt(LocalDateTime.now());
+        } else {
+            chatRoom.setFavoriteAddedAt(null); // 즐겨찾기 해제 시 null 처리
+        }
+
+        chatRoomRepository.save(chatRoom);
     }
 }

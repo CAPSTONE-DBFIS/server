@@ -1,12 +1,12 @@
 package capstone.dbfis.chatbot.domain.chatbot.dto;
 
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 @Data
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,4 +15,6 @@ public class ChatRoomDto {
     private String name;
     private ChatRoomType type;
     private Long projectId; // null 이면 개인 채팅방
+    private boolean favorite; // 즐겨찾기 여부
+    private LocalDateTime favoriteAddedat; // 즐겨찾기 등록 시간
 }

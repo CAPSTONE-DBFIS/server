@@ -81,8 +81,8 @@ public class MemberService {
         }
 
         // 액세스 및 리프레시 토큰 생성
-        String accessToken = tokenProvider.generateToken(member, Duration.ofHours(2));
-        String refreshToken = tokenProvider.generateToken(member, Duration.ofDays(14));
+        String accessToken = tokenProvider.generateToken(member, Duration.ofHours(24));
+        String refreshToken = tokenProvider.generateToken(member, Duration.ofDays(24));
         refreshTokenService.updateOrSaveRefreshToken(member, refreshToken);
 
         // 토큰 응답 반환

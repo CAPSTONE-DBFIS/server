@@ -69,7 +69,7 @@ public class FileSharingApiController {
      */
     @Operation(
             summary = "폴더·파일 목록 조회",
-            description = "특정 폴더(또는 루트)의 직속 하위 폴더와 파일을 한 번에 반환합니다."
+            description = "특정 폴더(또는 루트)의 직속 하위 폴더와 파일을 한 번에 반환합니다. 루트의 경우: /folders/contents 엔드포인트, 폴더의 경우: /folders/{folderId}/contents 엔드포인트 사용"
     )
     @GetMapping({"/folders/{folderId}/contents", "/folders/contents"})
     public ResponseEntity<List<ContentDto>> listContents(
