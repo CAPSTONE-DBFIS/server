@@ -145,6 +145,128 @@
         .tab-menu a.active:hover {
             background-color: #4a45c4;
         }
+        /* 키워드 검색 섹션 스타일 */
+        .search-section {
+            margin-top: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .search-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-form input, .search-form select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex-grow: 1;
+        }
+        
+        .search-form button {
+            background-color: #5B55D7;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .search-form button:hover {
+            background-color: #4a45c4;
+        }
+        
+        .search-results {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .article-item {
+            display: flex;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            transition: box-shadow 0.3s;
+        }
+        
+        .article-item:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .article-thumbnail {
+            width: 150px;
+            min-width: 150px;
+            height: 120px;
+            margin-right: 15px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+        }
+        
+        .article-content {
+            flex: 1;
+        }
+        
+        .article-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .article-title:hover {
+            color: #5B55D7;
+        }
+        
+        .article-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .article-category {
+            background-color: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .article-summary {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.4;
+        }
+        
+        .category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .category-badge {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .category-badge:hover, .category-badge.active {
+            background-color: #5B55D7;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -155,13 +277,38 @@
     
     <!-- 탭 메뉴 추가 -->
     <div class="tab-menu">
-        <a href="/insight">국내 인사이트</a>
-        <a href="/foreign-insight" class="active">해외 인사이트</a>
+        <a href="/insight-view">국내 인사이트</a>
+        <a href="/foreign-insight-view" class="active">해외 인사이트</a>
     </div>
     
     <label for="date">날짜 선택:</label>
     <input type="date" id="date" />
     <button onclick="loadAllData()">조회</button>
+
+    <!-- 키워드 검색 섹션을 일간 데이터 섹션 위로 이동 -->
+    <div class="search-section">
+        <h2>키워드 기반 기사 검색</h2>
+        
+        <div class="category-list" id="category-list">
+            <!-- 카테고리는 JavaScript로 동적 로드 -->
+            <div class="category-badge active" data-category="">전체</div>
+        </div>
+        
+        <div class="search-form">
+            <input type="text" id="search-keyword" placeholder="검색할 키워드 입력" />
+            <input type="date" id="search-start-date" />
+            <input type="date" id="search-end-date" />
+            <select id="search-category">
+                <option value="">카테고리 선택 (전체)</option>
+                <!-- 카테고리는 JavaScript로 동적 로드 -->
+            </select>
+            <button onclick="searchArticles()">검색</button>
+        </div>
+        
+        <div class="search-results" id="search-results">
+            <!-- 검색 결과는 JavaScript로 동적 로드 -->
+        </div>
+    </div>
 
     <!-- 일간 데이터 섹션 -->
     <div class="section" id="daily-section">
@@ -635,6 +782,7 @@
     document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('date').value = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         loadAllData();
+        loadCategories();
         const closeBtn = document.querySelector(".close-btn");
         closeBtn.addEventListener("click", closeModal);
         window.addEventListener("click", function(event) {
@@ -669,6 +817,267 @@
             if (weeklyChart) weeklyChart.destroy();
             if (weeklyRelatedChart) weeklyRelatedChart.destroy();
         }
+    }
+
+    // 카테고리 목록 로드
+    async function loadCategories() {
+        try {
+            const response = await fetch(`/api/insight/categories?foreign=true`);
+            if (!response.ok) {
+                console.error(`카테고리 로드 중 오류: HTTP ${response.status}`);
+                return;
+            }
+            
+            const responseText = await response.text();
+            let categories;
+            
+            try {
+                categories = JSON.parse(responseText);
+            } catch (e) {
+                console.error('카테고리 데이터 파싱 오류:', e, responseText);
+                return;
+            }
+            
+            // 카테고리 목록 렌더링
+            const categoryList = document.getElementById('category-list');
+            const categorySelect = document.getElementById('search-category');
+            
+            // 기존 카테고리 제외하고 비우기
+            Array.from(categoryList.children).forEach(child => {
+                if (!child.classList.contains('active')) {
+                    child.remove();
+                }
+            });
+            
+            // 첫 번째 옵션을 제외하고 드롭다운 비우기
+            while (categorySelect.options.length > 1) {
+                categorySelect.remove(1);
+            }
+            
+            // 카테고리 추가
+            categories.forEach(category => {
+                // 카테고리 배지 추가
+                const badge = document.createElement('div');
+                badge.className = 'category-badge';
+                badge.textContent = `${category.name} (${category.count})`;
+                badge.dataset.category = category.name;
+                badge.addEventListener('click', () => {
+                    // 다른 배지의 활성 상태 제거
+                    document.querySelectorAll('.category-badge').forEach(b => b.classList.remove('active'));
+                    // 현재 배지 활성화
+                    badge.classList.add('active');
+                    // 카테고리 선택
+                    document.getElementById('search-category').value = category.name !== '일반' ? category.name : '';
+                });
+                categoryList.appendChild(badge);
+                
+                // 드롭다운 옵션 추가
+                const option = document.createElement('option');
+                option.value = category.name !== '일반' ? category.name : '';
+                option.textContent = `${category.name} (${category.count})`;
+                categorySelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('카테고리 목록 로딩 중 오류 발생:', error);
+        }
+    }
+    
+    // 키워드 기반 기사 검색
+    async function searchArticles() {
+        const keyword = document.getElementById('search-keyword').value.trim();
+        const startDate = document.getElementById('search-start-date').value;
+        const endDate = document.getElementById('search-end-date').value;
+        const category = document.getElementById('search-category').value;
+        const resultsContainer = document.getElementById('search-results');
+        
+        // 입력 검증 강화
+        if (!keyword) {
+            resultsContainer.innerHTML = 
+                '<div style="padding: 20px; background-color: #fff3cd; color: #856404; border-radius: 5px; margin-bottom: 15px;">' +
+                '<strong>⚠️ 알림:</strong> 검색할 키워드를 입력해주세요.' +
+                '</div>';
+            document.getElementById('search-keyword').focus();
+            return;
+        }
+        
+        if (!startDate || !endDate) {
+            resultsContainer.innerHTML = 
+                '<div style="padding: 20px; background-color: #fff3cd; color: #856404; border-radius: 5px; margin-bottom: 15px;">' +
+                '<strong>⚠️ 알림:</strong> 검색 기간을 설정해주세요.' +
+                '</div>';
+            if (!startDate) document.getElementById('search-start-date').focus();
+            else document.getElementById('search-end-date').focus();
+            return;
+        }
+        
+        // 종료일이 시작일보다 이전인지 검사
+        if (new Date(endDate) < new Date(startDate)) {
+            resultsContainer.innerHTML = 
+                '<div style="padding: 20px; background-color: #fff3cd; color: #856404; border-radius: 5px; margin-bottom: 15px;">' +
+                '<strong>⚠️ 알림:</strong> 종료일은 시작일보다 이후여야 합니다.' +
+                '</div>';
+            document.getElementById('search-end-date').focus();
+            return;
+        }
+        
+        try {
+            // 로딩 표시 강화
+            resultsContainer.innerHTML = 
+                '<div style="text-align: center; padding: 30px;">' +
+                '<div style="display: inline-block; width: 40px; height: 40px; border: 5px solid #f3f3f3; ' +
+                'border-top: 5px solid #5B55D7; border-radius: 50%; animation: spin 1s linear infinite;"></div>' +
+                '<p style="margin-top: 15px; color: #666;">검색 중입니다. 잠시만 기다려주세요...</p>' +
+                '</div>' +
+                '<style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }}</style>';
+                
+            const url = new URL('/api/insight/search', window.location.origin);
+            url.searchParams.append('keyword', keyword);
+            url.searchParams.append('startDate', startDate);
+            url.searchParams.append('endDate', endDate);
+            url.searchParams.append('foreign', 'true');
+            if (category) {
+                url.searchParams.append('category', category);
+            }
+            
+            console.log('API 요청 URL:', url.toString());
+            
+            // 타임아웃 설정으로 요청 10초 이상 걸리면 오류 발생
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
+            
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId); // 타임아웃 제거
+            
+            const responseText = await response.text(); // 먼저 텍스트로 받아서 디버깅
+            console.log('API 응답:', responseText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
+            }
+            
+            // 유효한 JSON인지 확인
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.error('JSON 파싱 오류:', jsonError);
+                throw new Error('서버 응답이 유효한 JSON 형식이 아닙니다.');
+            }
+            
+            // 데이터에 메시지가 있으면 표시 (인덱스 없음 등의 메시지)
+            if (data.message) {
+                console.log('서버 메시지:', data.message);
+            }
+            
+            renderSearchResults(data);
+        } catch (error) {
+            console.error('기사 검색 중 오류 발생:', error);
+            
+            // 오류 종류에 따른 다른 메시지 표시
+            let errorMsg = '검색 중 오류가 발생했습니다.';
+            let detailMsg = error.message;
+            
+            if (error.name === 'AbortError') {
+                errorMsg = '검색 요청 시간이 초과되었습니다.';
+                detailMsg = '서버 응답이 너무 오래 걸려 요청이 취소되었습니다.';
+            } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                errorMsg = '네트워크 연결 오류가 발생했습니다.';
+                detailMsg = '인터넷 연결을 확인해주세요.';
+            } else if (error.message.includes('500')) {
+                errorMsg = '서버 내부 오류가 발생했습니다.';
+                detailMsg = '관리자에게 문의하거나 잠시 후 다시 시도해 주세요.';
+            } else if (error.message.includes('404')) {
+                errorMsg = '요청한 페이지를 찾을 수 없습니다.';
+                detailMsg = 'API 경로가 올바른지 확인해주세요.';
+            }
+            
+            resultsContainer.innerHTML = 
+                `<div style="padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 5px; margin-bottom: 15px;">
+                    <h3 style="margin-top: 0;">⚠️ ${errorMsg}</h3>
+                    <p style="margin-bottom: 10px;">${detailMsg}</p>
+                    <p style="font-size: 13px; color: #777;">자세한 내용은 개발자 콘솔을 확인하세요. (F12 키)</p>
+                    <button onclick="searchArticles()" style="margin-top: 10px; padding: 8px 15px; background-color: #721c24; 
+                     color: white; border: none; border-radius: 5px; cursor: pointer;">다시 시도</button>
+                </div>`;
+        }
+    }
+    
+    // 검색 결과 렌더링
+    function renderSearchResults(data) {
+        const resultsContainer = document.getElementById('search-results');
+        resultsContainer.innerHTML = '';
+        
+        if (!data.hits || data.hits.length === 0) {
+            resultsContainer.innerHTML = 
+                '<p style="text-align: center; padding: 20px; color: #666;">검색 결과가 없습니다.</p>';
+            return;
+        }
+        
+        data.hits.forEach(article => {
+            const articleElement = document.createElement('div');
+            articleElement.className = 'article-item';
+            
+            // 썸네일 이미지
+            const thumbnailElement = document.createElement('div');
+            thumbnailElement.className = 'article-thumbnail';
+            thumbnailElement.style.backgroundImage = article.image_url ? 
+                `url(${article.image_url})` : 
+                'url(https://via.placeholder.com/150x120?text=No+Image)';
+            articleElement.appendChild(thumbnailElement);
+            
+            // 기사 내용
+            const contentElement = document.createElement('div');
+            contentElement.className = 'article-content';
+            
+            // 제목
+            const titleElement = document.createElement('div');
+            titleElement.className = 'article-title';
+            titleElement.innerHTML = article.title;
+            titleElement.onclick = () => window.open(article.url, '_blank');
+            contentElement.appendChild(titleElement);
+            
+            // 메타 정보
+            const metaElement = document.createElement('div');
+            metaElement.className = 'article-meta';
+            
+            const dateElement = document.createElement('span');
+            dateElement.textContent = `${article.date || 'Unknown'}`;
+            metaElement.appendChild(dateElement);
+            
+            const sourceElement = document.createElement('span');
+            sourceElement.textContent = `출처: ${article.media_company || 'Unknown'}`;
+            metaElement.appendChild(sourceElement);
+            
+            const categoryElement = document.createElement('span');
+            categoryElement.className = 'article-category';
+            categoryElement.textContent = article.category || '일반';
+            metaElement.appendChild(categoryElement);
+            
+            contentElement.appendChild(metaElement);
+            
+            // 요약
+            const summaryElement = document.createElement('div');
+            summaryElement.className = 'article-summary';
+            if (article.highlights && article.highlights.length > 0) {
+                summaryElement.innerHTML = article.highlights.join(' ... ');
+            } else {
+                summaryElement.textContent = article.content ? 
+                    (article.content.substring(0, 200) + '...') : 
+                    '내용 없음';
+            }
+            contentElement.appendChild(summaryElement);
+            
+            articleElement.appendChild(contentElement);
+            resultsContainer.appendChild(articleElement);
+        });
+        
+        // 검색 결과 합계 표시
+        const totalElement = document.createElement('div');
+        totalElement.style.textAlign = 'right';
+        totalElement.style.marginTop = '10px';
+        totalElement.style.color = '#666';
+        totalElement.textContent = `총 ${data.total || 0}개의 검색 결과 중 ${data.hits.length}개 표시`;
+        resultsContainer.appendChild(totalElement);
     }
 </script>
 </body>
