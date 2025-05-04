@@ -291,7 +291,7 @@
         
         <div class="category-list" id="category-list">
             <!-- 카테고리는 JavaScript로 동적 로드 -->
-            <div class="category-badge active" data-category="">전체</div>
+            <div class="category-badge active" id="all-category" data-category="">전체</div>
         </div>
         
         <div class="search-form">
@@ -844,7 +844,7 @@
             
             // 기존 카테고리 제외하고 비우기
             Array.from(categoryList.children).forEach(child => {
-                if (!child.classList.contains('active')) {
+                if (child.id !== 'all-category') {
                     child.remove();
                 }
             });
@@ -852,6 +852,19 @@
             // 첫 번째 옵션을 제외하고 드롭다운 비우기
             while (categorySelect.options.length > 1) {
                 categorySelect.remove(1);
+            }
+            
+            // "전체" 카테고리 배지에 이벤트 리스너 추가
+            const allCategoryBadge = document.getElementById('all-category');
+            if (allCategoryBadge) {
+                allCategoryBadge.addEventListener('click', () => {
+                    // 모든 배지의 활성 상태 제거
+                    document.querySelectorAll('.category-badge').forEach(b => b.classList.remove('active'));
+                    // 전체 배지 활성화
+                    allCategoryBadge.classList.add('active');
+                    // 드롭다운 값 초기화
+                    document.getElementById('search-category').value = '';
+                });
             }
             
             // 카테고리 추가
