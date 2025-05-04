@@ -26,6 +26,7 @@ public class Persona {
     private boolean preset;       // true = 기본 preset, false = 사용자 커스텀
 
     @Column(nullable = false)
+    @Builder.Default              // 필드 기본값 반영
     private boolean active = true;
 
     @Column(nullable = false)
