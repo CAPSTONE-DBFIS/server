@@ -4,7 +4,6 @@ import capstone.dbfis.chatbot.domain.trackingkeyword.dto.AddTrackingKeywordReque
 import capstone.dbfis.chatbot.domain.trackingkeyword.dto.UpdateTrackingKeywordRequest;
 import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingKeyword;
 import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingKeywordRepository;
-import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,6 @@ import java.util.List;
 public class TrackingKeywordService {
 
     private final TrackingKeywordRepository trackingKeywordRepository;
-    private final TrackingResultRepository trackingResultRepository;
 
     /**
      * 새로운 추적 키워드를 생성합니다.
@@ -74,8 +72,7 @@ public class TrackingKeywordService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "삭제 권한이 없습니다.");
         }
 
-        // 관련 결과도 함께 삭제
-        trackingResultRepository.deleteByTrackingKeywordId(keyword.getId());
+        // !!!!! 수정필요 관련 결과도 함께 삭제하는 로직 필요 !!!!
         trackingKeywordRepository.delete(keyword);
     }
 
