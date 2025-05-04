@@ -9,9 +9,7 @@ import capstone.dbfis.chatbot.domain.filesharing.entity.Folder;
 import capstone.dbfis.chatbot.domain.filesharing.repository.FileRepository;
 import capstone.dbfis.chatbot.domain.filesharing.repository.FolderRepository;
 import capstone.dbfis.chatbot.domain.team.service.TeamService;
-import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
@@ -28,9 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -292,33 +288,6 @@ public class FileSharingService {
 
         // DB 메타 삭제
         fileRepository.deleteById(fileId);
-    }
-
-    /**
-     * 개인 트렌드 보고서 업로드
-     */
-    public String uploadPublicReport(MultipartFile file) {
-        String key = "reports/" + file.getOriginalFilename();
-        try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize());
-            metadata.setContentType(file.getContentType());
-            amazonS3.putObject(new PutObjectRequest(bucketName, key, file.getInputStream(), metadata)); // 업로드
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "공개 리포트 업로드 실패");
-        }
-        return key;
-    }
-
-    /**
-     * 챗봇 tool - 트렌드 보고서용 presigned URL 생성
-     */
-    public String generatePublicReportPresignedUrl(String key) {
-        Date expiration = new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7); // 7일 유효
-        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, key)
-                .withMethod(HttpMethod.GET)
-                .withExpiration(expiration);
-        return amazonS3.generatePresignedUrl(request).toString();
     }
 
     /**
