@@ -122,4 +122,25 @@ public class InsightController {
         
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/search")
+    @Operation(summary = "키워드 기반 기사 검색", description = "키워드와 카테고리로 기간 내 기사를 검색합니다.")
+    public ResponseEntity<String> searchArticlesByKeyword(
+            @RequestParam("keyword") String keyword,
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "foreign", defaultValue = "false") boolean isForeign) {
+        String result = insightService.searchArticlesByKeywordAndCategory(
+                keyword, startDate, endDate, category, isForeign);
+        return ResponseEntity.ok(result);
+    }
+    
+    @GetMapping("/categories")
+    @Operation(summary = "인기 카테고리 목록 조회", description = "상위 10개 인기 카테고리를 반환합니다.")
+    public ResponseEntity<List<Map<String, Object>>> getPopularCategories(
+            @RequestParam(value = "foreign", defaultValue = "false") boolean isForeign) {
+        List<Map<String, Object>> categories = insightService.getPopularCategories(isForeign);
+        return ResponseEntity.ok(categories);
+    }
 }

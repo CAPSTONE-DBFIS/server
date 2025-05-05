@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>키워드 인사이트</title>
+    <title>국내 키워드 인사이트</title>
     <!-- WordCloud 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
     <!-- Chart.js 라이브러리 -->
@@ -145,23 +145,170 @@
         .tab-menu a.active:hover {
             background-color: #4a45c4;
         }
+        /* 키워드 검색 섹션 스타일 */
+        .search-section {
+            margin-top: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .search-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-form input, .search-form select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex-grow: 1;
+        }
+        
+        .search-form button {
+            background-color: #5B55D7;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .search-form button:hover {
+            background-color: #4a45c4;
+        }
+        
+        .search-results {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .article-item {
+            display: flex;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            transition: box-shadow 0.3s;
+        }
+        
+        .article-item:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .article-thumbnail {
+            width: 150px;
+            min-width: 150px;
+            height: 120px;
+            margin-right: 15px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+        }
+        
+        .article-content {
+            flex: 1;
+        }
+        
+        .article-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .article-title:hover {
+            color: #5B55D7;
+        }
+        
+        .article-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .article-category {
+            background-color: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .article-summary {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.4;
+        }
+        
+        .category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .category-badge {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .category-badge:hover, .category-badge.active {
+            background-color: #5B55D7;
+            color: white;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>
-        <img src="https://img.icons8.com/ios-filled/50/5B55D7/bar-chart.png" /> 키워드 인사이트
+        국내 키워드 인사이트
     </h1>
     
     <!-- 탭 메뉴 추가 -->
     <div class="tab-menu">
-        <a href="/insight" class="active">국내 인사이트</a>
-        <a href="/foreign-insight">해외 인사이트</a>
+        <a href="/insight-view" class="active">국내 인사이트</a>
+        <a href="/foreign-insight-view">해외 인사이트</a>
     </div>
     
     <label for="date">날짜 선택:</label>
     <input type="date" id="date" />
     <button onclick="loadAllData()">조회</button>
+
+    <!-- 키워드 기반 기사 검색 섹션 (일간 데이터 섹션 위로 이동) -->
+    <div class="search-section" id="search-section">
+        <h2>키워드 기반 기사 검색</h2>
+        
+        <div class="category-list" id="category-list">
+            <!-- 카테고리는 JavaScript로 동적 로드, 전체 카테고리는 항상 존재 -->
+            <div class="category-badge active" id="all-category" data-category="">전체</div>
+        </div>
+        
+        <div class="search-form">
+            <input type="text" id="search-keyword" placeholder="검색할 키워드 입력" />
+            <input type="date" id="search-start-date" />
+            <input type="date" id="search-end-date" />
+            <select id="search-category">
+                <option value="">카테고리 선택 (전체)</option>
+                <!-- 카테고리는 JavaScript로 동적 로드 -->
+            </select>
+            <button onclick="searchArticles()">검색</button>
+        </div>
+        
+        <div class="search-results" id="search-results">
+            <!-- 검색 결과는 JavaScript로 동적 로드 -->
+        </div>
+    </div>
 
     <!-- 일간 데이터 섹션 -->
     <div class="section" id="daily-section">
@@ -580,182 +727,202 @@
         });
     }
 
-    // 모달 창을 이용한 기사 결과 렌더링 (더보기 버튼 포함)
-    function renderModalArticles(articles, append = false) {
-        const modalArticlesDiv = document.getElementById("modal-articles");
-
-        // 항상 loadMoreContainer를 제거하여 새로 위치시킵니다.
-        let existingContainer = document.getElementById('load-more-container');
-        if (existingContainer) {
-            existingContainer.remove();
-        }
-
-        if (!append) {
-            modalArticlesDiv.innerHTML = '';
-        }
-
-        // 새 기사들을 추가
-        articles.forEach(article => {
-            const articleDiv = document.createElement('div');
-            articleDiv.style.display = 'flex';
-            articleDiv.style.alignItems = 'center';
-            articleDiv.style.marginBottom = '20px';
-            articleDiv.style.padding = '10px';
-            articleDiv.style.border = '1px solid #ddd';
-            articleDiv.style.borderRadius = '10px';
-
-            if (article.image_url) {
-                const imgDiv = document.createElement('div');
-                imgDiv.style.marginRight = '20px';
-                imgDiv.style.flexShrink = '0';
-                const img = document.createElement('img');
-                img.src = article.image_url;
-                img.alt = article.title;
-                img.style.width = '200px';
-                img.style.height = '150px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '8px';
-                imgDiv.appendChild(img);
-                articleDiv.appendChild(imgDiv);
-            }
-
-            const textDiv = document.createElement('div');
-            textDiv.style.flex = '1';
-            const title = document.createElement('h3');
-            title.innerHTML = article.title;
-            title.style.cursor = 'pointer';
-            title.onclick = () => window.open(article.url, '_blank');
-            textDiv.appendChild(title);
-            const meta = document.createElement('p');
-            meta.style.fontSize = '13px';
-            meta.style.color = '#999';
-            meta.style.marginBottom = '10px';
-            meta.innerHTML = `언론사: ${article.media_company} | 게시일: ${article.date}`;
-            textDiv.appendChild(meta);
-            const snippet = document.createElement('p');
-            snippet.innerHTML = article.highlights.join(' ');
-            snippet.style.fontSize = '14px';
-            snippet.style.color = '#555';
-            textDiv.appendChild(snippet);
-            articleDiv.appendChild(textDiv);
-
-            modalArticlesDiv.appendChild(articleDiv);
-        });
-
-        // 더보기 버튼 및 컨테이너 생성 (항상 새로 생성해서 맨 하단에 위치시키기)
-        const loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'load-more-container';
-        loadMoreContainer.style.display = 'flex';
-        loadMoreContainer.style.justifyContent = 'flex-end';
-        loadMoreContainer.style.marginTop = '20px';
-
-        // 새로 불러온 기사 수가 PAGE_SIZE 이상이면 버튼을 보여줌
-        if (articles.length >= PAGE_SIZE) {
-            let loadMoreBtn = document.createElement('button');
-            loadMoreBtn.id = 'load-more-btn';
-            loadMoreBtn.textContent = '더보기';
-            loadMoreBtn.style.backgroundColor = '#5B55D7';
-            loadMoreBtn.style.color = '#fff';
-            loadMoreBtn.style.borderRadius = '5px';
-            loadMoreBtn.style.border = 'none';
-            loadMoreBtn.style.padding = '8px 15px';
-            loadMoreBtn.style.fontSize = '14px';
-            loadMoreBtn.style.cursor = 'pointer';
-            loadMoreBtn.style.transition = 'background-color 0.3s ease, transform 0.2s ease';
-            loadMoreBtn.addEventListener('click', () => {
-                currentSearchPage++;
-                const date = document.getElementById('date').value;
-                // 여기서는 일간 데이터를 기준으로 호출 (필요에 따라 주간 데이터로 변경 가능)
-                fetchRelatedArticlesRange(currentDailyKeyword, currentRelatedKeyword, date, date, currentSearchPage)
-                    .then(newArticles => renderModalArticles(newArticles, true));
+    // 카테고리 목록 로드
+    async function loadCategories() {
+        try {
+            const response = await fetch(`/api/insight/categories?foreign=false`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const categories = await response.json();
+            
+            // 카테고리 목록 렌더링
+            const categoryList = document.getElementById('category-list');
+            const categorySelect = document.getElementById('search-category');
+            
+            // 기존 카테고리 제외하고 비우기
+            Array.from(categoryList.children).forEach(child => {
+                if (child.id !== 'all-category') {
+                    child.remove();
+                }
             });
-            loadMoreContainer.appendChild(loadMoreBtn);
-        }
-
-        // loadMoreContainer를 항상 맨 아래에 붙임
-        modalArticlesDiv.appendChild(loadMoreContainer);
-
-        // 모달 창 열기
-        openModal();
-    }
-
-    // 모달 열기/닫기 함수 및 이벤트 리스너
-    function openModal() {
-        document.getElementById("article-modal").style.display = "block";
-    }
-
-    function closeModal() {
-        document.getElementById("article-modal").style.display = "none";
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        document.getElementById('date').value = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-        loadAllData();
-        const closeBtn = document.querySelector(".close-btn");
-        closeBtn.addEventListener("click", closeModal);
-        window.addEventListener("click", function(event) {
-            const modal = document.getElementById("article-modal");
-            if (event.target === modal) {
-                closeModal();
+            
+            // 첫 번째 옵션을 제외하고 드롭다운 비우기
+            while (categorySelect.options.length > 1) {
+                categorySelect.remove(1);
             }
-        });
-    });
-
-    // 전체 데이터 로드: 일간 및 주간 데이터 각각 불러와 차트 업데이트
-    async function loadAllData() {
-        const date = document.getElementById('date').value;
-        // 일간 데이터
-        DAILY_DATA = await fetchDailyData(date);
-        renderDailyKeywordChart(DAILY_DATA);
-        if (DAILY_DATA.length > 0) {
-            currentDailyKeyword = DAILY_DATA[0].keyword;
-            renderDailyRelatedChart(DAILY_DATA[0].relatedKeywords);
-            renderWordCloud(currentDailyKeyword, DAILY_DATA[0].relatedKeywords);
-        } else {
-            if (dailyChart) dailyChart.destroy();
-            if (dailyRelatedChart) dailyRelatedChart.destroy();
-        }
-        // 주간 데이터
-        WEEKLY_DATA = await fetchWeeklyData(date);
-        renderWeeklyKeywordChart(WEEKLY_DATA);
-        if (WEEKLY_DATA.keywords.length > 0) {
-            currentWeeklyKeyword = WEEKLY_DATA.keywords[0].keyword;
-            renderWeeklyRelatedChart(WEEKLY_DATA.keywords[0].relatedKeywords);
-        } else {
-            if (weeklyChart) weeklyChart.destroy();
-            if (weeklyRelatedChart) weeklyRelatedChart.destroy();
+            
+            // "전체" 카테고리 배지에 이벤트 리스너 추가
+            const allCategoryBadge = document.getElementById('all-category');
+            if (allCategoryBadge) {
+                allCategoryBadge.addEventListener('click', () => {
+                    // 모든 배지의 활성 상태 제거
+                    document.querySelectorAll('.category-badge').forEach(b => b.classList.remove('active'));
+                    // 전체 배지 활성화
+                    allCategoryBadge.classList.add('active');
+                    // 드롭다운 값 초기화
+                    document.getElementById('search-category').value = '';
+                });
+            }
+            
+            // 카테고리 추가
+            categories.forEach(category => {
+                // 카테고리 배지 추가
+                const badge = document.createElement('div');
+                badge.className = 'category-badge';
+                badge.textContent = `${category.name} (${category.count})`;
+                badge.dataset.category = category.name;
+                badge.addEventListener('click', () => {
+                    // 다른 배지의 활성 상태 제거
+                    document.querySelectorAll('.category-badge').forEach(b => b.classList.remove('active'));
+                    // 현재 배지 활성화
+                    badge.classList.add('active');
+                    // 카테고리 선택
+                    document.getElementById('search-category').value = category.name !== '일반' ? category.name : '';
+                });
+                categoryList.appendChild(badge);
+                
+                // 드롭다운 옵션 추가
+                const option = document.createElement('option');
+                option.value = category.name !== '일반' ? category.name : '';
+                option.textContent = `${category.name} (${category.count})`;
+                categorySelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('카테고리 목록 로딩 중 오류 발생:', error);
         }
     }
-
-    // 워드 클라우드 렌더링
-    function renderWordCloud(keyword, relatedKeywords) {
-        const wordCloudElement = document.getElementById('word-cloud');
-        if (!relatedKeywords || relatedKeywords.length === 0) {
-            wordCloudElement.innerHTML = '<p>워드 클라우드 데이터가 없습니다.</p>';
+    
+    // 키워드 기반 기사 검색
+    async function searchArticles() {
+        const keyword = document.getElementById('search-keyword').value.trim();
+        const startDate = document.getElementById('search-start-date').value;
+        const endDate = document.getElementById('search-end-date').value;
+        const category = document.getElementById('search-category').value;
+        
+        if (!keyword) {
+            alert('검색할 키워드를 입력해주세요.');
             return;
         }
-        const wordList = relatedKeywords.map(k => [k.relatedKeyword, k.frequency || 10]);
-        const minSize = 30, maxSize = 100;
-        const freqs = relatedKeywords.map(k => k.frequency);
-        const minFreq = Math.min(...freqs);
-        const maxFreq = Math.max(...freqs);
-        const weightFactorFn = function(size) {
-            if (maxFreq === minFreq) return (minSize + maxSize) / 2;
-            const normalized = (size - minFreq) / (maxFreq - minFreq);
-            return minSize + normalized * (maxSize - minSize);
-        };
-        if (wordCloudInstance) wordCloudInstance.stop();
-        wordCloudInstance = WordCloud(wordCloudElement, {
-            list: wordList,
-            gridSize: Math.round(20 * wordCloudElement.offsetWidth / 1024),
-            weightFactor: weightFactorFn,
-            fontFamily: 'Arial',
-            color: () => `hsl(${Math.random()*360}, 70%, 50%)`,
-            backgroundColor: '#fff',
-            rotateRatio: 0,
-            rotationSteps: 0,
-        });
+        
+        if (!startDate || !endDate) {
+            alert('검색 기간을 설정해주세요.');
+            return;
+        }
+        
+        try {
+            const url = new URL('/api/insight/search', window.location.origin);
+            url.searchParams.append('keyword', keyword);
+            url.searchParams.append('startDate', startDate);
+            url.searchParams.append('endDate', endDate);
+            url.searchParams.append('foreign', 'false');
+            if (category) {
+                url.searchParams.append('category', category);
+            }
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            renderSearchResults(data);
+        } catch (error) {
+            console.error('기사 검색 중 오류 발생:', error);
+            document.getElementById('search-results').innerHTML = 
+                `<p style="text-align: center; padding: 20px; color: #666;">검색 중 오류가 발생했습니다: ${error.message}</p>`;
+        }
     }
+    
+    // 검색 결과 렌더링
+    function renderSearchResults(data) {
+        const resultsContainer = document.getElementById('search-results');
+        resultsContainer.innerHTML = '';
+        
+        if (!data.hits || data.hits.length === 0) {
+            resultsContainer.innerHTML = 
+                '<p style="text-align: center; padding: 20px; color: #666;">검색 결과가 없습니다.</p>';
+            return;
+        }
+        
+        data.hits.forEach(article => {
+            const articleElement = document.createElement('div');
+            articleElement.className = 'article-item';
+            
+            // 썸네일 이미지
+            const thumbnailElement = document.createElement('div');
+            thumbnailElement.className = 'article-thumbnail';
+            thumbnailElement.style.backgroundImage = article.image_url ? 
+                `url(${article.image_url})` : 
+                'url(https://via.placeholder.com/150x120?text=No+Image)';
+            articleElement.appendChild(thumbnailElement);
+            
+            // 기사 내용
+            const contentElement = document.createElement('div');
+            contentElement.className = 'article-content';
+            
+            // 제목
+            const titleElement = document.createElement('div');
+            titleElement.className = 'article-title';
+            titleElement.innerHTML = article.title;
+            titleElement.onclick = () => window.open(article.url, '_blank');
+            contentElement.appendChild(titleElement);
+            
+            // 메타 정보
+            const metaElement = document.createElement('div');
+            metaElement.className = 'article-meta';
+            
+            const dateElement = document.createElement('span');
+            dateElement.textContent = `${article.date || 'Unknown'}`;
+            metaElement.appendChild(dateElement);
+            
+            const sourceElement = document.createElement('span');
+            sourceElement.textContent = `출처: ${article.media_company || 'Unknown'}`;
+            metaElement.appendChild(sourceElement);
+            
+            const categoryElement = document.createElement('span');
+            categoryElement.className = 'article-category';
+            categoryElement.textContent = article.category || '일반';
+            metaElement.appendChild(categoryElement);
+            
+            contentElement.appendChild(metaElement);
+            
+            // 요약
+            const summaryElement = document.createElement('div');
+            summaryElement.className = 'article-summary';
+            if (article.highlights && article.highlights.length > 0) {
+                summaryElement.innerHTML = article.highlights.join(' ... ');
+            } else {
+                summaryElement.textContent = article.content ? 
+                    (article.content.substring(0, 200) + '...') : 
+                    '내용 없음';
+            }
+            contentElement.appendChild(summaryElement);
+            
+            articleElement.appendChild(contentElement);
+            resultsContainer.appendChild(articleElement);
+        });
+        
+        // 검색 결과 합계 표시
+        const totalElement = document.createElement('div');
+        totalElement.style.textAlign = 'right';
+        totalElement.style.marginTop = '10px';
+        totalElement.style.color = '#666';
+        totalElement.textContent = `총 ${data.total || 0}개의 검색 결과 중 ${data.hits.length}개 표시`;
+        resultsContainer.appendChild(totalElement);
+    }
+    
+    // 오늘 날짜 기준으로 기본 날짜 설정
+    function setDefaultDates() {
+        const today = new Date();
+        const lastMonth = new Date();
+        lastMonth.setMonth(today.getMonth() - 1);
+        
+        document.getElementById('search-start-date').value = lastMonth.toISOString().split('T')[0];
+        document.getElementById('search-end-date').value = today.toISOString().split('T')[0];
+    }
+    
+    // 페이지 로드 시 초기화
+    document.addEventListener("DOMContentLoaded", function() {
+        setDefaultDates();
+        loadCategories();
+    });
 </script>
 </body>
 </html>
