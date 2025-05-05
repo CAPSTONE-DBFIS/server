@@ -438,6 +438,20 @@
       overflow-wrap: break-word;
     }
 
+    /* 말풍선 내부 전반적인 행간 ↓ */
+    .message { line-height: 1.45; }
+
+    /* 리스트 항목 맞춤 */
+    .message li {
+      list-style-type: disc;     /* 원하는 경우 inside → outside 변경 가능 */
+      margin: 2px 0;             /* 상·하 여백 축소 */
+      padding-left: 20px;        /* 들여쓰기 */
+      line-height: 1.35;         /* 글 줄간격 */
+    }
+
+    /* 일반 단락도 여백 축소 */
+    .message p { margin: 6px 0; }
+
     .message.user {
       background-color: #0a192f;
       color: white;
@@ -777,6 +791,36 @@
       white-space: nowrap !important;
       font-family: 'Nunito', sans-serif !important;
     }
+
+    /* 링크 아이콘 스타일 */
+    .link-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background-color: #0a192f;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    .link-icon i {
+      font-size: 1em;
+      margin-right: 2px;
+    }
+
+    .link-icon:hover {
+      background-color: #1a3c6f;
+      transform: scale(1.05);
+    }
+
+    .link-icon-number {
+      color: white;
+    }
+  </style>
   </style>
 </head>
 <body>
@@ -1373,9 +1417,8 @@
               const count = json.link_count || links.length;
               if (count > 0) {
                 linksButton.style.display = 'block';
-                linksButton.innerHTML = `출처 (${count}개)`; // 간결하게 표시
+                linksButton.innerHTML = `출처 (${count}개)`;
                 linksButton.onclick = () => {
-                  // 모달 생성
                   const modalOverlay = document.createElement('div');
                   modalOverlay.classList.add('modal-overlay');
 
@@ -1394,30 +1437,28 @@
                   const linksList = document.createElement('div');
                   linksList.classList.add('links-list');
 
-                  // 출처 리스트 렌더링
+                  // 링크 번호와 매핑
                   links.forEach(link => {
                     const item = document.createElement('div');
                     item.classList.add('link-item');
-                    // 도메인 추출
                     let domain = 'Unknown';
                     try {
                       domain = new URL(link.url).hostname || 'Unknown';
                     } catch {
                       domain = link.title.includes('Namuwiki') ? 'namu.wiki' : 'Unknown';
                     }
-                    // XSS 방지
                     const safeTitle = link.title ? link.title.replace(/</g, '<').replace(/>/g, '>') : 'No Title';
                     const safeContent = link.content ? link.content.replace(/</g, '<').replace(/>/g, '>') : 'No content available';
                     item.innerHTML = `
-                      <div class="link-header">
-                        <div class="link-id">[${link.id}]</div>
-                        <a href="${link.url}" target="_blank" class="link-title">${safeTitle}</a>
-                      </div>
-                      <div class="link-content">
-                        <div class="link-domain">${domain}</div>
-                        <p class="link-snippet">${safeContent}</p>
-                      </div>
-                    `;
+                  <div class="link-header">
+                    <div class="link-id">[${link.id || links.indexOf(link) + 1}]</div>
+                    <a href="${link.url}" target="_blank" class="link-title">${safeTitle}</a>
+                  </div>
+                  <div class="link-content">
+                    <div class="link-domain">${domain}</div>
+                    <p class="link-snippet">${safeContent}</p>
+                  </div>
+                `;
                     linksList.appendChild(item);
                   });
 
@@ -1531,8 +1572,8 @@
     markdownToHTML(markdown) {
       // 수식 블록 분리
       const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
-      const mathBlocks  = new Map();
-      let   mathIdx     = 0;
+      const mathBlocks = new Map();
+      let mathIdx = 0;
       markdown = markdown.replace(mathBlockRe, m => {
         const key = `__MATH_BLOCK_${mathIdx++}__`;
         mathBlocks.set(key, m);
@@ -1541,8 +1582,8 @@
 
       // 코드 블록 분리
       const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
-      const codeBlocks  = new Map();
-      let   codeIdx     = 0;
+      const codeBlocks = new Map();
+      let codeIdx = 0;
       markdown = markdown.replace(codeBlockRe, (_, lang, code) => {
         const escaped = code
                 .replace(/&/g, "&")
@@ -1553,12 +1594,21 @@
         return key;
       });
 
+      // 링크 처리: [숫자](링크) 형식 감지
+      const linkMap = new Map();
+      let linkIdx = 0;
+      markdown = markdown.replace(/\[(\d+)\]\((https?:\/\/[^\s]+)\)/g, (_, number, url) => {
+        const key = `__LINK_${linkIdx++}__`;
+        linkMap.set(key, { number: parseInt(number), url });
+        return key;
+      });
+
       // 표 변환
       const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
       markdown = markdown.replace(tableRe, (_, nl, block) => {
-        const lines   = block.trim().split(/\r?\n/);
+        const lines = block.trim().split(/\r?\n/);
         const headers = lines[0].slice(1, -1).split("|").map(s => s.trim());
-        const rows    = lines.slice(2);
+        const rows = lines.slice(2);
 
         let html = "<table><thead><tr>";
         headers.forEach(h => html += `<th>${h}</th>`);
@@ -1575,15 +1625,15 @@
         return nl + html;
       });
 
-      // **이미지** 변환: 있으면 무조건 <img> 태그로
+      // 이미지 변환
       markdown = markdown.replace(
               /!\[(.*?)\]\((.*?)\)/g,
               '<img src="$2" alt="$1" style="max-width:100%;height:auto;border-radius:8px;margin:10px 0;">'
       );
 
-      // **링크** 변환
+      // 일반 링크 변환
       markdown = markdown.replace(
-              /\[(.*?)\]\((.*?)\)/g,
+              /\[(.*?)\]\((https?:\/\/[^\s]+)\)/g,
               '<a href="$2" target="_blank">$1</a>'
       );
 
@@ -1598,6 +1648,12 @@
               .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
               .replace(/^- (.*)$/gm, '<li>$1</li>')
               .replace(/\n/g, '<br>');
+
+      // 링크 아이콘으로 복원
+      markdown = markdown.replace(/__LINK_(\d+)__/g, (_, idx) => {
+        const { number, url } = linkMap.get(`__LINK_${idx}__`);
+        return `<a href="${url}" target="_blank" class="link-icon"><i class="fas fa-link"></i><span class="link-icon-number">${number}</span></a>`;
+      });
 
       // 코드 블록 복원
       for (const [key, { html, lang }] of codeBlocks.entries()) {
