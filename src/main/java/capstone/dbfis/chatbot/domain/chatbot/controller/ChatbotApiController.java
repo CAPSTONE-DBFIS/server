@@ -160,6 +160,7 @@ public class ChatbotApiController {
             @RequestParam @NotBlank String query,
             @RequestParam(required = false) Long personaId,
             @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "llmModelType", required = false) String modelType,
             @RequestHeader("Authorization") @NotBlank String token) throws IOException {
 
         String memberId = tokenProvider.getMemberId(token);
@@ -193,7 +194,7 @@ public class ChatbotApiController {
                 });
             }
         }
-
+        body.add("model_type", modelType);
         return webClient.post()
                 .uri(fastapiUrl + "/agent/query")
                 .contentType(MediaType.MULTIPART_FORM_DATA)

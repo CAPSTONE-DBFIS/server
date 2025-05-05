@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
   <script src="https://unpkg.com/event-source-polyfill/dist/event-source-polyfill.min.js"></script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <style>
     * {
       margin: 0;
@@ -335,13 +334,49 @@
       min-height: 100px;
     }
 
+
+    /* 단락(p) 여백 줄이기 */
+    .chat-box p {
+      margin: 0;
+    }
+
+    /* 리스트 전체 여백 재설정 */
+    .chat-box ul,
+    .chat-box ol {
+      margin: 0;           /* 위아래 기본 마진 제거 */
+      padding-left: 1.5em; /* 들여쓰기 정도만 남김 */
+    }
+
+    /* 리스트 항목 간격 좁히기 */
+    .chat-box li {
+      margin: 0;
+      padding-left: 0;
+    }
     .chat-input {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: stretch;
       gap: 10px;
       padding: 10px;
       background: white;
       border-top: 1px solid #ddd;
+    }
+
+    .input-options {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #modelSelect {
+      height: 40px;
+      font-size: 14px;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      min-width: 120px;
     }
 
     .persona-controls {
@@ -357,6 +392,7 @@
       border-radius: 6px;
       border: 1px solid #ccc;
       background-color: #fff;
+      min-width: 120px;
     }
 
     .persona-buttons {
@@ -385,17 +421,32 @@
 
     #userInput {
       flex: 1;
-      height: 40px;
+      height: 80px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      padding: 0 12px;
-      font-size: 14px;
+      padding: 15px 20px;
+      font-size: 16px;
       outline: none;
+      min-width: 300px;
+      resize: vertical;
+    }
+
+    #fileInput {
+      height: 40px;
+      font-size: 14px;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      max-width: 180px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .btn-send {
-      height: 40px;
-      padding: 0 20px;
+      height: 80px;
+      padding: 0 15px;
       background-color: #0a192f;
       color: white;
       border: none;
@@ -436,21 +487,19 @@
       white-space: normal;
       display: inline-block;
       overflow-wrap: break-word;
+      line-height: 1.45;
     }
 
-    /* 말풍선 내부 전반적인 행간 ↓ */
-    .message { line-height: 1.45; }
-
-    /* 리스트 항목 맞춤 */
     .message li {
-      list-style-type: disc;     /* 원하는 경우 inside → outside 변경 가능 */
-      margin: 2px 0;             /* 상·하 여백 축소 */
-      padding-left: 20px;        /* 들여쓰기 */
-      line-height: 1.35;         /* 글 줄간격 */
+      list-style-type: disc;
+      margin: 2px 0;
+      padding-left: 20px;
+      line-height: 1.35;
     }
 
-    /* 일반 단락도 여백 축소 */
-    .message p { margin: 6px 0; }
+    .message p {
+      margin: 6px 0;
+    }
 
     .message.user {
       background-color: #0a192f;
@@ -550,7 +599,6 @@
       animation: fadeIn 0.5s ease forwards;
     }
 
-    /* 말풍선 내부의 출처 버튼 스타일 */
     .message .links-button {
       background-color: #0a192f;
       color: white;
@@ -567,12 +615,10 @@
       background-color: #1a3c6f;
     }
 
-    /* 기존 .links-container는 더 이상 필요 없으므로 스타일 제거 */
     .links-container {
       display: none;
     }
 
-    /* 모달 스타일 */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -619,10 +665,9 @@
       text-align: center;
     }
 
-    /* 모달 내 출처 리스트 스타일 */
     .links-list {
       display: block;
-      max-height: none; /* 모달 내에서는 제한 없음 */
+      max-height: none;
       overflow-y: auto;
       padding: 0;
     }
@@ -630,7 +675,7 @@
     .link-item {
       border-bottom: 1px solid #ddd;
       padding: 10px;
-      transition.ConcurrentModificationException: background-color 0.3s;
+      transition: background-color 0.3s;
     }
 
     .link-item:hover {
@@ -786,13 +831,6 @@
       font-family: 'Nunito', sans-serif;
     }
 
-    .MathJax, .MathJax_Display {
-      display: inline-block !important;
-      white-space: nowrap !important;
-      font-family: 'Nunito', sans-serif !important;
-    }
-
-    /* 링크 아이콘 스타일 */
     .link-icon {
       display: inline-flex;
       align-items: center;
@@ -821,7 +859,6 @@
       color: white;
     }
   </style>
-  </style>
 </head>
 <body>
 <header class="header">
@@ -847,44 +884,31 @@
   <div class="chat-container">
     <div class="chat-box" id="messagesContainer"></div>
     <div class="chat-input">
-      <div class="persona-controls">
-        <select id="personaSelect">
-          <option value="">기본 페르소나</option>
+      <div class="input-options">
+        <select id="modelSelect">
+          <option value="gpt">GPT-4o-mini</option>
+          <option value="claude">Claude-3.5-haiku</option>
         </select>
-        <div class="persona-buttons">
-          <button class="btn-add" onclick="ChatApp.addPersona()">＋</button>
-          <button class="btn-remove" onclick="ChatApp.deleteSelectedPersona()">－</button>
+        <div class="persona-controls">
+          <select id="personaSelect">
+            <option value="">기본 페르소나</option>
+          </select>
+          <div class="persona-buttons">
+            <button class="btn-add" onclick="ChatApp.addPersona()">＋</button>
+            <button class="btn-remove" onclick="ChatApp.deleteSelectedPersona()">－</button>
+          </div>
         </div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.hwp,.txt,.png,.jpg,.jpeg">
       </div>
-      <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
-      <input type="file" id="fileInput" style="max-width: 180px;" multiple>
-      <button class="btn-send" onclick="ChatApp.sendMessage()">전송</button>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>
+        <button class="btn-send" onclick="ChatApp.sendMessage()">전송</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script th:inline="none">
-  window.MathJax = {
-    tex: {
-      inlineMath: [['$', '$'], ['\\(', '\\)']],
-      displayMath: [['$$', '$$'], ['\\[', '\\]']],
-      processEscapes: true,
-    },
-    chtml: {
-      fontURL: 'https://fonts.googleapis.com/css_SD2?family=Nunito:wght@300;400;600&display=swap',
-      fontFamily: 'Nunito, sans-serif'
-    },
-    options: {
-      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-      ignoreHtmlClass: 'tex2jax_ignore',
-    },
-    startup: {
-      ready: () => {
-        MathJax.startup.defaultReady();
-      }
-    }
-  };
-
   const ChatApp = {
     currentChatroomId: null,
     selectedProjectId: null,
@@ -1189,7 +1213,7 @@
 
       const nameSpan = document.createElement('span');
       nameSpan.className = 'chatroom-name';
-      nameSpan.textContent = originalName || `채팅방 #${chatroomId}`;
+      span.textContent = originalName || `채팅방 #${chatroomId}`;
       nameSpan.onclick = (e) => {
         e.stopPropagation();
         this.loadChatMessages(chatroomId, originalName);
@@ -1310,6 +1334,8 @@
       const message = input.value.trim();
       const fileInput = document.getElementById('fileInput');
       const files = fileInput.files;
+      const modelSelect = document.getElementById('modelSelect');
+      const model = modelSelect.value;
 
       if (!message && files.length === 0) return; // 아무 입력 없으면 무시
 
@@ -1338,10 +1364,11 @@
         if (this.selectedPersonaId) {
           formData.append("personaId", this.selectedPersonaId);
         }
+        formData.append("llmModelType", model); // 모델 타입 추가
 
-        // ✅ 여러 파일 추가
+        // 여러 파일 추가
         for (const file of files) {
-          formData.append("files", file);  // key 이름 "files"
+          formData.append("files", file);
         }
 
         const response = await fetch(`http://localhost:8080/api/chatbot/chatroom/${this.currentChatroomId}/agent-query`, {
@@ -1369,20 +1396,16 @@
       const decoder = new TextDecoder("utf-8");
       const chatBox = document.getElementById('messagesContainer');
 
-      // 메시지 래퍼 생성
       const wrapper = document.createElement('div');
       wrapper.classList.add('message-wrapper', 'bot');
 
-      // 메시지 본문 생성
       const bubble = document.createElement('div');
       bubble.classList.add('message', 'bot');
 
-      // 출처 버튼 생성 (모달 트리거용)
       const linksButton = document.createElement('button');
       linksButton.classList.add('links-button');
-      linksButton.style.display = 'none'; // 초기에는 숨김
+      linksButton.style.display = 'none';
 
-      // 메시지 본문에 추가
       bubble.appendChild(linksButton);
       wrapper.appendChild(bubble);
 
@@ -1409,7 +1432,6 @@
               fullResponse += json.token;
               bubble.innerHTML = this.markdownToHTML(fullResponse);
               bubble.prepend(linksButton);
-              this.renderMathJax(bubble);
               this.addCopyButtonsToElement(bubble);
               this.adjustBubbleWidth(bubble);
             } else if (json.links) {
@@ -1437,7 +1459,6 @@
                   const linksList = document.createElement('div');
                   linksList.classList.add('links-list');
 
-                  // 링크 번호와 매핑
                   links.forEach(link => {
                     const item = document.createElement('div');
                     item.classList.add('link-item');
@@ -1487,7 +1508,6 @@
               fullResponse = json.final;
               bubble.innerHTML = this.markdownToHTML(fullResponse);
               bubble.prepend(linksButton);
-              this.renderMathJax(bubble);
               this.addCopyButtonsToElement(bubble);
               this.adjustBubbleWidth(bubble);
             } else if (json.error) {
@@ -1512,30 +1532,11 @@
       chatBox.appendChild(wrapper);
       chatBox.scrollTop = chatBox.scrollHeight;
 
-      if (isMarkdown) {
-        this.renderMathJax(messageDiv);
-      }
-
       this.adjustBubbleWidth(messageDiv);
     },
 
-    renderMathJax(element) {
-      const checkMathJax = () => {
-        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-          window.MathJax.typesetPromise([element]).then(() => {
-            this.adjustBubbleWidth(element);
-          }).catch(err => {
-            console.error("MathJax 렌더링 오류:", err);
-          });
-        } else {
-          setTimeout(checkMathJax, 100);
-        }
-      };
-      checkMathJax();
-    },
-
     adjustBubbleWidth(bubble) {
-      const mathElements = bubble.querySelectorAll('.math-block, .MathJax, .MathJax_Display');
+      const mathElements = bubble.querySelectorAll('.math-block');
       if (mathElements.length > 0) {
         mathElements.forEach(el => {
           const width = el.scrollWidth;
@@ -1570,7 +1571,6 @@
     },
 
     markdownToHTML(markdown) {
-      // 수식 블록 분리
       const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
       const mathBlocks = new Map();
       let mathIdx = 0;
@@ -1580,7 +1580,6 @@
         return key;
       });
 
-      // 코드 블록 분리
       const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
       const codeBlocks = new Map();
       let codeIdx = 0;
@@ -1594,7 +1593,6 @@
         return key;
       });
 
-      // 링크 처리: [숫자](링크) 형식 감지
       const linkMap = new Map();
       let linkIdx = 0;
       markdown = markdown.replace(/\[(\d+)\]\((https?:\/\/[^\s]+)\)/g, (_, number, url) => {
@@ -1603,7 +1601,6 @@
         return key;
       });
 
-      // 표 변환
       const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
       markdown = markdown.replace(tableRe, (_, nl, block) => {
         const lines = block.trim().split(/\r?\n/);
@@ -1625,19 +1622,16 @@
         return nl + html;
       });
 
-      // 이미지 변환
       markdown = markdown.replace(
               /!\[(.*?)\]\((.*?)\)/g,
               '<img src="$2" alt="$1" style="max-width:100%;height:auto;border-radius:8px;margin:10px 0;">'
       );
 
-      // 일반 링크 변환
       markdown = markdown.replace(
               /\[(.*?)\]\((https?:\/\/[^\s]+)\)/g,
               '<a href="$2" target="_blank">$1</a>'
       );
 
-      // 헤딩, 볼드, 리스트, 줄바꿈 등
       markdown = markdown
               .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
               .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
@@ -1649,13 +1643,11 @@
               .replace(/^- (.*)$/gm, '<li>$1</li>')
               .replace(/\n/g, '<br>');
 
-      // 링크 아이콘으로 복원
       markdown = markdown.replace(/__LINK_(\d+)__/g, (_, idx) => {
         const { number, url } = linkMap.get(`__LINK_${idx}__`);
         return `<a href="${url}" target="_blank" class="link-icon"><i class="fas fa-link"></i><span class="link-icon-number">${number}</span></a>`;
       });
 
-      // 코드 블록 복원
       for (const [key, { html, lang }] of codeBlocks.entries()) {
         const cls = lang ? ` class="language-${lang}"` : "";
         markdown = markdown.replace(
@@ -1664,7 +1656,6 @@
         );
       }
 
-      // 수식 블록 복원
       for (const [key, raw] of mathBlocks.entries()) {
         markdown = markdown.replace(
                 key,
