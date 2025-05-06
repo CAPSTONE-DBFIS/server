@@ -128,9 +128,16 @@
 
             var verificationCode = $('input[name="verificationCode"]').val();
 
+            var verifyData = {
+                memberId: currentSignupId,
+                verificationCode: verificationCode
+            };
+
             $.ajax({
                 type: 'POST',
-                url: `/api/verify-signup?memberId=${encodeURIComponent(currentSignupId)}&verificationCode=${encodeURIComponent(verificationCode)}`,
+                url: '/api/verify-signup',
+                contentType: 'application/json',
+                data: JSON.stringify(verifyData),
                 success: function () {
                     alert('인증 완료! 로그인 페이지로 이동합니다.');
                     window.location.href = '/login';
