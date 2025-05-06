@@ -185,6 +185,7 @@
 </footer>
 
 <script>
+    const baseURL = window.location.origin;
     document.addEventListener("DOMContentLoaded", function () {
         setTimeout(updateUI, 100);
     });
@@ -219,7 +220,7 @@
             return;
         }
 
-        fetch("http://localhost:8080/api/token/validate", {
+        fetch(`${baseURL}/api/token/validate`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${token}` }
         })

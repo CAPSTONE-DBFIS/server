@@ -378,16 +378,17 @@
     let DAILY_DATA = [];
     let WEEKLY_DATA = {};
 
+    const baseURL = window.location.origin;
     // 일간 키워드 데이터 조회
     async function fetchDailyData(date) {
-        const res = await fetch(`http://localhost:8080/api/insight?date=${date}`);
+        const res = await fetch(`${baseURL}/api/insight?date=${date}`);
         const data = await res.json();
         return data.top_keywords || [];
     }
 
     // 주간 키워드 데이터 조회
     async function fetchWeeklyData(date) {
-        const res = await fetch(`http://localhost:8080/api/insight/weekly?date=${date}`);
+        const res = await fetch(`${baseURL}/api/insight/weekly?date=${date}`);
         const data = await res.json();
         return {
             range_start: data.range_start,
@@ -399,7 +400,7 @@
     // 관련 기사 전체 목록을 한 번에 가져오기
     async function fetchRelatedArticles(keyword, relatedKeyword, startDate, endDate) {
         try {
-            const url = `http://localhost:8080/api/insight/related-search-range`
+            const url = `${baseURL}/api/insight/related-search-range`
                 + `?keyword=${encodeURIComponent(keyword)}`
                 + `&relatedKeyword=${encodeURIComponent(relatedKeyword)}`
                 + `&startDate=${startDate}`
