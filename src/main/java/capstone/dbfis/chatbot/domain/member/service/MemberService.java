@@ -86,7 +86,7 @@ public class MemberService {
         refreshTokenService.updateOrSaveRefreshToken(member, refreshToken);
 
         // 토큰 응답 반환
-        return new LoginResponse(accessToken, refreshToken);
+        return new LoginResponse(accessToken, refreshToken, member.getName(), member.getEmail());
     }
 
     /**
