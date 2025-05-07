@@ -143,4 +143,17 @@ public class InsightController {
         List<Map<String, Object>> categories = insightService.getPopularCategories(isForeign);
         return ResponseEntity.ok(categories);
     }
+    
+    @GetMapping("/sentiment-analysis")
+    @Operation(summary = "키워드 기반 기사의 긍부정 비율 분석", description = "키워드로 검색된 기사들의 긍부정 비율을 분석하여 반환합니다.")
+    public ResponseEntity<String> getKeywordSentimentAnalysis(
+            @RequestParam("keyword") String keyword,
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "foreign", defaultValue = "false") boolean isForeign) {
+        String result = insightService.getKeywordSentimentAnalysis(
+                keyword, startDate, endDate, category, isForeign);
+        return ResponseEntity.ok(result);
+    }
 }
