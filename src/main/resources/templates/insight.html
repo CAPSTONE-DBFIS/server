@@ -267,6 +267,24 @@
             background-color: #5B55D7;
             color: white;
         }
+        .article-sentiment {
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .article-sentiment.positive {
+            background-color: #e6f4ea;
+            color: #137333;
+        }
+        .article-sentiment.negative {
+            background-color: #fce8e6;
+            color: #c5221f;
+        }
+        .article-sentiment.neutral {
+            background-color: #f1f3f4;
+            color: #5f6368;
+        }
     </style>
 </head>
 <body>
@@ -880,6 +898,33 @@
             categoryElement.className = 'article-category';
             categoryElement.textContent = article.category || '일반';
             metaElement.appendChild(categoryElement);
+            
+            // 긍부정 정보 추가
+            if (article.sentiment) {
+                const sentimentElement = document.createElement('span');
+                sentimentElement.className = 'article-sentiment';
+                let sentimentText = '';
+                let sentimentClass = '';
+                
+                switch(article.sentiment) {
+                    case 'positive':
+                        sentimentText = '긍정';
+                        sentimentClass = 'positive';
+                        break;
+                    case 'negative':
+                        sentimentText = '부정';
+                        sentimentClass = 'negative';
+                        break;
+                    case 'neutral':
+                        sentimentText = '중립';
+                        sentimentClass = 'neutral';
+                        break;
+                }
+                
+                sentimentElement.textContent = sentimentText;
+                sentimentElement.classList.add(sentimentClass);
+                metaElement.appendChild(sentimentElement);
+            }
             
             contentElement.appendChild(metaElement);
             
