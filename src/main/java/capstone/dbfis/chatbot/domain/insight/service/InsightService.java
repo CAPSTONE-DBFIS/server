@@ -696,6 +696,16 @@ public class InsightService {
                         obj.put("category", "일반");
                     }
                     
+                    // 하이라이트 정보 추가
+                    if (hit.highlight() != null && hit.highlight().containsKey("title")) {
+                        obj.put("highlights", new JSONArray(hit.highlight().get("title")));
+                    }
+                    
+                    // 긍부정 정보 추가
+                    if (src.get("sentiment") != null) {
+                        obj.put("sentiment", src.get("sentiment"));
+                    }
+                    
                     hits.put(obj);
                 }
             } catch (Exception e) {
