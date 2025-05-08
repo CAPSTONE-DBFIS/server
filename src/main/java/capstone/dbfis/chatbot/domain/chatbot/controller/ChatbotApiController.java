@@ -53,10 +53,10 @@ public class ChatbotApiController {
     private String fastapiUrl;
 
     @Operation(summary = "챗봇 대시보드", description = "사용자가 속해있는 프로젝트, 프로젝트별 채팅방, 개인 채팅방을 조회합니다.")
-    @GetMapping("/dashboard")
-    public ResponseEntity<ChatDashboardDto> getDashboard(
-            @RequestHeader("Authorization") @NotBlank String token) {
-        String memberId = tokenProvider.getMemberId(token);
+        @GetMapping("/dashboard")
+        public ResponseEntity<ChatDashboardDto> getDashboard(
+                @RequestHeader("Authorization") @NotBlank String token) {
+            String memberId = tokenProvider.getMemberId(token);
 
         List<ProjectResponse> projects = projectService.getProjectsByMember(memberId);
         List<ChatRoom> rooms = chatRoomService.getChatRoomsByMemberId(memberId);
