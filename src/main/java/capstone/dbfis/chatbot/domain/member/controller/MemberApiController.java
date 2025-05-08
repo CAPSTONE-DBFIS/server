@@ -24,7 +24,7 @@ public class MemberApiController {
     private final TokenProvider tokenProvider;
 
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "사용자의 아이디와 비밀번호로 로그인 후 AccessToken과 RefreshToken를 발급합니다.")
+    @Operation(summary = "로그인", description = "사용자의 아이디와 비밀번호로 로그인 후 AccessToken, RefreshToken, 회원 id, 회원 이름를 발급합니다.")
     public ResponseEntity<LoginResponse> login(
             @RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(memberService.login(request));  // 200 OK
