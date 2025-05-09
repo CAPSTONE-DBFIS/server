@@ -15,8 +15,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,12 +28,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Validated
 @RestController
@@ -53,36 +48,13 @@ public class ChatbotApiController {
     private String fastapiUrl;
 
     @Operation(summary = "챗봇 대시보드", description = "사용자가 속해있는 프로젝트, 프로젝트별 채팅방, 개인 채팅방을 조회합니다.")
-        @GetMapping("/dashboard")
-        public ResponseEntity<ChatDashboardDto> getDashboard(
-                @RequestHeader("Authorization") @NotBlank String token) {
-            String memberId = tokenProvider.getMemberId(token);
+    @GetMapping("/dashboard")
+    public ResponseEntity<ChatDashboardDto> getDashboard(
+            @RequestHeader("Authorization") @NotBlank String token) {
+        String memberId = tokenProvider.getMemberId(token);
 
         List<ProjectResponse> projects = projectService.getProjectsByMember(memberId);
-        List<ChatRoom> rooms = chatRoomService.getChatRoomsByMemberId(memberId);
-        List<ChatRoomDto> roomDtos = rooms.stream()
-                .map(r -> ChatRoomDto.builder()
-                        .id(r.getId())
-                        .name(r.getName())
-                        .type(r.getType())
-                        .projectId(r.getProjectId())
-                        .favorite(r.isFavorite())
-                        .favoriteAddedat(r.getFavoriteAddedAt())
-                        .build())
-                .toList();
-
-        Map<Long, List<ChatRoomDto>> projectChatrooms = roomDtos.stream()
-                .filter(dto -> dto.getProjectId() != null)
-                .collect(Collectors.groupingBy(ChatRoomDto::getProjectId));
-        List<ChatRoomDto> personalRooms = roomDtos.stream()
-                .filter(dto -> dto.getProjectId() == null)
-                .toList();
-
-        ChatDashboardDto dto = ChatDashboardDto.builder()
-                .projects(projects)
-                .projectChatrooms(projectChatrooms)
-                .personalChatrooms(personalRooms)
-                .build();
+        ChatDashboardDto dto = chatRoomService.buildChatDashboard(memberId, projects);
 
         return ResponseEntity.ok(dto);
     }
@@ -95,13 +67,7 @@ public class ChatbotApiController {
             @RequestParam(required = false) @Min(1) Long projectId) {
 
         String memberId = tokenProvider.getMemberId(token);
-        ChatRoom chatRoom = chatRoomService.createChatRoom(memberId, type, projectId);
-        ChatRoomDto dto = ChatRoomDto.builder()
-                .id(chatRoom.getId())
-                .name(chatRoom.getName())
-                .type(chatRoom.getType())
-                .projectId(chatRoom.getProjectId())
-                .build();
+        ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type, projectId);
 
         return ResponseEntity.status(201).body(dto); // 201 Created
     }
@@ -165,36 +131,8 @@ public class ChatbotApiController {
 
         String memberId = tokenProvider.getMemberId(token);
 
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("query", query);
-        body.add("chat_room_id", chatroomId);
-        body.add("member_id", memberId);
-        body.add("persona_id", personaId);
+        MultiValueMap<String, Object> body = chatRoomService.prepareMultipartRequest(query, chatroomId, memberId, personaId, files, modelType);
 
-        if (files != null && !files.isEmpty()) {
-            for (MultipartFile file : files) {
-                String filename = file.getOriginalFilename();
-                if (filename == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일 이름이 없습니다.");
-                }
-
-                String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-                List<String> allowedExtensions = List.of("pdf", "docx", "hwp", "txt", "png", "jpg", "jpeg");
-
-                if (!allowedExtensions.contains(extension)) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "지원하지 않는 파일 형식입니다. 허용된 형식: " + String.join(", ", allowedExtensions));
-                }
-
-                body.add("files", new ByteArrayResource(file.getBytes()) {
-                    @Override
-                    public String getFilename() {
-                        return filename;
-                    }
-                });
-            }
-        }
-        body.add("model_type", modelType);
         return webClient.post()
                 .uri(fastapiUrl + "/agent/query")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -202,12 +140,10 @@ public class ChatbotApiController {
                 .header("Authorization", token)
                 .body(BodyInserters.fromMultipartData(body))
                 .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError,
-                        resp -> resp.bodyToMono(String.class)
-                                .map(msg -> new ResponseStatusException(resp.statusCode(), "FAST API 4xx 오류: " + msg)))
-                .onStatus(HttpStatusCode::is5xxServerError,
-                        resp -> Mono.error(new ResponseStatusException(
-                                HttpStatus.BAD_GATEWAY, "FAST API 5xx 오류")))
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class)
+                                .map(msg -> new ResponseStatusException(resp.statusCode(), msg))
+                )
                 .bodyToFlux(String.class)
                 .filter(line -> !line.isBlank() && !line.equals("data: [DONE]"));
     }

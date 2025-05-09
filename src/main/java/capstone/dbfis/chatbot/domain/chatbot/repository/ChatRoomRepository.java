@@ -14,6 +14,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("SELECT c FROM ChatRoom c WHERE c.memberId = :memberId " +
             "ORDER BY c.favorite DESC, c.favoriteAddedAt DESC NULLS LAST, c.id ASC")
     List<ChatRoom> findByMemberIdSorted(@Param("memberId") String memberId);
-    List<ChatRoom> findByMemberIdOrderByIdAsc(String memberId); // 사용자의 모든 채팅방을 조회 후 채팅방 id 기준 오름차순 정렬
     Optional<ChatRoom> findByIdAndMemberId(Long id, String userId); // 특정 chatroomId + userId로 채팅방 조회
+    List<ChatRoom> findByProjectId(Long projectId);
 }

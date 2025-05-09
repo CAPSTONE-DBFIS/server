@@ -1,5 +1,8 @@
 package capstone.dbfis.chatbot.domain.project.service;
 
+import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
+import capstone.dbfis.chatbot.domain.chatbot.repository.ChatRoomRepository;
+import capstone.dbfis.chatbot.domain.chatbot.service.ChatMessageService;
 import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
 import capstone.dbfis.chatbot.domain.project.dto.UpdateProjectRequest;
 import capstone.dbfis.chatbot.domain.project.entity.Project;
@@ -25,6 +28,8 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageService chatMessageService;
 
     /**
      * 팀에 새 프로젝트를 생성합니다.
@@ -123,6 +128,16 @@ public class ProjectService {
             );
         }
 
+
+        // 프로젝트에 속한 채팅방 삭제
+        List<ChatRoom> projectChatRooms = chatRoomRepository.findByProjectId(projectId);
+        System.out.println("삭제 대상 채팅방 수: " + projectChatRooms.size());
+        for (ChatRoom room : projectChatRooms) {
+            chatMessageService.deleteMessagesByChatRoom(room);  // 메시지 먼저 삭제
+            chatRoomRepository.delete(room);                    // 채팅방 삭제
+        }
+
+        // 프로젝트 삭제
         projectRepository.delete(project);
     }
 
