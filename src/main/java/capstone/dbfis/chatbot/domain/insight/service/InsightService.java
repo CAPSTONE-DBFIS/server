@@ -805,6 +805,185 @@ public class InsightService {
         }
     }
 
+    /**
+     * 키워드 검색 결과의 긍/부정 비율 분석
+     * @param keyword 검색 키워드
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @param category 기사 카테고리 (선택)
+     * @param isForeign 해외 기사 여부 
+     * @return 긍/부정 비율 분석 결과 JSON
+     */
+    public String getKeywordSentimentAnalysis(
+            String keyword,
+            String startDate,
+            String endDate,
+            String category,
+            boolean isForeign
+    ) {
+        try {
+            if (keyword == null || keyword.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "검색 키워드는 필수입니다.");
+            }
+
+            // 날짜 유효성 체크
+            if (startDate == null || startDate.isBlank() ||
+                    endDate == null || endDate.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "시작일과 종료일을 모두 입력해야 합니다."
+                );
+            }
+            try {
+                LocalDate.parse(startDate);
+                LocalDate.parse(endDate);
+            } catch (DateTimeParseException e) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "날짜 형식이 잘못되었습니다. YYYY-MM-DD 형식으로 입력해주세요."
+                );
+            }
+
+            // 검색 인덱스 선택
+            String searchIndex = isForeign ? foreignIndexName : indexName;
+            System.out.println("감정분석 검색 인덱스: " + searchIndex);
+            System.out.println("감정분석 파라미터: keyword=" + keyword + ", startDate=" + startDate + 
+                               ", endDate=" + endDate + ", category=" + category + ", isForeign=" + isForeign);
+            
+            // 인덱스 존재 여부 확인
+            boolean indexExists = false;
+            try {
+                indexExists = client.indices().exists(e -> e.index(searchIndex)).value();
+                if (!indexExists) {
+                    System.out.println("검색 인덱스가 존재하지 않습니다: " + searchIndex);
+                    // 인덱스가 없으면 빈 결과 반환
+                    JSONObject result = new JSONObject();
+                    result.put("message", "검색 인덱스가 존재하지 않습니다.");
+                    result.put("positive", 0);
+                    result.put("negative", 0);
+                    result.put("neutral", 0);
+                    result.put("total", 0);
+                    return result.toString(2);
+                }
+            } catch (Exception e) {
+                System.out.println("인덱스 확인 중 예외 발생: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            // 검색 쿼리 빌드 - 집계(aggregation) 포함
+            SearchRequest.Builder searchBuilder = new SearchRequest.Builder()
+                    .index(searchIndex)
+                    .size(0) // 실제 검색 결과는 필요 없이 집계만 필요
+                    .query(q -> {
+                        // 기본 bool 쿼리 시작
+                        co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder boolBuilder = 
+                            new co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder();
+                        
+                        // 키워드 검색 조건 추가 - 제목에서 검색
+                        boolBuilder.must(s -> s.match(m -> m.field("title").query(keyword)));
+                        
+                        // 날짜 범위 필터 추가
+                        boolBuilder.filter(f -> f.range(r -> r
+                                .field("date")
+                                .gte(JsonData.of(startDate))
+                                .lte(JsonData.of(endDate))
+                        ));
+                        
+                        // 카테고리 필터 추가 (값이 있는 경우에만)
+                        if (category != null && !category.isBlank()) {
+                            boolBuilder.filter(f -> f.term(t -> t
+                                    .field("category")
+                                    .value(category.toLowerCase())
+                            ));
+                        }
+                        
+                        return q.bool(boolBuilder.build());
+                    })
+                    .aggregations("sentiment_counts", a -> a
+                            .terms(t -> t
+                                    .field("sentiment")
+                                    .size(10) // 충분히 큰 사이즈
+                            )
+                    );
+
+            SearchResponse<Map> resp;
+            try {
+                SearchRequest searchRequest = searchBuilder.build();
+                resp = client.search(searchRequest, Map.class);
+                System.out.println("감정분석 검색 결과의 총 개수: " + resp.hits().total().value());
+            } catch (IOException ex) {
+                System.out.println("감정분석 검색 중 IO 오류 발생: " + ex.getMessage());
+                ex.printStackTrace();
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "감정분석 검색 중 오류가 발생했습니다.",
+                        ex
+                );
+            }
+
+            // 감정 분석 결과 처리
+            JSONObject result = new JSONObject();
+            long positive = 0;
+            long negative = 0;
+            long neutral = 0;
+            long total = resp.hits().total().value();
+            
+            // 집계 결과가 존재하는지 확인
+            if (resp.aggregations() != null && 
+                resp.aggregations().get("sentiment_counts") != null &&
+                resp.aggregations().get("sentiment_counts").sterms() != null &&
+                resp.aggregations().get("sentiment_counts").sterms().buckets() != null &&
+                resp.aggregations().get("sentiment_counts").sterms().buckets().array() != null) {
+                
+                // 감정별 집계 처리
+                for (var bucket : resp.aggregations().get("sentiment_counts").sterms().buckets().array()) {
+                    String sentimentValue = bucket.key().stringValue();
+                    long count = bucket.docCount();
+                    
+                    if ("positive".equals(sentimentValue)) {
+                        positive = count;
+                    } else if ("negative".equals(sentimentValue)) {
+                        negative = count;
+                    } else if ("neutral".equals(sentimentValue)) {
+                        neutral = count;
+                    }
+                }
+            }
+            
+            // 결과 JSON 구성
+            result.put("positive", positive);
+            result.put("negative", negative);
+            result.put("neutral", neutral);
+            result.put("total", total);
+            
+            // 백분율 계산 (전체 문서가 0개가 아닌 경우만)
+            if (total > 0) {
+                result.put("positive_percent", Math.round((positive * 100.0) / total));
+                result.put("negative_percent", Math.round((negative * 100.0) / total));
+                result.put("neutral_percent", Math.round((neutral * 100.0) / total));
+            } else {
+                result.put("positive_percent", 0);
+                result.put("negative_percent", 0);
+                result.put("neutral_percent", 0);
+            }
+            
+            return result.toString(2);
+            
+        } catch (ResponseStatusException ex) {
+            // 이미 처리된 예외는 그대로 전달
+            throw ex;
+        } catch (Exception ex) {
+            // 예상치 못한 예외는 로깅 후 500 에러로 변환
+            System.out.println("감정분석 처리 중 예상치 못한 예외 발생: " + ex.getMessage());
+            ex.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "서버 처리 중 오류가 발생했습니다.",
+                    ex
+            );
+        }
+    }
+
     // 날짜 문자열을 yyyy-MM-dd 형식으로 변환
     private String formatDateString(String rawDate) {
         try {

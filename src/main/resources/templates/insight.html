@@ -290,7 +290,7 @@
 <body>
 <div class="container">
     <h1>
-        국내 키워드 인사이트
+        <img src="https://img.icons8.com/ios-filled/50/5B55D7/south-korea.png" /> 국내 키워드 인사이트
     </h1>
     
     <!-- 탭 메뉴 추가 -->
@@ -321,6 +321,19 @@
                 <!-- 카테고리는 JavaScript로 동적 로드 -->
             </select>
             <button onclick="searchArticles()">검색</button>
+        </div>
+        
+        <!-- 긍/부정 비율 차트 추가 -->
+        <div id="sentiment-chart-container" style="display: none; margin-bottom: 20px;">
+            <h3>키워드 감정분석 결과</h3>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; min-height: 150px;">
+                <div style="flex: 2; min-width: 300px; max-width: 600px; height: 100px;">
+                    <canvas id="sentiment-chart"></canvas>
+                </div>
+                <div id="sentiment-stats" style="flex: 1; margin-left: 20px; min-width: 200px; padding: 10px;">
+                    <!-- 감정 분석 통계는 JavaScript로 동적 로드 -->
+                </div>
+            </div>
         </div>
         
         <div class="search-results" id="search-results">
@@ -396,17 +409,18 @@
     let DAILY_DATA = [];
     let WEEKLY_DATA = {};
 
-    const baseURL = window.location.origin;
+    let sentimentChart = null;
+
     // 일간 키워드 데이터 조회
     async function fetchDailyData(date) {
-        const res = await fetch(`${baseURL}/api/insight?date=${date}`);
+        const res = await fetch(`http://localhost:8080/api/insight?date=${date}`);
         const data = await res.json();
         return data.top_keywords || [];
     }
 
     // 주간 키워드 데이터 조회
     async function fetchWeeklyData(date) {
-        const res = await fetch(`${baseURL}/api/insight/weekly?date=${date}`);
+        const res = await fetch(`http://localhost:8080/api/insight/weekly?date=${date}`);
         const data = await res.json();
         return {
             range_start: data.range_start,
@@ -418,7 +432,7 @@
     // 관련 기사 전체 목록을 한 번에 가져오기
     async function fetchRelatedArticles(keyword, relatedKeyword, startDate, endDate) {
         try {
-            const url = `${baseURL}/api/insight/related-search-range`
+            const url = `http://localhost:8080/api/insight/related-search-range`
                 + `?keyword=${encodeURIComponent(keyword)}`
                 + `&relatedKeyword=${encodeURIComponent(relatedKeyword)}`
                 + `&startDate=${startDate}`
@@ -828,24 +842,43 @@
         }
         
         try {
-            const url = new URL('/api/insight/search', window.location.origin);
-            url.searchParams.append('keyword', keyword);
-            url.searchParams.append('startDate', startDate);
-            url.searchParams.append('endDate', endDate);
-            url.searchParams.append('foreign', 'false');
+            // 기사 검색
+            const searchUrl = new URL('/api/insight/search', window.location.origin);
+            searchUrl.searchParams.append('keyword', keyword);
+            searchUrl.searchParams.append('startDate', startDate);
+            searchUrl.searchParams.append('endDate', endDate);
+            searchUrl.searchParams.append('foreign', 'false');
             if (category) {
-                url.searchParams.append('category', category);
+                searchUrl.searchParams.append('category', category);
             }
             
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
+            const searchResponse = await fetch(searchUrl);
+            if (!searchResponse.ok) throw new Error(`HTTP error! status: ${searchResponse.status}`);
+            const searchData = await searchResponse.json();
             
-            renderSearchResults(data);
+            // 긍/부정 비율 분석 요청
+            const sentimentUrl = new URL('/api/insight/sentiment-analysis', window.location.origin);
+            sentimentUrl.searchParams.append('keyword', keyword);
+            sentimentUrl.searchParams.append('startDate', startDate);
+            sentimentUrl.searchParams.append('endDate', endDate);
+            sentimentUrl.searchParams.append('foreign', 'false');
+            if (category) {
+                sentimentUrl.searchParams.append('category', category);
+            }
+            
+            const sentimentResponse = await fetch(sentimentUrl);
+            if (!sentimentResponse.ok) throw new Error(`HTTP error! status: ${sentimentResponse.status}`);
+            const sentimentData = await sentimentResponse.json();
+            
+            // 검색 결과와 긍/부정 비율 차트 렌더링
+            renderSearchResults(searchData);
+            renderSentimentChart(sentimentData);
         } catch (error) {
             console.error('기사 검색 중 오류 발생:', error);
             document.getElementById('search-results').innerHTML = 
                 `<p style="text-align: center; padding: 20px; color: #666;">검색 중 오류가 발생했습니다: ${error.message}</p>`;
+            // 오류 시 감정 분석 차트 숨기기
+            document.getElementById('sentiment-chart-container').style.display = 'none';
         }
     }
     
@@ -952,6 +985,130 @@
         totalElement.style.color = '#666';
         totalElement.textContent = `총 ${data.total || 0}개의 검색 결과 중 ${data.hits.length}개 표시`;
         resultsContainer.appendChild(totalElement);
+    }
+    
+    // 감정 분석 차트 렌더링
+    function renderSentimentChart(data) {
+        const chartContainer = document.getElementById('sentiment-chart-container');
+        const statsContainer = document.getElementById('sentiment-stats');
+        
+        // 데이터가 없거나 총 개수가 0인 경우 처리
+        if (!data || data.total === 0) {
+            chartContainer.style.display = 'none';
+            return;
+        }
+        
+        // 차트 컨테이너 표시
+        chartContainer.style.display = 'block';
+        
+        // 감정 분석 통계 정보 표시
+        statsContainer.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <p style="font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">감정 분석 결과:</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; white-space: nowrap;"><span style="color: #137333;">&#9679; 긍정</span>: ${data.positive} (${data.positive_percent}%)</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; white-space: nowrap;"><span style="color: #c5221f;">&#9679; 부정</span>: ${data.negative} (${data.negative_percent}%)</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; white-space: nowrap;"><span style="color: #5f6368;">&#9679; 중립</span>: ${data.neutral} (${data.neutral_percent}%)</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; white-space: nowrap;">총 기사 수: ${data.total}개</p>
+            </div>
+        `;
+        
+        // 차트 데이터 준비
+        const ctx = document.getElementById('sentiment-chart').getContext('2d');
+        
+        // 기존 차트 제거
+        if (sentimentChart) {
+            sentimentChart.destroy();
+        }
+        
+        // 단일 막대에 비율 표시하는 차트로 변경
+        sentimentChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [''],
+                datasets: [
+                    {
+                        label: '긍정',
+                        data: [data.positive_percent],
+                        backgroundColor: 'rgba(19, 115, 51, 0.7)',
+                        borderWidth: 0
+                    },
+                    {
+                        label: '부정',
+                        data: [data.negative_percent],
+                        backgroundColor: 'rgba(197, 34, 31, 0.7)',
+                        borderWidth: 0
+                    },
+                    {
+                        label: '중립',
+                        data: [data.neutral_percent],
+                        backgroundColor: 'rgba(95, 99, 104, 0.7)',
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                barThickness: 30,  // 막대 두께 조절
+                scales: {
+                    x: {
+                        stacked: true,
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            display: false // y축 라벨 숨김
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'center',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 8,
+                            font: {
+                                size: 11
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let value = context.parsed.x;
+                                
+                                // 실제 건수도 표시
+                                let count = 0;
+                                if (context.dataset.label === '긍정') count = data.positive;
+                                else if (context.dataset.label === '부정') count = data.negative;
+                                else if (context.dataset.label === '중립') count = data.neutral;
+                                
+                                return `${label}: ${value}% (${count}건)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
     
     // 오늘 날짜 기준으로 기본 날짜 설정
