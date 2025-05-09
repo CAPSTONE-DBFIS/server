@@ -23,5 +23,6 @@ public class Project {
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

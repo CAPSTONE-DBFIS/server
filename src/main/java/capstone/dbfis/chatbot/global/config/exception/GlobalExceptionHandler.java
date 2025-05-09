@@ -138,6 +138,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
+    // 401 JWT 만료
+    @ExceptionHandler(io.jsonwebtoken.ExpiredJwtException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredJwt(io.jsonwebtoken.ExpiredJwtException ex, HttpServletRequest req) {
+        logger.warn("만료된 JWT 토큰 사용 시도: {}", ex.getMessage());
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                "토큰이 만료되었습니다.",
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    // 401 JWT 위조/손상
+    @ExceptionHandler(io.jsonwebtoken.JwtException.class)
+    public ResponseEntity<ErrorResponse> handleJwtException(io.jsonwebtoken.JwtException ex, HttpServletRequest req) {
+        logger.warn("잘못된 JWT 토큰: {}", ex.getMessage());
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                "유효하지 않은 토큰입니다.",
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
     // 그 외 모든 예외는 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAll(Exception ex, HttpServletRequest req) {
@@ -150,5 +178,57 @@ public class GlobalExceptionHandler {
                 req.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    // 404 잘못된 api 주소
+    @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(HttpServletRequest req) {
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                "존재하지 않는 API 경로입니다.",
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    // 405 Method Not Allowed - 잘못된 HTTP 메서드 (예: GET만 지원하는 API에 POST)
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(org.springframework.web.HttpRequestMethodNotSupportedException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                "Method Not Allowed",
+                "지원하지 않는 요청 방식입니다. 허용된 방식: " + String.join(", ", ex.getSupportedMethods()),
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
+    }
+
+    // 400 Bad Request - JSON 파싱 실패
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid Request Body",
+                "요청 본문(JSON 형식 등)을 읽을 수 없습니다. 형식을 확인하세요.",
+                req.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // 400 Bad Request - 필수 @RequestParam 누락
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(org.springframework.web.bind.MissingServletRequestParameterException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Missing Parameter",
+                String.format("필수 파라미터 '%s'가 누락되었습니다.", ex.getParameterName()),
+                req.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(body);
     }
 }

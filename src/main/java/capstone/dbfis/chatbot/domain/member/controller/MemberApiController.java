@@ -24,7 +24,7 @@ public class MemberApiController {
     private final TokenProvider tokenProvider;
 
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "사용자의 아이디와 비밀번호로 로그인 후 AccessToken과 RefreshToken를 발급합니다.")
+    @Operation(summary = "로그인", description = "사용자의 아이디와 비밀번호로 로그인 후 AccessToken, RefreshToken, 회원 id, 회원 이름를 발급합니다.")
     public ResponseEntity<LoginResponse> login(
             @RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(memberService.login(request));  // 200 OK
@@ -43,17 +43,16 @@ public class MemberApiController {
     @PostMapping("/resend-verification")
     @Operation(summary = "인증 메일 재전송", description = "회원가입 인증 이메일을 다시 보냅니다.")
     public ResponseEntity<Void> resendVerification(
-            @RequestParam @NotBlank String memberId) {
-        memberService.sendNewSignUpEmail(memberId);
+            @RequestBody @Valid ResendVerificationRequest request) {
+        memberService.sendNewSignUpEmail(request.getMemberId());
         return ResponseEntity.noContent().build();  // 204 No Content
     }
 
     @PostMapping("/verify-signup")
     @Operation(summary = "회원가입 이메일 인증번호 검증", description = "사용자가 입력한 인증번호로 회원가입 이메일 인증을 완료합니다.")
     public ResponseEntity<Void> verifySignup(
-            @RequestParam @NotBlank String memberId,
-            @RequestParam @NotBlank String verificationCode) {
-        memberService.verifySignUpCode(memberId, verificationCode);
+            @RequestBody @Valid VerifySignupRequest request) {
+        memberService.verifySignUpCode(request.getMemberId(), request.getVerificationCode());
         return ResponseEntity.ok().build();        // 200 OK
     }
 

@@ -86,7 +86,7 @@ public class MemberService {
         refreshTokenService.updateOrSaveRefreshToken(member, refreshToken);
 
         // 토큰 응답 반환
-        return new LoginResponse(accessToken, refreshToken);
+        return new LoginResponse(accessToken, refreshToken, member.getName(), member.getEmail());
     }
 
     /**
@@ -170,7 +170,7 @@ public class MemberService {
         passwordResetTokenRepository.save(new PasswordResetToken(token, member));
 
         // 재설정 링크 전송
-        String resetLink = "http://localhost:8080/reset-password?token=" + token;
+        String resetLink = "http://43.202.195.215:8080/reset-password?token=" + token;
         sendPasswordResetEmail(member.getEmail(), resetLink);
     }
 

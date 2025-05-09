@@ -37,6 +37,7 @@ public class File {
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
+    @Builder.Default
     @Column(nullable = false)
     private int downloadCount = 0;
 }

@@ -95,13 +95,13 @@ public class TokenProvider {
                     .getBody();
         } catch (ExpiredJwtException e) {
             log.error("JWT 만료됨: {}", e.getMessage());
-            throw new IllegalStateException("토큰이 만료되었습니다.");
+            throw e;
         } catch (SignatureException e) {
             log.error("JWT 서명 불일치: {}", e.getMessage());
-            throw new IllegalStateException("토큰 서명이 유효하지 않습니다.");
+            throw e;
         } catch (JwtException e) {
             log.error("JWT 파싱 오류: {}", e.getMessage());
-            throw new IllegalStateException("유효하지 않은 토큰입니다.");
+            throw e;
         }
     }
 

@@ -41,6 +41,11 @@ public class ChatRoom {
     @Column(name = "favorite_added_at")
     private LocalDateTime favoriteAddedAt;
 
+    // 생성 시간
+    @Builder.Default
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     public void updateName(String name) {
         this.name = name;
     }
