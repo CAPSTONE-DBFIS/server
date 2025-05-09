@@ -74,14 +74,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    /* ===== 전역 ===== */
-    const baseURL = window.location.origin;
+    const baseAPI = "/api/teams";
     let currentTeamId = null,
         currentFolderId = null,
         pathStack = [],
         currentSort = 'desc';
 
-    /* ===== 유틸 ===== */
     const token = () => localStorage.getItem('accessToken');
     const showLoading = on => document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
     const fmtSize = b => b < 1024 ? b + ' B' : b/1024<1024 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB';
@@ -95,10 +93,9 @@
         return ascii ? decodeURIComponent(ascii[1]) : null;
     };
 
-    /* ===== 초기 팀 목록 ===== */
     window.onload = async () => {
         showLoading(true);
-        const res = await fetch('http://localhost:8080/api/teams/my-teams', {
+        const res = await fetch(`${baseAPI}/my-teams`, {
             headers: { Authorization: `Bearer ${token()}` }
         });
         const teams = await res.json();
@@ -118,7 +115,6 @@
         showLoading(false);
     };
 
-    /* ===== 팀 선택 ===== */
     function selectTeam(id, name) {
         currentTeamId = id;
         currentFolderId = null;
@@ -144,10 +140,9 @@
     const goRoot = () => { currentFolderId = null; pathStack = []; updateBreadcrumb(); loadFolderAndFiles(); };
     const goLevel = i => { currentFolderId = pathStack[i].id; pathStack = pathStack.slice(0, i+1); updateBreadcrumb(); loadFolderAndFiles(); };
 
-    /* ===== 추천 파일 ===== */
     async function loadSuggestions() {
         if (!currentTeamId) return;
-        const url = new URL(`${baseURL}/${currentTeamId}/files/recommend`, location);
+        const url = `${baseAPI}/${currentTeamId}/files/recommend`;
         const files = await fetch(url, {
             headers: { Authorization: `Bearer ${token()}` }
         }).then(r => r.json());
@@ -165,19 +160,14 @@
         });
     }
 
-    /* ===== 폴더+파일 통합 로드 ===== */
     async function loadFolderAndFiles() {
         if (!currentTeamId) return;
         showLoading(true);
         try {
-            let url;
-            // 루트인지 하위 폴더인지에 따라 올바른 엔드포인트 선택
-            if (currentFolderId === null) {
-                url = new URL(`${baseURL}/${currentTeamId}/folders/contents`, location);
-            } else {
-                url = new URL(`${baseURL}/${currentTeamId}/folders/${currentFolderId}/contents`, location);
-            }
-            url.searchParams.set('sort', currentSort);
+            let url = currentFolderId === null
+                ? `${baseAPI}/${currentTeamId}/folders/contents`
+                : `${baseAPI}/${currentTeamId}/folders/${currentFolderId}/contents`;
+            url += `?sort=${currentSort}`;
 
             const items = await fetch(url, {
                 headers: { Authorization: `Bearer ${token()}` }
@@ -233,10 +223,9 @@
         });
     }
 
-    /* ===== 다운로드 ===== */
     async function downloadFile(id) {
         showLoading(true);
-        const url = new URL(`${baseURL}/${currentTeamId}/files/${id}`, location);
+        const url = `${baseAPI}/${currentTeamId}/files/${id}`;
         const res = await fetch(url, {
             headers: { Authorization: `Bearer ${token()}` }
         });
@@ -249,16 +238,12 @@
         showLoading(false);
     }
 
-    /* ===== 삭제 ===== */
     async function deleteItem(id, type) {
         if (!confirm('정말 삭제하시겠습니까?')) return;
         showLoading(true);
-        let url;
-        if (type === 'FOLDER') {
-            url = new URL(`${baseURL}/${currentTeamId}/folders/${id}`, location);
-        } else {
-            url = new URL(`${baseURL}/${currentTeamId}/files/${id}`, location);
-        }
+        const url = type === 'FOLDER'
+            ? `${baseAPI}/${currentTeamId}/folders/${id}`
+            : `${baseAPI}/${currentTeamId}/files/${id}`;
         await fetch(url, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token()}` }
@@ -267,7 +252,6 @@
         showLoading(false);
     }
 
-    /* ===== 업로드 ===== */
     const triggerUpload = () => document.getElementById('uploadInput').click();
     async function handleUpload(e) {
         const f = e.target.files[0];
@@ -275,8 +259,7 @@
         showLoading(true);
         const fd = new FormData();
         fd.append('file', f);
-        // 업로드 URL
-        const uploadPath = `${baseURL}/${currentTeamId}/folders/${currentFolderId}/files`;
+        const uploadPath = `${baseAPI}/${currentTeamId}/folders/${currentFolderId}/files`;
         await fetch(uploadPath, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token()}` },
@@ -287,13 +270,12 @@
         showLoading(false);
     }
 
-    /* ===== 폴더 생성 ===== */
     async function openNewFolder() {
         const name = prompt('새 폴더 이름');
         if (!name) return;
         showLoading(true);
         const req = { parentId: currentFolderId, name };
-        await fetch(`${baseURL}/${currentTeamId}/folders`, {
+        await fetch(`${baseAPI}/${currentTeamId}/folders`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -305,7 +287,6 @@
         showLoading(false);
     }
 
-    /* ===== 검색 & 정렬 ===== */
     const searchFiles = () => loadFolderAndFiles();
     const setSort = o => { currentSort = o; loadFolderAndFiles(); };
 </script>
