@@ -165,7 +165,7 @@ public class ChatRoomService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일 이름이 없습니다.");
 
                 String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-                List<String> allowedExtensions = List.of("pdf", "docx", "hwp", "txt", "png", "jpg", "jpeg");
+                List<String> allowedExtensions = List.of("pdf", "docx", "hwp", "txt");
 
                 if (!allowedExtensions.contains(extension)) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
