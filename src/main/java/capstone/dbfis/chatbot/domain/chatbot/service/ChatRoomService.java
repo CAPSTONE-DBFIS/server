@@ -57,7 +57,22 @@ public class ChatRoomService {
      */
     public ChatDashboardDto buildChatDashboard(String memberId, List<ProjectResponse> projects) {
         List<ChatRoom> rooms = getChatRoomsByMemberId(memberId);
-        rooms.sort(Comparator.comparing(ChatRoom::getCreatedAt).reversed()); // 채팅방 생성 시간 최신순 정렬
+
+        rooms.sort((r1, r2) -> {
+            // 즐겨찾기 먼저
+            if (r1.isFavorite() && !r2.isFavorite()) return -1;
+            if (!r1.isFavorite() && r2.isFavorite()) return 1;
+
+            // 즐겨찾기면 favoriteAddedAt 최신순
+            if (r1.isFavorite()) {
+                return Optional.ofNullable(r2.getFavoriteAddedAt()).orElse(LocalDateTime.MIN)
+                        .compareTo(Optional.ofNullable(r1.getFavoriteAddedAt()).orElse(LocalDateTime.MIN));
+            }
+
+            // 아니면 createdAt 최신순
+            return Optional.ofNullable(r2.getCreatedAt()).orElse(LocalDateTime.MIN)
+                    .compareTo(Optional.ofNullable(r1.getCreatedAt()).orElse(LocalDateTime.MIN));
+        });
 
         List<ChatRoomDto> roomDtos = rooms.stream()
                 .map(r -> ChatRoomDto.builder()
