@@ -7,8 +7,7 @@ import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
 import capstone.dbfis.chatbot.domain.chatbot.service.ChatMessageService;
 import capstone.dbfis.chatbot.domain.chatbot.service.ChatRoomService;
-import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
-import capstone.dbfis.chatbot.domain.project.service.ProjectService;
+
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -38,7 +36,6 @@ import java.util.List;
 @Tag(name = "Chatbot API", description = "챗봇 API")
 @RequiredArgsConstructor
 public class ChatbotApiController {
-    private final ProjectService projectService;
     private final ChatRoomService chatRoomService;
     private final ChatMessageService chatMessageService;
     private final TokenProvider tokenProvider;
@@ -47,14 +44,13 @@ public class ChatbotApiController {
     @Value("${fastapi.url}")
     private String fastapiUrl;
 
-    @Operation(summary = "챗봇 대시보드", description = "사용자가 속해있는 프로젝트, 프로젝트별 채팅방, 개인 채팅방을 조회합니다.")
+    @Operation(summary = "챗봇 대시보드", description = "사용자가 속해있는 팀, 팀 별 채팅방, 개인 채팅방을 조회합니다.")
     @GetMapping("/dashboard")
     public ResponseEntity<ChatDashboardDto> getDashboard(
             @RequestHeader("Authorization") @NotBlank String token) {
         String memberId = tokenProvider.getMemberId(token);
 
-        List<ProjectResponse> projects = projectService.getProjectsByMember(memberId);
-        ChatDashboardDto dto = chatRoomService.buildChatDashboard(memberId, projects);
+        ChatDashboardDto dto = chatRoomService.buildChatDashboard(memberId);
 
         return ResponseEntity.ok(dto);
     }
@@ -63,11 +59,10 @@ public class ChatbotApiController {
     @PostMapping("/chatroom")
     public ResponseEntity<ChatRoomDto> createChatRoom(
             @RequestHeader("Authorization") @NotBlank String token,
-            @RequestParam ChatRoomType type,
-            @RequestParam(required = false) @Min(1) Long projectId) {
+            @RequestParam ChatRoomType type) {
 
         String memberId = tokenProvider.getMemberId(token);
-        ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type, projectId);
+        ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type);
 
         return ResponseEntity.status(201).body(dto); // 201 Created
     }
