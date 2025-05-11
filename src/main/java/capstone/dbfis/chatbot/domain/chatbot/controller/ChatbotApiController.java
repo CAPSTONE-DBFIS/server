@@ -60,7 +60,7 @@ public class ChatbotApiController {
     public ResponseEntity<ChatRoomDto> createChatRoom(
             @RequestHeader("Authorization") @NotBlank String token,
             @RequestParam ChatRoomType type,
-            @RequestParam Long teamId) {
+            @RequestParam(required = false) Long teamId) {
 
         String memberId = tokenProvider.getMemberId(token);
         ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type, teamId);
