@@ -2,10 +2,11 @@ package capstone.dbfis.chatbot.domain.chatbot.service;
 
 import capstone.dbfis.chatbot.domain.chatbot.dto.ChatDashboardDto;
 import capstone.dbfis.chatbot.domain.chatbot.dto.ChatRoomDto;
+import capstone.dbfis.chatbot.domain.chatbot.dto.TeamDto;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
 import capstone.dbfis.chatbot.domain.chatbot.repository.ChatRoomRepository;
-import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,17 +27,18 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
+    private final TeamService teamService;
 
     /**
      * 새로운 채팅방 생성 및 DTO 반환 (생성된 채팅방은 가장 최근에 접근한 것처럼 정렬 우선순위 고려)
      */
     @Transactional
-    public ChatRoomDto createChatRoomAndReturnDto(String memberId, ChatRoomType type, Long projectId) {
+    public ChatRoomDto createChatRoomAndReturnDto(String memberId, ChatRoomType type, Long teamId) {
         ChatRoom chatRoom = ChatRoom.builder()
                 .memberId(memberId)
                 .name("새 채팅방") // 임시 이름
                 .type(type)
-                .projectId(projectId)
+                .teamId(teamId)
                 .createdAt(LocalDateTime.now())
                 .build();
         chatRoom = chatRoomRepository.save(chatRoom);
@@ -46,7 +47,7 @@ public class ChatRoomService {
                 .id(chatRoom.getId())
                 .name(chatRoom.getName())
                 .type(chatRoom.getType())
-                .projectId(chatRoom.getProjectId())
+                .teamId(chatRoom.getTeamId())
                 .favorite(chatRoom.isFavorite())
                 .favoriteAddedat(chatRoom.getFavoriteAddedAt())
                 .build();
@@ -55,37 +56,58 @@ public class ChatRoomService {
     /**
      * 채팅방 대시보드 DTO 구성
      */
-    public ChatDashboardDto buildChatDashboard(String memberId, List<ProjectResponse> projects) {
+    public ChatDashboardDto buildChatDashboard(String memberId) {
+        // 1. 해당 사용자에 속한 전체 채팅방 조회
         List<ChatRoom> rooms = getChatRoomsByMemberId(memberId);
-        rooms.sort(Comparator.comparing(ChatRoom::getCreatedAt).reversed()); // 채팅방 생성 시간 최신순 정렬
 
+        // 2. 즐겨찾기 > 추가일 최신순 > 생성일 최신순 정렬
+        rooms.sort((r1, r2) -> {
+            if (r1.isFavorite() && !r2.isFavorite()) return -1;
+            if (!r1.isFavorite() && r2.isFavorite()) return 1;
+
+            if (r1.isFavorite()) {
+                return Optional.ofNullable(r2.getFavoriteAddedAt()).orElse(LocalDateTime.MIN)
+                        .compareTo(Optional.ofNullable(r1.getFavoriteAddedAt()).orElse(LocalDateTime.MIN));
+            }
+
+            return Optional.ofNullable(r2.getCreatedAt()).orElse(LocalDateTime.MIN)
+                    .compareTo(Optional.ofNullable(r1.getCreatedAt()).orElse(LocalDateTime.MIN));
+        });
+
+        // 3. ChatRoom → ChatRoomDto로 변환
         List<ChatRoomDto> roomDtos = rooms.stream()
                 .map(r -> ChatRoomDto.builder()
                         .id(r.getId())
                         .name(r.getName())
                         .type(r.getType())
-                        .projectId(r.getProjectId())
+                        .teamId(r.getTeamId())
                         .favorite(r.isFavorite())
                         .favoriteAddedat(r.getFavoriteAddedAt())
                         .build())
                 .toList();
 
-        Map<Long, List<ChatRoomDto>> projectChatrooms = new HashMap<>();
-        for (ProjectResponse project : projects) {
-            List<ChatRoomDto> relatedRooms = roomDtos.stream()
-                    .filter(dto -> project.getId().equals(dto.getProjectId()))
-                    .collect(Collectors.toList());
-            projectChatrooms.put(project.getId(), relatedRooms);
-        }
-
+        // 4. 개인 채팅방과 팀 채팅방 분리
         List<ChatRoomDto> personalRooms = roomDtos.stream()
-                .filter(dto -> dto.getProjectId() == null)
+                .filter(dto -> dto.getTeamId() == null)
                 .toList();
 
+        List<ChatRoomDto> teamChatList = roomDtos.stream()
+                .filter(dto -> dto.getTeamId() != null)
+                .toList();
+
+        // 5. 속해있는 팀 정보 조회
+        List<TeamDto> myTeams = teamService.getUserTeams(memberId).stream()
+                .map(t -> TeamDto.builder()
+                        .teamId(t.getTeamId())
+                        .teamName(t.getTeamName())
+                        .build())
+                .toList();
+
+        // 6. 최종 응답 DTO 생성
         return ChatDashboardDto.builder()
-                .projects(projects)
-                .projectChatrooms(projectChatrooms)
                 .personalChatrooms(personalRooms)
+                .teamChatrooms(teamChatList)
+                .myTeams(myTeams)
                 .build();
     }
 
@@ -165,7 +187,7 @@ public class ChatRoomService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일 이름이 없습니다.");
 
                 String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-                List<String> allowedExtensions = List.of("pdf", "docx", "hwp", "txt", "png", "jpg", "jpeg");
+                List<String> allowedExtensions = List.of("pdf", "docx", "hwp", "txt");
 
                 if (!allowedExtensions.contains(extension)) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,

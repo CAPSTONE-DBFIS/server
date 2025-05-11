@@ -14,7 +14,7 @@ public class ChatRoomDto {
     private Long id;
     private String name;
     private ChatRoomType type;
-    private Long projectId; // null 이면 개인 채팅방
+    private Long teamId;
     private boolean favorite; // 즐겨찾기 여부
     private LocalDateTime favoriteAddedat; // 즐겨찾기 등록 시간
 }
