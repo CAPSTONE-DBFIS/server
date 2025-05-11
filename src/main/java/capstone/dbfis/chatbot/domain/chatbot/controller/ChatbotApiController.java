@@ -59,10 +59,11 @@ public class ChatbotApiController {
     @PostMapping("/chatroom")
     public ResponseEntity<ChatRoomDto> createChatRoom(
             @RequestHeader("Authorization") @NotBlank String token,
-            @RequestParam ChatRoomType type) {
+            @RequestParam ChatRoomType type,
+            @RequestParam Long teamId) {
 
         String memberId = tokenProvider.getMemberId(token);
-        ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type);
+        ChatRoomDto dto = chatRoomService.createChatRoomAndReturnDto(memberId, type, teamId);
 
         return ResponseEntity.status(201).body(dto); // 201 Created
     }

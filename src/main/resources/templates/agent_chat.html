@@ -155,6 +155,7 @@
       justify-content: space-between;
       opacity: 0;
       animation: fadeIn 0.5s ease forwards;
+      margin-left: 10px;
     }
 
     .chatroom-item:hover,
@@ -256,7 +257,6 @@
     }
 
     .team-label:hover {
-      background: #16043;
       background: #1a2b50;
     }
 
@@ -973,20 +973,42 @@
         console.error("사이드바 로드 실패:", await res.text());
         return;
       }
-      const { teamChatrooms, personalChatrooms } = await res.json();
+      const { teamChatrooms, personalChatrooms, myTeams } = await res.json();
       const chatroomList = document.getElementById('chatroomList');
       chatroomList.innerHTML = '';
 
       // 팀 채팅방 표시
-      if (teamChatrooms.length) {
+      if (myTeams.length) {
         const teamsLabel = document.createElement('div');
         teamsLabel.textContent = "팀 채팅";
         teamsLabel.style.fontWeight = "bold";
         teamsLabel.style.marginTop = "15px";
         chatroomList.appendChild(teamsLabel);
 
-        teamChatrooms.forEach(chat => {
-          chatroomList.appendChild(this.createChatroomItem(chat));
+        myTeams.forEach(team => {
+          // 팀 레이블 생성
+          const teamLabel = document.createElement('div');
+          teamLabel.className = 'team-label';
+          teamLabel.dataset.teamId = team.teamId;
+          teamLabel.innerHTML = `<i class="fas fa-users"></i><span>${team.teamName}</span>`;
+
+          // 팀 채팅방 생성 버튼
+          const addChatroomBtn = document.createElement('button');
+          addChatroomBtn.className = 'add-chatroom-btn';
+          addChatroomBtn.innerHTML = '+';
+          addChatroomBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.createNewTeamChatroom(team.teamId);
+          };
+          teamLabel.appendChild(addChatroomBtn);
+
+          chatroomList.appendChild(teamLabel);
+
+          // 해당 팀의 채팅방 표시
+          const teamChats = teamChatrooms.filter(chat => chat.teamId === team.teamId);
+          teamChats.forEach(chat => {
+            chatroomList.appendChild(this.createChatroomItem(chat));
+          });
         });
       }
 
@@ -1046,6 +1068,26 @@
 
       div.append(favoriteBtn, span, editBtn, deleteBtn);
       return div;
+    },
+
+    async createNewTeamChatroom(teamId) {
+      if (!this.getAuthToken()) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+      try {
+        const url = `${baseURL}/api/chatbot/chatroom?type=TEAM&teamId=${teamId}`;
+        const response = await this.requestWithAuth(url, {
+          method: "POST",
+        });
+        if (!response.ok) throw new Error(`팀 채팅방 생성 실패: ${await response.text()}`);
+        const chatroom = await response.json();
+        await this.loadSidebar();
+        await this.loadChatMessages(chatroom.id, chatroom.name);
+      } catch (error) {
+        console.error("팀 채팅방 생성 오류:", error);
+        alert(`팀 채팅방 생성 실패: ${error.message}`);
+      }
     },
 
     async toggleFavorite(chatroomId, favorite) {

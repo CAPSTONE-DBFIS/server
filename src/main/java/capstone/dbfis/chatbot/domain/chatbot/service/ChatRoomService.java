@@ -2,9 +2,11 @@ package capstone.dbfis.chatbot.domain.chatbot.service;
 
 import capstone.dbfis.chatbot.domain.chatbot.dto.ChatDashboardDto;
 import capstone.dbfis.chatbot.domain.chatbot.dto.ChatRoomDto;
+import capstone.dbfis.chatbot.domain.chatbot.dto.TeamDto;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
 import capstone.dbfis.chatbot.domain.chatbot.repository.ChatRoomRepository;
+import capstone.dbfis.chatbot.domain.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
@@ -25,16 +27,18 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
+    private final TeamService teamService;
 
     /**
      * 새로운 채팅방 생성 및 DTO 반환 (생성된 채팅방은 가장 최근에 접근한 것처럼 정렬 우선순위 고려)
      */
     @Transactional
-    public ChatRoomDto createChatRoomAndReturnDto(String memberId, ChatRoomType type) {
+    public ChatRoomDto createChatRoomAndReturnDto(String memberId, ChatRoomType type, Long teamId) {
         ChatRoom chatRoom = ChatRoom.builder()
                 .memberId(memberId)
                 .name("새 채팅방") // 임시 이름
                 .type(type)
+                .teamId(teamId)
                 .createdAt(LocalDateTime.now())
                 .build();
         chatRoom = chatRoomRepository.save(chatRoom);
@@ -91,10 +95,19 @@ public class ChatRoomService {
                 .filter(dto -> dto.getTeamId() != null)
                 .toList();
 
-        // 5. 최종 응답 DTO 생성
+        // 5. 속해있는 팀 정보 조회
+        List<TeamDto> myTeams = teamService.getUserTeams(memberId).stream()
+                .map(t -> TeamDto.builder()
+                        .teamId(t.getTeamId())
+                        .teamName(t.getTeamName())
+                        .build())
+                .toList();
+
+        // 6. 최종 응답 DTO 생성
         return ChatDashboardDto.builder()
                 .personalChatrooms(personalRooms)
                 .teamChatrooms(teamChatList)
+                .myTeams(myTeams)
                 .build();
     }
 

@@ -11,4 +11,5 @@ import java.util.List;
 public class ChatDashboardDto {
     private List<ChatRoomDto> personalChatrooms;
     private List<ChatRoomDto> teamChatrooms;
+    private List<TeamDto> myTeams;
 }
