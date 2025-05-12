@@ -73,7 +73,7 @@ public class TrackingKeywordService {
         }
 
         // !!!!! 수정필요 관련 결과도 함께 삭제하는 로직 필요 !!!!
-        trackingKeywordRepository.delete(keyword);
+s        trackingKeywordRepository.delete(keyword);
     }
 
     /**
