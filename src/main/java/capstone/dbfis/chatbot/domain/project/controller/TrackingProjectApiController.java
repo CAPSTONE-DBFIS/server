@@ -1,10 +1,10 @@
 package capstone.dbfis.chatbot.domain.project.controller;
 
 import capstone.dbfis.chatbot.domain.project.dto.AddProjectRequest;
-import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
 import capstone.dbfis.chatbot.domain.project.dto.UpdateProjectRequest;
-import capstone.dbfis.chatbot.domain.project.entity.Project;
-import capstone.dbfis.chatbot.domain.project.service.ProjectService;
+import capstone.dbfis.chatbot.domain.project.entity.TrackingProject;
+import capstone.dbfis.chatbot.domain.project.service.TrackingProjectService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,21 +15,20 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@Tag(name = "Project API", description = "프로젝트 관리 API")
-@RequestMapping("/api/projects")
+@Tag(name = "TrackingProject API", description = "추적 프로젝트 관리 API")
+@RequestMapping("/api/trprojects")
 @RequiredArgsConstructor
-public class ProjectApiController {
-
-    private final ProjectService projectService;
+public class TrackingProjectApiController {
+    private final TrackingProjectService trackingProjectService;
     private final TokenProvider tokenProvider;
 
     @Operation(summary = "프로젝트 생성", description = "특정 팀에 새로운 프로젝트를 생성합니다. 요청자는 해당 팀의 리더여야 합니다.")
     @PostMapping
-    public ResponseEntity<ProjectResponse> createProject(@RequestHeader("Authorization") String token,
+    public ResponseEntity<TrProjectResponse> createProject(@RequestHeader("Authorization") String token,
                                                          @RequestBody AddProjectRequest request) {
         String creatorId = tokenProvider.getMemberId(token);
 
-        Project project = projectService.createProject(
+        TrackingProject trProject = trackingProjectService.createTrProject(
                 request.getTeamId(),
                 creatorId,
                 request.getName(),
@@ -38,13 +37,14 @@ public class ProjectApiController {
                 request.getEndDate()
         );
 
-        ProjectResponse response = new ProjectResponse(
-                project.getId(),
-                project.getName(),
-                project.getDescription(),
-                project.getTeam().getId(),
-                project.getStartDate(),
-                project.getEndDate()
+        TrProjectResponse response = new TrProjectResponse(
+                trProject.getId(),
+                trProject.getName(),
+                trProject.getDescription(),
+                trProject.getTeam().getId(),
+                trProject.getTeam().getName(),
+                trProject.getStartDate(),
+                trProject.getEndDate()
         );
         return ResponseEntity.ok(response);
     }
@@ -55,7 +55,7 @@ public class ProjectApiController {
                                                 @PathVariable Long projectId, @RequestBody UpdateProjectRequest request) {
         String requesterId = tokenProvider.getMemberId(token);
 
-        projectService.updateProject(projectId, requesterId, request);
+        trackingProjectService.updateProject(projectId, requesterId, request);
         return ResponseEntity.ok("프로젝트 정보가 수정되었습니다.");
     }
 
@@ -65,15 +65,26 @@ public class ProjectApiController {
                                                 @PathVariable Long projectId) {
         String requesterId = tokenProvider.getMemberId(token);
 
-        projectService.deleteProject(projectId, requesterId);
+        trackingProjectService.deleteProject(projectId, requesterId);
         return ResponseEntity.ok("프로젝트가 삭제되었습니다.");
     }
 
+
     @Operation(summary = "사용자가 속한 모든 프로젝트 조회", description = "사용자가 속한 모든 프로젝트를 반환합니다.")
     @GetMapping("/my")
-    public ResponseEntity<List<ProjectResponse>> getMyProjects(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<List<TrProjectResponse>> getMyProjects(@RequestHeader("Authorization") String token) {
         String memberId = tokenProvider.getMemberId(token);
-        List<ProjectResponse> projects = projectService.getProjectsByMember(memberId);
-        return ResponseEntity.ok(projects);
+        List<TrProjectResponse> trProjects = trackingProjectService.getProjectsByMember(memberId);
+        return ResponseEntity.ok(trProjects);
+    }
+
+    @Operation(summary = "사용자가 속한 특정 프로젝트 조회", description = "특정 프로젝트를 반환합니다.")
+    @GetMapping("/my/{projectId}")
+    public ResponseEntity<List<TrProjectResponse>> getProject(@RequestHeader("Authorization") String token,
+                                                              @PathVariable Long projectId) {
+        String memberId = tokenProvider.getMemberId(token);
+        List<TrProjectResponse> trProjects = trackingProjectService.getProjectsById(memberId, projectId);
+
+        return ResponseEntity.ok(trProjects);
     }
 }

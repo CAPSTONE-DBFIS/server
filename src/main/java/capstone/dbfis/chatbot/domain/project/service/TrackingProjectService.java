@@ -1,9 +1,9 @@
 package capstone.dbfis.chatbot.domain.project.service;
 
-import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
+import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
 import capstone.dbfis.chatbot.domain.project.dto.UpdateProjectRequest;
-import capstone.dbfis.chatbot.domain.project.entity.Project;
-import capstone.dbfis.chatbot.domain.project.repository.ProjectRepository;
+import capstone.dbfis.chatbot.domain.project.entity.TrackingProject;
+import capstone.dbfis.chatbot.domain.project.repository.TrackingProjectRepository;
 import capstone.dbfis.chatbot.domain.team.entity.Team;
 import capstone.dbfis.chatbot.domain.team.entity.TeamMember;
 import capstone.dbfis.chatbot.domain.team.repository.TeamMemberRepository;
@@ -11,19 +11,18 @@ import capstone.dbfis.chatbot.domain.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-
-import static java.util.stream.Collectors.toList;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ProjectService {
+public class TrackingProjectService {
 
-    private final ProjectRepository projectRepository;
+    private final TrackingProjectRepository trackingProjectRepository;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
@@ -31,7 +30,7 @@ public class ProjectService {
      * 팀에 새 프로젝트를 생성합니다.
      */
     @Transactional
-    public Project createProject(Long teamId, String creatorId, String projectName, String description, LocalDate startDate, LocalDate endDate) {
+    public TrackingProject createTrProject(Long teamId, String creatorId, String projectName, String description, LocalDate startDate, LocalDate endDate) {
         // 팀 검증
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -56,7 +55,7 @@ public class ProjectService {
             );
         }
 
-        Project project = Project.builder()
+        TrackingProject trProject = TrackingProject.builder()
                 .team(team)
                 .name(projectName)
                 .description(description)
@@ -64,7 +63,7 @@ public class ProjectService {
                 .endDate(endDate)
                 .build();
 
-        return projectRepository.save(project);
+        return trackingProjectRepository.save(trProject);
     }
 
     /**
@@ -73,12 +72,12 @@ public class ProjectService {
     @Transactional
     public void updateProject(Long projectId, String requesterId, UpdateProjectRequest request) {
         // 프로젝트 검증
-        Project project = projectRepository.findById(projectId)
+        TrackingProject trProject = trackingProjectRepository.findById(projectId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "존재하지 않는 프로젝트입니다.")
                 );
 
-        Long teamId = project.getTeam().getId();
+        Long teamId = trProject.getTeam().getId();
         // 팀 멤버 검증
         TeamMember tm = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, requesterId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -92,11 +91,11 @@ public class ProjectService {
             );
         }
 
-        project.setName(request.getName());
-        project.setDescription(request.getDescription());
-        project.setStartDate(request.getStartDate());
-        project.setEndDate(request.getEndDate());
-        projectRepository.save(project);
+        trProject.setName(request.getName());
+        trProject.setDescription(request.getDescription());
+        trProject.setStartDate(request.getStartDate());
+        trProject.setEndDate(request.getEndDate());
+        trackingProjectRepository.save(trProject);
     }
 
     /**
@@ -105,13 +104,13 @@ public class ProjectService {
     @Transactional
     public void deleteProject(Long projectId, String requesterId) {
         // 프로젝트 검증
-        Project project = projectRepository.findById(projectId)
+        TrackingProject trProject = trackingProjectRepository.findById(projectId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "존재하지 않는 프로젝트입니다.")
                 );
 
         // 팀 멤버 검증
-        Long teamId = project.getTeam().getId();
+        Long teamId = trProject.getTeam().getId();
         TeamMember tm = teamMemberRepository.findByTeam_IdAndMember_Id(teamId, requesterId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "팀에 속하지 않은 사용자입니다.")
@@ -124,51 +123,53 @@ public class ProjectService {
             );
         }
 
-        projectRepository.delete(project);
+
+
+
+        // 프로젝트 삭제
+        trackingProjectRepository.delete(trProject);
     }
 
     /**
      * 특정 멤버가 속한 모든 팀의 프로젝트 목록을 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getProjectsByMember(String memberId) {
+    public List<TrProjectResponse> getProjectsByMember(String memberId) {
         return teamMemberRepository.findByMember_Id(memberId).stream()
                 .map(TeamMember::getTeam)
-                .flatMap(team -> projectRepository.findByTeam_Id(team.getId()).stream())
-                .map(project -> new ProjectResponse(
-                        project.getId(),
-                        project.getName(),
-                        project.getDescription(),
-                        project.getTeam().getId(),
-                        project.getStartDate(),
-                        project.getEndDate()
+                .flatMap(team -> trackingProjectRepository.findByTeam_Id(team.getId()).stream())
+                .map(trProject -> new TrProjectResponse(
+                        trProject.getId(),
+                        trProject.getName(),
+                        trProject.getDescription(),
+                        trProject.getTeam().getId(),
+                        trProject.getTeam().getName(),
+                        trProject.getStartDate(),
+                        trProject.getEndDate()
                 ))
-                .collect(toList());
+                .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public ProjectResponse getProjectByMemberAndProjectId(String memberId, Long projectId) {
-        // 프로젝트 ID로 먼저 조회
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "프로젝트를 찾을 수 없습니다."));
+    @Transactional
+    public List<TrProjectResponse> getProjectsById(String memberId, Long projectId) {
+        List<Long> teamIds = teamMemberRepository.findByMember_Id(memberId).stream()
+                .map(tm -> tm.getTeam().getId())
+                .collect(Collectors.toList());
 
-        // 사용자가 속한 팀 목록 확인
-        List<Long> memberTeamIds = teamMemberRepository.findByMember_Id(memberId).stream()
-                .map(teamMember -> teamMember.getTeam().getId())
-                .toList();
+        TrackingProject trProject = trackingProjectRepository
+                .findByIdAndTeam_IdIn(projectId, teamIds)
+                .orElseThrow(() -> new IllegalArgumentException("해당 프로젝트를 조회할 수 없습니다."));
 
-        // 권한 검증: 사용자가 이 프로젝트에 속해 있는 팀에 포함되어 있는지 확인
-        if (!memberTeamIds.contains(project.getTeam().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 프로젝트에 접근할 권한이 없습니다.");
-        }
-
-        return new ProjectResponse(
-                project.getId(),
-                project.getName(),
-                project.getDescription(),
-                project.getTeam().getId(),
-                project.getStartDate(),
-                project.getEndDate()
+        TrProjectResponse response = new TrProjectResponse(
+                trProject.getId(),
+                trProject.getName(),
+                trProject.getDescription(),
+                trProject.getTeam().getId(),
+                trProject.getTeam().getName(), //
+                trProject.getStartDate(),
+                trProject.getEndDate()
         );
+
+        return List.of(response);
     }
 }

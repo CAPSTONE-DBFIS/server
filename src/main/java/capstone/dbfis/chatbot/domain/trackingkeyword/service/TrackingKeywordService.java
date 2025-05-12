@@ -1,6 +1,8 @@
 package capstone.dbfis.chatbot.domain.trackingkeyword.service;
 
+import capstone.dbfis.chatbot.domain.project.repository.TrackingProjectRepository;
 import capstone.dbfis.chatbot.domain.trackingkeyword.dto.AddTrackingKeywordRequest;
+import capstone.dbfis.chatbot.domain.trackingkeyword.dto.TrackingKeywordResponseDto;
 import capstone.dbfis.chatbot.domain.trackingkeyword.dto.UpdateTrackingKeywordRequest;
 import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingKeyword;
 import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingKeywordRepository;
@@ -20,19 +22,33 @@ import java.util.List;
 public class TrackingKeywordService {
 
     private final TrackingKeywordRepository trackingKeywordRepository;
+    private final TrackingProjectRepository trackingProjectRepository;
 
     /**
      * 새로운 추적 키워드를 생성합니다.
      */
-    public TrackingKeyword createKeyword(String requesterId, AddTrackingKeywordRequest request) {
+    public TrackingKeywordResponseDto createKeyword(String requesterId, AddTrackingKeywordRequest request) {
         TrackingKeyword keyword = new TrackingKeyword();
         keyword.setRequesterId(requesterId);
         keyword.setKeyword(request.getKeyword());
         keyword.setStartDate(request.getStartDate());
         keyword.setEndDate(request.getEndDate());
         keyword.setTrackingInterval(request.getTrackingInterval());
+        keyword.setProjectId(
+                trackingProjectRepository.findById(request.getProjectId())
+                        .orElseThrow(() -> new RuntimeException("Project not found"))
+        );
 
-        return trackingKeywordRepository.save(keyword);
+        TrackingKeyword saved = trackingKeywordRepository.save(keyword);
+
+        return new TrackingKeywordResponseDto(
+                saved.getId(),
+                saved.getKeyword(),
+                saved.getStartDate(),
+                saved.getEndDate(),
+                saved.getTrackingInterval(),
+                saved.getProjectId() != null ? saved.getProjectId().getId() : null
+        );
     }
 
     /**
@@ -72,8 +88,8 @@ public class TrackingKeywordService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "삭제 권한이 없습니다.");
         }
 
-        // !!!!! 수정필요 관련 결과도 함께 삭제하는 로직 필요 !!!!
-s        trackingKeywordRepository.delete(keyword);
+        trackingKeywordRepository.delete(keyword);
+
     }
 
     /**
@@ -83,3 +99,4 @@ s        trackingKeywordRepository.delete(keyword);
         return trackingKeywordRepository.findByRequesterId(requesterId);
     }
 }
+
