@@ -15,5 +15,4 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             "ORDER BY c.favorite DESC, c.favoriteAddedAt DESC NULLS LAST, c.id ASC")
     List<ChatRoom> findByMemberIdSorted(@Param("memberId") String memberId);
     Optional<ChatRoom> findByIdAndMemberId(Long id, String userId); // 특정 chatroomId + userId로 채팅방 조회
-    List<ChatRoom> findByProjectId(Long projectId);
 }

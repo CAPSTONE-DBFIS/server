@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
-public class UpdateProjectRequest {
+public class UpdateTrProjectRequest {
     private String name;
     private String description;
     private LocalDate startDate;

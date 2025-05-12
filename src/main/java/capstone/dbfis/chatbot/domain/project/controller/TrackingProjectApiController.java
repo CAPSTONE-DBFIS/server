@@ -1,8 +1,6 @@
 package capstone.dbfis.chatbot.domain.project.controller;
 
-import capstone.dbfis.chatbot.domain.project.dto.AddProjectRequest;
-import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
-import capstone.dbfis.chatbot.domain.project.dto.UpdateProjectRequest;
+import capstone.dbfis.chatbot.domain.project.dto.*;
 import capstone.dbfis.chatbot.domain.project.entity.TrackingProject;
 import capstone.dbfis.chatbot.domain.project.service.TrackingProjectService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
@@ -25,7 +23,7 @@ public class TrackingProjectApiController {
     @Operation(summary = "프로젝트 생성", description = "특정 팀에 새로운 프로젝트를 생성합니다. 요청자는 해당 팀의 리더여야 합니다.")
     @PostMapping
     public ResponseEntity<TrProjectResponse> createProject(@RequestHeader("Authorization") String token,
-                                                         @RequestBody AddProjectRequest request) {
+                                                         @RequestBody AddTrProjectRequest request) {
         String creatorId = tokenProvider.getMemberId(token);
 
         TrackingProject trProject = trackingProjectService.createTrProject(
@@ -52,7 +50,7 @@ public class TrackingProjectApiController {
     @Operation(summary = "프로젝트 수정", description = "프로젝트 이름과 설명을 수정합니다. 요청자는 해당 팀의 리더여야 합니다.")
     @PutMapping("/{projectId}")
     public ResponseEntity<String> updateProject(@RequestHeader("Authorization") String token,
-                                                @PathVariable Long projectId, @RequestBody UpdateProjectRequest request) {
+                                                @PathVariable Long projectId, @RequestBody UpdateTrProjectRequest request) {
         String requesterId = tokenProvider.getMemberId(token);
 
         trackingProjectService.updateProject(projectId, requesterId, request);

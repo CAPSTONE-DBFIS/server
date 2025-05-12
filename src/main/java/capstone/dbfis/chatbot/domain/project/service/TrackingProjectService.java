@@ -1,7 +1,7 @@
 package capstone.dbfis.chatbot.domain.project.service;
 
 import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
-import capstone.dbfis.chatbot.domain.project.dto.UpdateProjectRequest;
+import capstone.dbfis.chatbot.domain.project.dto.UpdateTrProjectRequest;
 import capstone.dbfis.chatbot.domain.project.entity.TrackingProject;
 import capstone.dbfis.chatbot.domain.project.repository.TrackingProjectRepository;
 import capstone.dbfis.chatbot.domain.team.entity.Team;
@@ -70,7 +70,7 @@ public class TrackingProjectService {
      * 기존 프로젝트를 수정합니다.
      */
     @Transactional
-    public void updateProject(Long projectId, String requesterId, UpdateProjectRequest request) {
+    public void updateProject(Long projectId, String requesterId, UpdateTrProjectRequest request) {
         // 프로젝트 검증
         TrackingProject trProject = trackingProjectRepository.findById(projectId)
                 .orElseThrow(() -> new ResponseStatusException(

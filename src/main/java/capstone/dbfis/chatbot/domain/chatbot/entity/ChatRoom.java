@@ -29,8 +29,8 @@ public class ChatRoom {
     private ChatRoomType type; // 채팅방 타입(PERSONAL/PROJECT)
 
     // 프로젝트 소속 채팅방이면 projectId, 아니면 null
-    @Column(name = "project_id")
-    private Long projectId;
+    @Column(name = "team_id")
+    private Long teamId;
 
     @Builder.Default
     // 즐겨찾기

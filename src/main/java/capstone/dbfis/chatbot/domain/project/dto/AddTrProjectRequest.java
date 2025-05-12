@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
-public class AddProjectRequest {
+public class AddTrProjectRequest {
     @NotNull
     @Schema(description="팀 ID", example="1")
     private Long teamId;

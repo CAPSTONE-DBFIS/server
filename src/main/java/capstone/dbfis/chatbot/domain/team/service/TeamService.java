@@ -3,13 +3,13 @@ package capstone.dbfis.chatbot.domain.team.service;
 import capstone.dbfis.chatbot.domain.member.dto.MyPageResponse;
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
 import capstone.dbfis.chatbot.domain.project.repository.TrackingProjectRepository;
 import capstone.dbfis.chatbot.domain.team.dto.TeamMemberResponse;
 import capstone.dbfis.chatbot.domain.team.dto.AddTeamMemberRequest;
 import capstone.dbfis.chatbot.domain.team.dto.UpdateTeamRequest;
 import capstone.dbfis.chatbot.domain.team.entity.Team;
 import capstone.dbfis.chatbot.domain.team.entity.TeamMember;
-import capstone.dbfis.chatbot.domain.project.dto.ProjectResponse;
 import capstone.dbfis.chatbot.domain.team.repository.TeamMemberRepository;
 import capstone.dbfis.chatbot.domain.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +29,7 @@ public class TeamService {
     private final TeamMemberRepository teamMemberRepository;
     private final MemberRepository memberRepository;
     private final TrackingProjectRepository trprojectRepository;
+
 
     /**
      * 새로운 팀을 생성하고 요청 사용자를 리더로 등록합니다.
@@ -209,7 +210,7 @@ public class TeamService {
     }
 
     /**
-     * 사용자가 속한 모든 팀의 정보(팀, 멤버, 프로젝트)를 조회합니다.
+     * 사용자가 속한 모든 팀의 정보(팀, 멤버)를 조회합니다.
      */
     public List<MyPageResponse.TeamResponse> getUserTeams(String memberId) {
         List<Team> teams = teamRepository.findAllByTeamMembers_Member_Id(memberId);
@@ -219,7 +220,6 @@ public class TeamService {
                         .teamName(team.getName())
                         .teamDescription(team.getDescription())
                         .members(getTeamMembers(team.getId()))
-                        .projects(getTeamProjects(team.getId()))
                         .build())
                 .collect(Collectors.toList());
     }
@@ -243,12 +243,13 @@ public class TeamService {
     /**
      * 팀에 속한 모든 프로젝트를 조회합니다.
      */
-    private List<ProjectResponse> getTeamProjects(Long teamId) {
+    private List<TrProjectResponse> getTeamProjects(Long teamId) {
         return trprojectRepository.findByTeam_Id(teamId).stream()
-                .map(p -> new ProjectResponse(
+                .map(p -> new TrProjectResponse(
                         p.getId(), p.getName(),
                         p.getDescription(),
                         p.getTeam().getId(),
+                        p.getTeam().getName(),
                         p.getStartDate(), p.getEndDate()))
                 .collect(Collectors.toList());
     }
