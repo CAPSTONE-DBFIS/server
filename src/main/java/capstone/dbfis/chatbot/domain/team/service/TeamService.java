@@ -3,6 +3,8 @@ package capstone.dbfis.chatbot.domain.team.service;
 import capstone.dbfis.chatbot.domain.member.dto.MyPageResponse;
 import capstone.dbfis.chatbot.domain.member.entity.Member;
 import capstone.dbfis.chatbot.domain.member.repository.MemberRepository;
+import capstone.dbfis.chatbot.domain.project.dto.TrProjectResponse;
+import capstone.dbfis.chatbot.domain.project.repository.TrackingProjectRepository;
 import capstone.dbfis.chatbot.domain.team.dto.TeamMemberResponse;
 import capstone.dbfis.chatbot.domain.team.dto.AddTeamMemberRequest;
 import capstone.dbfis.chatbot.domain.team.dto.UpdateTeamRequest;
@@ -26,6 +28,8 @@ public class TeamService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final MemberRepository memberRepository;
+    private final TrackingProjectRepository trprojectRepository;
+
 
     /**
      * 새로운 팀을 생성하고 요청 사용자를 리더로 등록합니다.
@@ -236,4 +240,17 @@ public class TeamService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 팀에 속한 모든 프로젝트를 조회합니다.
+     */
+    private List<TrProjectResponse> getTeamProjects(Long teamId) {
+        return trprojectRepository.findByTeam_Id(teamId).stream()
+                .map(p -> new TrProjectResponse(
+                        p.getId(), p.getName(),
+                        p.getDescription(),
+                        p.getTeam().getId(),
+                        p.getTeam().getName(),
+                        p.getStartDate(), p.getEndDate()))
+                .collect(Collectors.toList());
+    }
 }
