@@ -60,18 +60,11 @@ public class ChatRoomService {
         // 1. 해당 사용자에 속한 전체 채팅방 조회
         List<ChatRoom> rooms = getChatRoomsByMemberId(memberId);
 
-        // 2. 즐겨찾기 > 추가일 최신순 > 생성일 최신순 정렬
+        // 2. 추가일 최신순 > 생성일 최신순 정렬 (즐겨찾기 여부 무시)
         rooms.sort((r1, r2) -> {
-            if (r1.isFavorite() && !r2.isFavorite()) return -1;
-            if (!r1.isFavorite() && r2.isFavorite()) return 1;
-
-            if (r1.isFavorite()) {
-                return Optional.ofNullable(r2.getFavoriteAddedAt()).orElse(LocalDateTime.MIN)
-                        .compareTo(Optional.ofNullable(r1.getFavoriteAddedAt()).orElse(LocalDateTime.MIN));
-            }
-
-            return Optional.ofNullable(r2.getCreatedAt()).orElse(LocalDateTime.MIN)
-                    .compareTo(Optional.ofNullable(r1.getCreatedAt()).orElse(LocalDateTime.MIN));
+            LocalDateTime time1 = Optional.ofNullable(r1.getFavoriteAddedAt()).orElse(r1.getCreatedAt());
+            LocalDateTime time2 = Optional.ofNullable(r2.getFavoriteAddedAt()).orElse(r2.getCreatedAt());
+            return time2.compareTo(time1); // 최신순 정렬
         });
 
         // 3. ChatRoom → ChatRoomDto로 변환
