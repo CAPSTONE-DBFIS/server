@@ -1,5 +1,7 @@
 package capstone.dbfis.chatbot.domain.insight.service;
 
+import capstone.dbfis.chatbot.domain.insight.dto.CompetitorDto;
+import capstone.dbfis.chatbot.domain.insight.dto.CompetitorSentimentDto;
 import capstone.dbfis.chatbot.domain.insight.dto.KeywordInsightDto;
 import capstone.dbfis.chatbot.domain.insight.dto.WeeklyKeywordInsightDto;
 import capstone.dbfis.chatbot.domain.insight.repository.InsightRepository;
@@ -40,6 +42,14 @@ public class InsightService {
 
     @Value("${elasticsearch.foreign.index:foreign_news_article}")
     private String foreignIndexName;
+
+    // 경쟁사 목록 정의
+    private static final List<String> COMPETITORS = List.of(
+            "삼성SDS", "LG CNS", "현대오토에버", "SK주식회사 C&C", "포스코DX", 
+            "두산디지털이노베이션", "롯데이노베이트", "CJ올리브네트웍스", "신세계아이앤씨", 
+            "현대IT&E", "농협정보시스템", "하나금융티아이", "아시아나IDT", 
+            "한진정보통신", "코오롱베니트", "kt ds", "교보DTS"
+    );
 
     /**
      * 단일 날짜를 기준으로 상위 키워드 인사이트를 반환
@@ -980,6 +990,271 @@ public class InsightService {
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "서버 처리 중 오류가 발생했습니다.",
                     ex
+            );
+        }
+    }
+
+    /**
+     * 기간별 경쟁사 언급량 분석
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @param period 기간 구분 (daily, weekly, monthly)
+     * @return 경쟁사별 언급량 및 비율 JSON
+     */
+    public String getCompetitorMentionAnalysis(String startDate, String endDate, String period) {
+        try {
+            // 날짜 유효성 체크
+            if (startDate == null || startDate.isBlank() ||
+                    endDate == null || endDate.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "시작일과 종료일을 모두 입력해야 합니다."
+                );
+            }
+            
+            try {
+                LocalDate.parse(startDate);
+                LocalDate.parse(endDate);
+            } catch (DateTimeParseException e) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "날짜 형식이 잘못되었습니다. YYYY-MM-DD 형식으로 입력해주세요."
+                );
+            }
+
+            // 기간 설정 검증
+            if (period == null || period.isBlank() || 
+                    (!period.equals("daily") && !period.equals("weekly") && !period.equals("monthly"))) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "기간은 daily, weekly, monthly 중 하나여야 합니다."
+                );
+            }
+            
+            // 총 기사 수 조회
+            SearchResponse<Map> totalResponse = client.search(s -> s
+                    .index(indexName)
+                    .size(0)
+                    .query(q -> q
+                            .range(r -> r
+                                    .field("date")
+                                    .gte(JsonData.of(startDate))
+                                    .lte(JsonData.of(endDate))
+                            )
+                    ),
+                    Map.class
+            );
+            
+            long totalArticleCount = totalResponse.hits().total().value();
+            
+            // 경쟁사별 기사 수 집계
+            List<CompetitorDto> competitorStats = new ArrayList<>();
+            
+            for (String competitor : COMPETITORS) {
+                // 해당 경쟁사가 언급된 기사 수 조회
+                SearchResponse<Map> compResponse = client.search(s -> s
+                        .index(indexName)
+                        .size(0)
+                        .query(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .bool(inner -> inner
+                                                        .should(s1 -> s1.match(mt -> mt.field("title").query(competitor)))
+                                                        .should(s2 -> s2.match(mt -> mt.field("content").query(competitor)))
+                                                        .minimumShouldMatch("1")
+                                                )
+                                        )
+                                        .filter(f -> f
+                                                .range(r -> r
+                                                        .field("date")
+                                                        .gte(JsonData.of(startDate))
+                                                        .lte(JsonData.of(endDate))
+                                                )
+                                        )
+                                )
+                        ),
+                        Map.class
+                );
+                
+                long articleCount = compResponse.hits().total().value();
+                double percentage = totalArticleCount > 0 ? (double) articleCount / totalArticleCount * 100 : 0;
+                
+                // 소수점 2자리까지 반올림
+                percentage = Math.round(percentage * 100) / 100.0;
+                
+                competitorStats.add(new CompetitorDto(competitor, (int) articleCount, percentage));
+            }
+            
+            // 기사 수 기준 내림차순 정렬
+            competitorStats.sort((c1, c2) -> Integer.compare(c2.getArticleCount(), c1.getArticleCount()));
+            
+            // 결과 JSON 생성
+            JSONObject result = new JSONObject();
+            result.put("total_article_count", totalArticleCount);
+            result.put("period", period);
+            result.put("start_date", startDate);
+            result.put("end_date", endDate);
+            
+            JSONArray competitors = new JSONArray();
+            for (CompetitorDto dto : competitorStats) {
+                JSONObject comp = new JSONObject();
+                comp.put("name", dto.getName());
+                comp.put("article_count", dto.getArticleCount());
+                comp.put("percentage", dto.getPercentage());
+                competitors.put(comp);
+            }
+            
+            result.put("competitors", competitors);
+            
+            return result.toString(2);
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "경쟁사 언급량 분석 중 오류가 발생했습니다.",
+                    e
+            );
+        }
+    }
+    
+    /**
+     * 경쟁사별 감성 분석 트렌드
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @return 경쟁사별 감성 분석 결과 JSON
+     */
+    public String getCompetitorSentimentAnalysis(String startDate, String endDate) {
+        try {
+            // 날짜 유효성 체크
+            if (startDate == null || startDate.isBlank() ||
+                    endDate == null || endDate.isBlank()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "시작일과 종료일을 모두 입력해야 합니다."
+                );
+            }
+            
+            try {
+                LocalDate.parse(startDate);
+                LocalDate.parse(endDate);
+            } catch (DateTimeParseException e) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "날짜 형식이 잘못되었습니다. YYYY-MM-DD 형식으로 입력해주세요."
+                );
+            }
+            
+            // 경쟁사별 감성 분석 결과 집계
+            List<CompetitorSentimentDto> sentimentResults = new ArrayList<>();
+            
+            for (String competitor : COMPETITORS) {
+                // 해당 경쟁사가 언급된 기사의 감성 분석 집계
+                SearchResponse<Map> response = client.search(s -> s
+                        .index(indexName)
+                        .size(0)
+                        .query(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .bool(inner -> inner
+                                                        .should(s1 -> s1.match(mt -> mt.field("title").query(competitor)))
+                                                        .should(s2 -> s2.match(mt -> mt.field("content").query(competitor)))
+                                                        .minimumShouldMatch("1")
+                                                )
+                                        )
+                                        .filter(f -> f
+                                                .range(r -> r
+                                                        .field("date")
+                                                        .gte(JsonData.of(startDate))
+                                                        .lte(JsonData.of(endDate))
+                                                )
+                                        )
+                                )
+                        )
+                        .aggregations("sentiment_counts", a -> a
+                                .terms(t -> t
+                                        .field("sentiment")
+                                        .size(10)
+                                )
+                        ),
+                        Map.class
+                );
+                
+                // 감성별 기사 수 집계
+                int positiveCount = 0;
+                int negativeCount = 0;
+                int neutralCount = 0;
+                
+                if (response.aggregations() != null && 
+                    response.aggregations().get("sentiment_counts") != null &&
+                    response.aggregations().get("sentiment_counts").sterms() != null) {
+                    
+                    for (co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket bucket : 
+                            response.aggregations().get("sentiment_counts").sterms().buckets().array()) {
+                        String sentiment = bucket.key().stringValue();
+                        long count = bucket.docCount();
+                        
+                        if ("positive".equalsIgnoreCase(sentiment)) {
+                            positiveCount = (int) count;
+                        } else if ("negative".equalsIgnoreCase(sentiment)) {
+                            negativeCount = (int) count;
+                        } else if ("neutral".equalsIgnoreCase(sentiment)) {
+                            neutralCount = (int) count;
+                        }
+                    }
+                }
+                
+                // 전체 기사 수 계산
+                int totalCount = positiveCount + negativeCount + neutralCount;
+                
+                // 비율 계산
+                double positiveRate = totalCount > 0 ? (double) positiveCount / totalCount * 100 : 0;
+                double negativeRate = totalCount > 0 ? (double) negativeCount / totalCount * 100 : 0;
+                double neutralRate = totalCount > 0 ? (double) neutralCount / totalCount * 100 : 0;
+                
+                // 소수점 2자리까지 반올림
+                positiveRate = Math.round(positiveRate * 100) / 100.0;
+                negativeRate = Math.round(negativeRate * 100) / 100.0;
+                neutralRate = Math.round(neutralRate * 100) / 100.0;
+                
+                sentimentResults.add(new CompetitorSentimentDto(
+                        competitor, 
+                        positiveCount, 
+                        negativeCount, 
+                        neutralCount, 
+                        positiveRate, 
+                        negativeRate, 
+                        neutralRate
+                ));
+            }
+            
+            // 긍정 비율 기준 내림차순 정렬
+            sentimentResults.sort((c1, c2) -> Double.compare(c2.getPositiveRate(), c1.getPositiveRate()));
+            
+            // 결과 JSON 생성
+            JSONObject result = new JSONObject();
+            result.put("start_date", startDate);
+            result.put("end_date", endDate);
+            
+            JSONArray competitors = new JSONArray();
+            for (CompetitorSentimentDto dto : sentimentResults) {
+                JSONObject comp = new JSONObject();
+                comp.put("name", dto.getName());
+                comp.put("positive_count", dto.getPositiveCount());
+                comp.put("negative_count", dto.getNegativeCount());
+                comp.put("neutral_count", dto.getNeutralCount());
+                comp.put("positive_rate", dto.getPositiveRate());
+                comp.put("negative_rate", dto.getNegativeRate());
+                comp.put("neutral_rate", dto.getNeutralRate());
+                competitors.put(comp);
+            }
+            
+            result.put("competitors", competitors);
+            
+            return result.toString(2);
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "경쟁사 감성 분석 중 오류가 발생했습니다.",
+                    e
             );
         }
     }
