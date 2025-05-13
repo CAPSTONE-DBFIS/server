@@ -29,25 +29,20 @@ public class TrackingProjectApiController {
         TrackingProject trProject = trackingProjectService.createTrProject(
                 request.getTeamId(),
                 creatorId,
-                request.getName(),
-                request.getDescription(),
-                request.getStartDate(),
-                request.getEndDate()
+                request.getName()
         );
 
         TrProjectResponse response = new TrProjectResponse(
                 trProject.getId(),
                 trProject.getName(),
-                trProject.getDescription(),
                 trProject.getTeam().getId(),
-                trProject.getTeam().getName(),
-                trProject.getStartDate(),
-                trProject.getEndDate()
+                trProject.getTeam().getName()
+
         );
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "프로젝트 수정", description = "프로젝트 이름과 설명을 수정합니다. 요청자는 해당 팀의 리더여야 합니다.")
+    @Operation(summary = "프로젝트 수정", description = "프로젝트 이름을 수정합니다. 요청자는 해당 팀의 리더여야 합니다.")
     @PutMapping("/{projectId}")
     public ResponseEntity<String> updateProject(@RequestHeader("Authorization") String token,
                                                 @PathVariable Long projectId, @RequestBody UpdateTrProjectRequest request) {

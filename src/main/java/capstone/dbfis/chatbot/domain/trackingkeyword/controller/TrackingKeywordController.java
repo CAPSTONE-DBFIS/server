@@ -55,4 +55,13 @@ public class TrackingKeywordController {
         List<TrackingKeywordResponseDto> keywords = service.getAllKeywords(memberId);
         return ResponseEntity.ok(keywords);
     }
+
+    @Operation(summary = "특정 키워드 조회", description = "특정한 추적 키워드의 id를 받아 해당 키워드를 반환합니다.")
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTrackingKeyword(@RequestHeader("Authorization") String token ,
+                                                @PathVariable Long id) {
+        String memberId = tokenProvider.getMemberId(token);
+        TrackingKeywordResponseDto keyword = service.getTrackingKeyword(memberId, id);
+        return ResponseEntity.ok(keyword);
+    }
 }

@@ -6,6 +6,7 @@ import capstone.dbfis.chatbot.domain.trackingkeyword.dto.TrackingKeywordResponse
 import capstone.dbfis.chatbot.domain.trackingkeyword.dto.UpdateTrackingKeywordRequest;
 import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingKeyword;
 import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingKeywordRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -110,6 +111,23 @@ public class TrackingKeywordService {
                         k.getProjectId() != null ? k.getProjectId().getId() : null
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public TrackingKeywordResponseDto getTrackingKeyword(String requesterId, Long id) {
+
+        TrackingKeyword k = trackingKeywordRepository
+                .findWithProjectAndTeamByRequesterIdAndId(requesterId, id)
+                .orElseThrow(() -> new EntityNotFoundException("해당 키워드가 없습니다."));
+
+        return new TrackingKeywordResponseDto(
+                k.getId(),
+                k.getKeyword(),
+                k.getStartDate(),
+                k.getEndDate(),
+                k.getTrackingInterval(),
+                k.getProjectId() != null ? k.getProjectId().getId() : null
+        );
     }
 }
 

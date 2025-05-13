@@ -9,7 +9,4 @@ import java.time.LocalDate;
 @Setter
 public class UpdateTrProjectRequest {
     private String name;
-    private String description;
-    private LocalDate startDate;
-    private LocalDate endDate;
-}
+    }

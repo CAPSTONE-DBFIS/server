@@ -247,10 +247,8 @@ public class TeamService {
         return trprojectRepository.findByTeam_Id(teamId).stream()
                 .map(p -> new TrProjectResponse(
                         p.getId(), p.getName(),
-                        p.getDescription(),
                         p.getTeam().getId(),
-                        p.getTeam().getName(),
-                        p.getStartDate(), p.getEndDate()))
+                        p.getTeam().getName()))
                 .collect(Collectors.toList());
     }
 }

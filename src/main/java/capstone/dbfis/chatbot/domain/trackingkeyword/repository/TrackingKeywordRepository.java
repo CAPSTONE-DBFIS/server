@@ -6,13 +6,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface TrackingKeywordRepository extends JpaRepository<TrackingKeyword, Long> {
-    List<TrackingKeyword> findByRequesterId(String requesterId);
     @Query("SELECT k FROM TrackingKeyword k " +
             "LEFT JOIN FETCH k.projectId p " +
             "LEFT JOIN FETCH p.team " +
             "WHERE k.requesterId = :requesterId")
     List<TrackingKeyword> findWithProjectAndTeamByRequesterId(@Param("requesterId") String requesterId);
+
+    @Query("SELECT k FROM TrackingKeyword k " +
+            "JOIN FETCH k.projectId p " +
+            "JOIN FETCH p.team " +
+            "WHERE k.requesterId = :requesterId AND k.id = :id")
+    Optional<TrackingKeyword> findWithProjectAndTeamByRequesterIdAndId(@Param("requesterId") String requesterId,
+                                                                       @Param("id") Long id);
 }
