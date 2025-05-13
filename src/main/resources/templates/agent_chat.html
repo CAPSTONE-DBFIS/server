@@ -882,6 +882,8 @@
           <option value="gpt-4o-mini">GPT-4o-mini</option>
           <option value="claude-3-7-sonnet-20250219">Claude-3.7-Sonnet</option>
           <option value="grok-3-mini-beta">Grok-3-mini-beta</option>
+          <option value="grok-3-beta">Grok-3-beta</option>
+
         </select>
         <div class="persona-controls">
           <select id="personaSelect">
@@ -892,7 +894,7 @@
             <button class="btn-remove" onclick="ChatApp.deleteSelectedPersona()">－</button>
           </div>
         </div>
-        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.hwp,.txt,.png,.jpg,.jpeg">
+        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.hwp,.txt">
       </div>
       <div style="display: flex; gap: 10px; align-items: center;">
         <input type="text" id="userInput" placeholder="메시지를 입력하세요"/>

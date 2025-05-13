@@ -24,7 +24,7 @@ public class PersonaService {
     @Transactional(readOnly = true)
     public List<PersonaDto> listAllForUser(String auth) {
         String memberId = tokenProvider.getMemberId(auth);
-        return personaRepository.findByOwnerIdOrPresetTrue(memberId).stream()
+        return personaRepository.findByOwnerIdOrPresetTrueOrderByIdAsc(memberId).stream()
                 .map(p -> PersonaDto.builder()
                         .id(p.getId())
                         .name(p.getName())

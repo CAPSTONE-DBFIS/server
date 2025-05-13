@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface PersonaRepository extends JpaRepository<Persona, Long> {
-    List<Persona> findByOwnerIdOrPresetTrue(String ownerId);
+    List<Persona> findByOwnerIdOrPresetTrueOrderByIdAsc(String ownerId);
 }
