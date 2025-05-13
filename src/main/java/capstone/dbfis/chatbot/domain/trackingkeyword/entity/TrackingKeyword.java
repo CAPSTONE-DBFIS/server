@@ -36,9 +36,6 @@ public class TrackingKeyword {
     @Column(name = "tracking_interval")
     private int trackingInterval; // 단위: 일
 
-    @Column(name = "last_tracked_at")
-    private LocalDate lastTrackedAt;
-
     @OneToMany(mappedBy = "trackingKeyword", cascade = CascadeType.REMOVE)
     private List<TrackingResult> trackingResults;
 

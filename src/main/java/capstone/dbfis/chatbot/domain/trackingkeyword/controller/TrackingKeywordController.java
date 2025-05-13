@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/tracking-keywords")
 @Tag(name = "Tracking Keyword API", description = "추적 키워드 관리 API")
@@ -50,6 +52,7 @@ public class TrackingKeywordController {
     @GetMapping
     public ResponseEntity<?> getAllKeyword(@RequestHeader("Authorization") String token) {
         String memberId = tokenProvider.getMemberId(token);
-        return ResponseEntity.ok(service.getAllKeywords(memberId));
+        List<TrackingKeywordResponseDto> keywords = service.getAllKeywords(memberId);
+        return ResponseEntity.ok(keywords);
     }
 }
