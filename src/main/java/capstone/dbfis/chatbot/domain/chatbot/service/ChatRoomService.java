@@ -6,6 +6,7 @@ import capstone.dbfis.chatbot.domain.chatbot.dto.TeamDto;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
 import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
 import capstone.dbfis.chatbot.domain.chatbot.repository.ChatRoomRepository;
+import capstone.dbfis.chatbot.domain.member.dto.MyPageResponse;
 import capstone.dbfis.chatbot.domain.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -34,23 +35,39 @@ public class ChatRoomService {
      */
     @Transactional
     public ChatRoomDto createChatRoomAndReturnDto(String memberId, ChatRoomType type, Long teamId) {
+        if (type == ChatRoomType.TEAM) {
+            if (teamId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "teamId는 필수입니다.");
+
+            if (!teamService.isUserInTeam(teamId, memberId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 팀에 속해있지 않습니다.");
+            }
+
+            ChatRoom room = ChatRoom.builder()
+                    .name("새 팀 채팅방")
+                    .type(ChatRoomType.TEAM)
+                    .teamId(teamId)
+                    .memberId(memberId)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            ChatRoom saved = chatRoomRepository.save(room);
+            return ChatRoomDto.builder()
+                    .id(saved.getId()).name(saved.getName()).type(saved.getType()).teamId(saved.getTeamId())
+                    .favorite(saved.isFavorite()).favoriteAddedat(saved.getFavoriteAddedAt()).build();
+        }
+
         ChatRoom chatRoom = ChatRoom.builder()
                 .memberId(memberId)
-                .name("새 채팅방") // 임시 이름
-                .type(type)
-                .teamId(teamId)
+                .name("새 채팅방")
+                .type(ChatRoomType.PERSONAL)
                 .createdAt(LocalDateTime.now())
                 .build();
-        chatRoom = chatRoomRepository.save(chatRoom);
 
+        chatRoom = chatRoomRepository.save(chatRoom);
         return ChatRoomDto.builder()
-                .id(chatRoom.getId())
-                .name(chatRoom.getName())
-                .type(chatRoom.getType())
-                .teamId(chatRoom.getTeamId())
-                .favorite(chatRoom.isFavorite())
-                .favoriteAddedat(chatRoom.getFavoriteAddedAt())
-                .build();
+                .id(chatRoom.getId()).name(chatRoom.getName()).type(chatRoom.getType())
+                .teamId(chatRoom.getTeamId()).favorite(chatRoom.isFavorite())
+                .favoriteAddedat(chatRoom.getFavoriteAddedAt()).build();
     }
 
     /**
@@ -123,16 +140,44 @@ public class ChatRoomService {
      * 멤버의 채팅방 리스트 조회
      */
     public List<ChatRoom> getChatRoomsByMemberId(String memberId) {
-        return chatRoomRepository.findByMemberIdSorted(memberId);
+        // 개인 채팅방만 조회
+        List<ChatRoom> personalRooms = chatRoomRepository.findByMemberIdSorted(memberId)
+                .stream()
+                .filter(room -> room.getType() == ChatRoomType.PERSONAL)
+                .toList();
+
+        List<Long> teamIds = teamService.getUserTeams(memberId).stream()
+                .map(MyPageResponse.TeamResponse::getTeamId)
+                .toList();
+
+        // 팀 채팅방만 조회
+        List<ChatRoom> teamRooms = teamIds.isEmpty() ? List.of()
+                : chatRoomRepository.findByTeamIdInAndType(teamIds, ChatRoomType.TEAM);
+
+        List<ChatRoom> all = new ArrayList<>();
+        all.addAll(personalRooms);
+        all.addAll(teamRooms);
+        return all;
     }
 
     /**
      * 멤버 ID와 채팅방 ID에 대한 채팅방 조회
      */
     public ChatRoom getChatRoomByIdAndMemberId(Long chatroomId, String memberId) {
-        return chatRoomRepository.findByIdAndMemberId(chatroomId, memberId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "해당 채팅방을 찾을 수 없습니다."));
+        ChatRoom room = chatRoomRepository.findById(chatroomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "채팅방 없음"));
+
+        if (room.getTeamId() != null) {
+            if (!teamService.isUserInTeam(room.getTeamId(), memberId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "팀 채팅방 접근 불가");
+            }
+        } else {
+            if (!room.getMemberId().equals(memberId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "개인 채팅방 접근 불가");
+            }
+        }
+
+        return room;
     }
 
     /**
@@ -140,9 +185,21 @@ public class ChatRoomService {
      */
     @Transactional
     public void deleteChatRoomAndMessages(Long chatroomId, String memberId) {
-        ChatRoom chatRoom = chatRoomRepository.findByIdAndMemberId(chatroomId, memberId)
+        ChatRoom chatRoom = chatRoomRepository.findById(chatroomId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "해당 채팅방을 찾을 수 없습니다."));
+                        HttpStatus.BAD_REQUEST, "채팅방을 찾을 수 없습니다."));
+
+        // 팀 채팅방일 경우, 해당 팀의 멤버인지 확인
+        if (chatRoom.getType() == ChatRoomType.TEAM) {
+            if (!teamService.isUserInTeam(chatRoom.getTeamId(), memberId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 팀 채팅방을 삭제할 수 없습니다.");
+            }
+        } else {
+            // 개인 채팅방은 본인만 삭제 가능
+            if (!chatRoom.getMemberId().equals(memberId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 채팅방을 삭제할 수 없습니다.");
+            }
+        }
 
         chatMessageService.deleteMessagesByChatRoom(chatRoom);
         chatRoomRepository.delete(chatRoom);
