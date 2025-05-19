@@ -67,6 +67,8 @@ dependencies {
 	implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.17.0'
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 
+	implementation 'org.apache.httpcomponents:httpmime:4.5.13'
+
 	// 테스트 의존성
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
