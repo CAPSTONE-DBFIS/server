@@ -1,9 +1,6 @@
 package capstone.dbfis.chatbot.domain.filesharing.controller;
 
-import capstone.dbfis.chatbot.domain.filesharing.dto.ContentDto;
-import capstone.dbfis.chatbot.domain.filesharing.dto.CreateFolderRequest;
-import capstone.dbfis.chatbot.domain.filesharing.dto.FileDto;
-import capstone.dbfis.chatbot.domain.filesharing.dto.FolderDto;
+import capstone.dbfis.chatbot.domain.filesharing.dto.*;
 import capstone.dbfis.chatbot.domain.filesharing.service.FileSharingService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,9 +12,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -52,7 +51,7 @@ public class FileSharingApiController {
     /**
      * 팀 폴더 삭제 (하위 폴더·파일 전체 재귀 삭제)
      */
-    @Operation(summary = "폴더 삭제", description = "지정 폴더와 그 하위 파일·폴더를 모두 삭제합니다.")
+    @Operation(summary = "폴더 삭제", description = "지정 폴더와 그 하위 파일·폴더를 모두 삭제합니다. (S3, DB, Milvus 삭제 포함)")
     @DeleteMapping("/folders/{folderId}")
     public ResponseEntity<Void> deleteFolder(
             @RequestHeader("Authorization") @NotBlank String auth,
@@ -69,7 +68,7 @@ public class FileSharingApiController {
      */
     @Operation(
             summary = "폴더·파일 목록 조회",
-            description = "특정 폴더(또는 루트)의 직속 하위 폴더와 파일을 한 번에 반환합니다. 루트의 경우: /folders/contents 엔드포인트, 폴더의 경우: /folders/{folderId}/contents 엔드포인트 사용"
+            description = "특정 폴더(또는 루트)의 하위 폴더와 파일을 반환합니다. 루트의 경우: /folders/contents 엔드포인트, 폴더의 경우: /folders/{folderId}/contents 엔드포인트 사용"
     )
     @GetMapping({"/folders/{folderId}/contents", "/folders/contents"})
     public ResponseEntity<List<ContentDto>> listContents(
@@ -87,7 +86,7 @@ public class FileSharingApiController {
     /**
      * 파일 업로드
      */
-    @Operation(summary = "파일 업로드", description = "팀 폴더에 문서 파일을 업로드하고 메타·임베딩을 저장합니다.")
+    @Operation(summary = "파일 업로드", description = "팀 폴더에 문서 파일을 업로드하고 S3, DB에 파일, 메타데이터를 저장하고, Milvus에 임베딩을 저장합니다.")
     @PostMapping("/folders/{folderId}/files")
     public ResponseEntity<FileDto> uploadFile(
             @RequestHeader("Authorization") @NotBlank String auth,
@@ -123,7 +122,7 @@ public class FileSharingApiController {
     /**
      * 파일 삭제
      */
-    @Operation(summary = "파일 삭제", description = "지정 파일을 S3, Milvus, DB에서 모두 제거합니다.")
+    @Operation(summary = "파일 삭제", description = "파일을 S3, DB, Milvus에서 모두 제거합니다.")
     @DeleteMapping("/files/{fileId}")
     public ResponseEntity<Void> deleteFile(
             @RequestHeader("Authorization") @NotBlank String auth,
@@ -147,5 +146,46 @@ public class FileSharingApiController {
         String memberId = tokenProvider.getMemberId(auth);
         List<FileDto> recs = fileSharingService.recommendFiles(teamId, memberId);
         return ResponseEntity.ok(recs);
+    }
+
+    /**
+     * 파일명 검색
+     * */
+    @Operation(summary = "팀 내 파일명 검색", description = "파일명에 포함된 키워드로 팀 내 파일을 조회합니다.")
+    @GetMapping("/files/search")
+    public ResponseEntity<List<FileDto>> searchFilesByName(
+            @RequestHeader("Authorization") @NotBlank String auth,
+            @PathVariable @Min(1) Long teamId,
+            @RequestParam("name") @NotBlank String nameKeyword
+    ) {
+        tokenProvider.getMemberId(auth);
+        List<FileDto> results = fileSharingService.searchFilesByName(teamId, nameKeyword);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
+     * 스토리지 잔여 용량 조회
+     * */
+    @Operation(summary = "팀 스토리지 잔여 용량 조회", description = "팀 당 스토리지 한도를 1GB로 설정하고, 현재 사용량(MB), 잔여 용량(MB)을 반환합니다.")
+    @GetMapping("/storage/remaining")
+    public ResponseEntity<RemainingStorageResponse> getRemainingStorage(
+            @RequestHeader("Authorization") @NotBlank String auth,
+            @PathVariable @Min(1) Long teamId
+    ) {
+        tokenProvider.getMemberId(auth);
+        RemainingStorageResponse resp = fileSharingService.getRemainingStorage(teamId);
+        return ResponseEntity.ok(resp);
+    }
+
+    /**
+     * 팀 공유 파일 기반 RAG 응답 챗봇
+     * */
+    @Operation(summary = "팀 공유 파일 기반 챗봇", description = "팀 공유 파일 기반 RAG 응답 챗봇")
+    @PostMapping("/files/query")
+    public Flux<ServerSentEvent<String>> proxyTeamFilesQuery(
+            @PathVariable("teamId") String teamId,
+            @RequestParam("query") String query
+    ) {
+        return fileSharingService.streamTeamFileChat(teamId, query);
     }
 }

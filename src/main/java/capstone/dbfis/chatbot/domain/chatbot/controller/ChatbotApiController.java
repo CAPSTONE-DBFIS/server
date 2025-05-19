@@ -117,7 +117,7 @@ public class ChatbotApiController {
 
     @Operation(summary = "에이전트 스트리밍 쿼리 프록시", description = "선택적으로 FastApi에 파일을 업로드 하고, FastAPI SSE 스트림을 프록시합니다.")
     @PostMapping(value = "/chatroom/{chatroomId}/agent-query", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> proxyStream(
+    public Flux<String> proxyAgentQuery(
             @PathVariable @Min(1) Long chatroomId,
             @RequestParam @NotBlank String query,
             @RequestParam(required = false) Long personaId,
