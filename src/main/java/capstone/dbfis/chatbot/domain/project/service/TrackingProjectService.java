@@ -30,7 +30,7 @@ public class TrackingProjectService {
      * 팀에 새 프로젝트를 생성합니다.
      */
     @Transactional
-    public TrackingProject createTrProject(Long teamId, String creatorId, String projectName, String description, LocalDate startDate, LocalDate endDate) {
+    public TrackingProject createTrProject(Long teamId, String creatorId, String projectName) {
         // 팀 검증
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -58,9 +58,6 @@ public class TrackingProjectService {
         TrackingProject trProject = TrackingProject.builder()
                 .team(team)
                 .name(projectName)
-                .description(description)
-                .startDate(startDate)
-                .endDate(endDate)
                 .build();
 
         return trackingProjectRepository.save(trProject);
@@ -92,9 +89,7 @@ public class TrackingProjectService {
         }
 
         trProject.setName(request.getName());
-        trProject.setDescription(request.getDescription());
-        trProject.setStartDate(request.getStartDate());
-        trProject.setEndDate(request.getEndDate());
+
         trackingProjectRepository.save(trProject);
     }
 
@@ -141,11 +136,8 @@ public class TrackingProjectService {
                 .map(trProject -> new TrProjectResponse(
                         trProject.getId(),
                         trProject.getName(),
-                        trProject.getDescription(),
                         trProject.getTeam().getId(),
-                        trProject.getTeam().getName(),
-                        trProject.getStartDate(),
-                        trProject.getEndDate()
+                        trProject.getTeam().getName()
                 ))
                 .collect(Collectors.toList());
     }
@@ -163,11 +155,8 @@ public class TrackingProjectService {
         TrProjectResponse response = new TrProjectResponse(
                 trProject.getId(),
                 trProject.getName(),
-                trProject.getDescription(),
                 trProject.getTeam().getId(),
-                trProject.getTeam().getName(), //
-                trProject.getStartDate(),
-                trProject.getEndDate()
+                trProject.getTeam().getName()
         );
 
         return List.of(response);

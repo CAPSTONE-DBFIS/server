@@ -13,9 +13,6 @@ import java.time.LocalDate;
 public class TrProjectResponse {
     private Long id;
     private String name;
-    private String description;
     private Long teamId;
     private String teamName;
-    private LocalDate startDate;
-    private LocalDate endDate;
-}
+   }

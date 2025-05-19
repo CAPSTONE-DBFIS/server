@@ -6,6 +6,7 @@ import capstone.dbfis.chatbot.domain.trackingkeyword.dto.TrackingKeywordResponse
 import capstone.dbfis.chatbot.domain.trackingkeyword.dto.UpdateTrackingKeywordRequest;
 import capstone.dbfis.chatbot.domain.trackingkeyword.entity.TrackingKeyword;
 import capstone.dbfis.chatbot.domain.trackingkeyword.repository.TrackingKeywordRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 추적 키워드 관리 비즈니스 로직 서비스
@@ -95,8 +97,37 @@ public class TrackingKeywordService {
     /**
      * 사용자가 생성한 모든 추적 키워드를 조회합니다.
      */
-    public List<TrackingKeyword> getAllKeywords(String requesterId) {
-        return trackingKeywordRepository.findByRequesterId(requesterId);
+    @Transactional(readOnly = true)
+    public List<TrackingKeywordResponseDto> getAllKeywords(String requesterId) {
+
+        List<TrackingKeyword> keywords = trackingKeywordRepository.findWithProjectAndTeamByRequesterId(requesterId);
+        return keywords.stream()
+                .map(k -> new TrackingKeywordResponseDto(
+                        k.getId(),
+                        k.getKeyword(),
+                        k.getStartDate(),
+                        k.getEndDate(),
+                        k.getTrackingInterval(),
+                        k.getProjectId() != null ? k.getProjectId().getId() : null
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public TrackingKeywordResponseDto getTrackingKeyword(String requesterId, Long id) {
+
+        TrackingKeyword k = trackingKeywordRepository
+                .findWithProjectAndTeamByRequesterIdAndId(requesterId, id)
+                .orElseThrow(() -> new EntityNotFoundException("해당 키워드가 없습니다."));
+
+        return new TrackingKeywordResponseDto(
+                k.getId(),
+                k.getKeyword(),
+                k.getStartDate(),
+                k.getEndDate(),
+                k.getTrackingInterval(),
+                k.getProjectId() != null ? k.getProjectId().getId() : null
+        );
     }
 }
 
