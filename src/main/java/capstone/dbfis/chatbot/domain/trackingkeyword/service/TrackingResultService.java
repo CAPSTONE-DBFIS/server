@@ -50,13 +50,8 @@ public class TrackingResultService {
             TrackingResultResponseDto defaultDto = new TrackingResultResponseDto(
                     0L,
                     keyword.getKeyword(),
-                    null, // 또는 null
+                    null,
                     0,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
                     null,
                     null
             );
@@ -69,11 +64,6 @@ public class TrackingResultService {
                         result.getKeyword(),
                         result.getCreatedAt(),
                         result.getCreatedOrder(),
-                        result.getSentimentReport(),
-                        result.getArticleCountReport(),
-                        result.getMediaCompaniesReport(),
-                        result.getRelatedWordReport(),
-                        result.getRecordDate(),
                         result.getArticleCntChange(),
                         result.getLlmDescription()
 
@@ -93,14 +83,7 @@ public class TrackingResultService {
                         row -> (Long) row[0],   // 키워드 ID
                         row -> (Long) row[1]    // 기사 갯수 합계
                 ));
-        // 2. 연관어 최신 행 (createdAt 가장 최근) 기준
-        List<Object[]> latestRelatedWords = trackingResultRepository.findLatestRelatedWords(keywordIds);
-        Map<Long, String> relatedWordMap = latestRelatedWords.stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (String) row[1]
-                ));
-        // 3. 보고서 주차 최신 createdOrder
+
         List<Object[]> latestCreatedOrders = trackingSummaryRepository.findLatestCreatedOrderByKeywordIds(keywordIds);
         Map<Long, Integer> createdOrderMap = latestCreatedOrders.stream()
                 .collect(Collectors.toMap(
@@ -123,13 +106,64 @@ public class TrackingResultService {
             dto.setKeyword(keyword.getKeyword());
             dto.setCreatedAt(nextCollectionDate);
             dto.setCreatedOrder(createdOrderMap.getOrDefault(id, 0));
-            dto.setRelatedWordReport(relatedWordMap.getOrDefault(id, null));
             dto.setArticleCountReport(articleCountMap.getOrDefault(id, 0L)+"");
 
             responseList.add(dto);
         }
         return responseList;
     }
+
+    public List<TrackingListRelatedWordDto> getListRelatedWord(String memberId, Long projectId) {
+
+        List<TrackingKeyword> keywords = trackingKeywordRepository.findByRequesterIdAndProjectId(memberId, projectId);
+        List<Long> keywordIds = keywords.stream().map(TrackingKeyword::getId).collect(Collectors.toList());
+
+        List<Object[]> latestRelatedWords = trackingResultRepository.findLatestRelatedWords(keywordIds);
+        Map<Long, String> relatedWordMap = latestRelatedWords.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (String) row[1]
+                ));
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<TrackingListRelatedWordDto> responseList = new ArrayList<>();
+
+        for (TrackingKeyword keyword : keywords) {
+            Long id = keyword.getId();
+            String keywordStr = keyword.getKeyword();
+            String rawRelatedWord = relatedWordMap.getOrDefault(id, "[]");
+
+            try {
+                List<List<Object>> wordPairs = objectMapper.readValue(rawRelatedWord, new TypeReference<List<List<Object>>>() {});
+                if (wordPairs.isEmpty()) {
+                    // 연관어가 아예 없을 경우 하나의 null DTO 추가
+                    TrackingListRelatedWordDto dto = new TrackingListRelatedWordDto();
+                    dto.setId(id);
+                    dto.setKeyword(keywordStr);
+                    dto.setRelatedWord(null);
+                    responseList.add(dto);
+                } else {
+                    for (List<Object> pair : wordPairs) {
+                        TrackingListRelatedWordDto dto = new TrackingListRelatedWordDto();
+                        dto.setId(id);
+                        dto.setKeyword(keywordStr);
+                        dto.setRelatedWord((String) pair.get(0));
+                        responseList.add(dto);
+                    }
+                }
+            } catch (Exception e) {
+                // JSON 파싱 실패 시 null로 하나 추가
+                TrackingListRelatedWordDto dto = new TrackingListRelatedWordDto();
+                dto.setId(id);
+                dto.setKeyword(keywordStr);
+                dto.setRelatedWord(null);
+                responseList.add(dto);
+            }
+        }
+
+        return responseList;
+    }
+
 
     public static LocalDate calculateNextCollectionDate(LocalDate startDate, LocalDate endDate, int intervalDays) {
         LocalDate today = LocalDate.now();
@@ -159,7 +193,12 @@ public class TrackingResultService {
         }
         List<TrackingSummary> trackingSummaries = trackingSummaryRepository.findByTrackingKeywordId(keywordId);
         if (trackingSummaries.isEmpty()) {
-            return Collections.emptyList();
+            TrackingArticleCountsDto defaultDto = new TrackingArticleCountsDto(
+                    null,
+                    0,
+                    0
+            );
+            return List.of(defaultDto);
         }
 
 
@@ -204,7 +243,14 @@ public class TrackingResultService {
         }
         List<TrackingSummary> trackingSummaries = trackingSummaryRepository.findByTrackingKeywordId(keywordId);
         if (trackingSummaries.isEmpty()) {
-            return Collections.emptyList();
+            TrackingSentimentsDto defaultDto = new TrackingSentimentsDto(
+                    null,
+                    0,
+                    0,
+                    0,
+                    0
+            );
+            return List.of(defaultDto);
         }
 
 
@@ -260,7 +306,13 @@ public class TrackingResultService {
         }
         List<TrackingSummary> trackingSummaries = trackingSummaryRepository.findByTrackingKeywordId(keywordId);
         if (trackingSummaries.isEmpty()) {
-            return Collections.emptyList();
+            TrackingRelatedWordsDto defaultDto = new TrackingRelatedWordsDto(
+                    null,    // date
+                    null,    // word
+                    0,       // frequency
+                    0        // createdOrder
+            );
+            return List.of(defaultDto);
         }
 
 
@@ -313,7 +365,13 @@ public class TrackingResultService {
         }
         List<TrackingSummary> trackingSummaries = trackingSummaryRepository.findByTrackingKeywordId(keywordId);
         if (trackingSummaries.isEmpty()) {
-            return Collections.emptyList();
+            TrackingMediaCompanyDto defaultDto = new TrackingMediaCompanyDto(
+                    null,    // date
+                    null,    // companyName
+                    0,       // frequency
+                    0        // createdOrder
+            );
+            return List.of(defaultDto);
         }
 
 

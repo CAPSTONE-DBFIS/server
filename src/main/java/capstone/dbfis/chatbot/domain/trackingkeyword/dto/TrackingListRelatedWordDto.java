@@ -11,10 +11,9 @@ import java.time.LocalDate;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class TrackingListResponseDto {
+
+public class TrackingListRelatedWordDto {
     private Long id;
     private String keyword;
-    private LocalDate createdAt;
-    private int createdOrder;
-    private String articleCountReport;
+    private String relatedWord;
 }

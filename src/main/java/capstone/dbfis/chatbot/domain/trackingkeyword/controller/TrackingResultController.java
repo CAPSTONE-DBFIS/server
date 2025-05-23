@@ -20,7 +20,7 @@ public class TrackingResultController {
     private final TokenProvider tokenProvider;
     private final TrackingResultService trackingResultService;
 
-    @Operation(summary = "추적 결과 조회", description = "특정 키워드에 대한 수집 결과를 반환합니다.")
+    @Operation(summary = "추적 llm요약본 조회", description = "추적 키워드에 대한 주기 동안의 수집 요약괍 분석본을 반환합니다.")
     @GetMapping("/{keywordId}")
     public ResponseEntity<List<TrackingResultResponseDto>> report(@RequestHeader("Authorization") String token,
                                                                 @PathVariable  Long keywordId) {
@@ -42,6 +42,18 @@ public class TrackingResultController {
 
         // 서비스에서 결과 조회
         List<TrackingListResponseDto> results = trackingResultService.getListByKeywordId(memberId, projectId);
+
+        return ResponseEntity.ok(results);
+    }
+    @Operation(summary = "추적 리스트에서 업데이트된 연관어 조회", description = "추적 키워드에 대한 연관어 수집 현황을 반환합니다.")
+    @GetMapping("/list/{projectId}/related_word")
+    public ResponseEntity<List<TrackingListRelatedWordDto>> listRelatedWord(@RequestHeader("Authorization") String token,
+                                                              @PathVariable  Long projectId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingListRelatedWordDto> results = trackingResultService.getListRelatedWord(memberId, projectId);
 
         return ResponseEntity.ok(results);
     }
