@@ -114,6 +114,22 @@ public class TrackingKeywordService {
     }
 
     @Transactional(readOnly = true)
+    public List<TrackingKeywordResponseDto> getProjectKeywords(String requesterId, Long projectId) {
+
+        List<TrackingKeyword> keywords = trackingKeywordRepository.findByRequesterIdAndProjectId(requesterId,projectId);
+        return keywords.stream()
+                .map(k -> new TrackingKeywordResponseDto(
+                        k.getId(),
+                        k.getKeyword(),
+                        k.getStartDate(),
+                        k.getEndDate(),
+                        k.getTrackingInterval(),
+                        k.getProjectId() != null ? k.getProjectId().getId() : null
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public TrackingKeywordResponseDto getTrackingKeyword(String requesterId, Long id) {
 
         TrackingKeyword k = trackingKeywordRepository

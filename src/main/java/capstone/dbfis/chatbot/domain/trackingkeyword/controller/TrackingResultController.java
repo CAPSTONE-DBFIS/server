@@ -1,6 +1,6 @@
 package capstone.dbfis.chatbot.domain.trackingkeyword.controller;
 
-import capstone.dbfis.chatbot.domain.trackingkeyword.dto.TrackingResultResponseDto;
+import capstone.dbfis.chatbot.domain.trackingkeyword.dto.*;
 import capstone.dbfis.chatbot.domain.trackingkeyword.service.TrackingResultService;
 import capstone.dbfis.chatbot.global.config.jwt.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +22,7 @@ public class TrackingResultController {
 
     @Operation(summary = "추적 결과 조회", description = "특정 키워드에 대한 수집 결과를 반환합니다.")
     @GetMapping("/{keywordId}")
-    public ResponseEntity<List<TrackingResultResponseDto>> list(@RequestHeader("Authorization") String token,
+    public ResponseEntity<List<TrackingResultResponseDto>> report(@RequestHeader("Authorization") String token,
                                                                 @PathVariable  Long keywordId) {
         // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
         String memberId = tokenProvider.getMemberId(token);
@@ -33,5 +33,69 @@ public class TrackingResultController {
         return ResponseEntity.ok(results);
     }
 
+    @Operation(summary = "추적 리스트 조회", description = "전체 키워드에 대한 수집 현황을 반환합니다.")
+    @GetMapping("/list/{projectId}")
+    public ResponseEntity<List<TrackingListResponseDto>> list(@RequestHeader("Authorization") String token,
+                                                              @PathVariable  Long projectId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingListResponseDto> results = trackingResultService.getListByKeywordId(memberId, projectId);
+
+        return ResponseEntity.ok(results);
+    }
+
+    @Operation(summary = "추적 중인 키워드에 대한 기사수와 감정분석 빈도 수 반환", description = "추적 키워드에 대한 기사 수와, 감성분석 수집 결과를 반환합니다.")
+    @GetMapping("/{keywordId}/article_counts")
+    public ResponseEntity<List<TrackingArticleCountsDto>> article_Counts(@RequestHeader("Authorization") String token,
+                                                                                    @PathVariable  Long keywordId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingArticleCountsDto> results = trackingResultService.parseArticleCounts(memberId, keywordId);
+
+        return ResponseEntity.ok(results);
+    }
+
+    @Operation(summary = "추적 중인 키워드에 대한 기사수와 감정분석 빈도 수 반환", description = "추적 키워드에 대한 기사 수와, 감성분석 수집 결과를 반환합니다.")
+    @GetMapping("/{keywordId}/sentiments_counts")
+    public ResponseEntity<List<TrackingSentimentsDto>> sentiments_Counts(@RequestHeader("Authorization") String token,
+                                                                                    @PathVariable  Long keywordId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingSentimentsDto> results = trackingResultService.parseSentimentsCounts(memberId, keywordId);
+
+        return ResponseEntity.ok(results);
+    }
+
+    @Operation(summary = "추적 중인 키워드에 대한 연관어 빈도 수 반환", description = "추적 키워드에 대한 연관어 수집 결과를 반환합니다.")
+    @GetMapping("/{keywordId}/related_word_counts")
+    public ResponseEntity<List<TrackingRelatedWordsDto>> related_Word_Counts(@RequestHeader("Authorization") String token,
+                                                                             @PathVariable  Long keywordId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingRelatedWordsDto> results = trackingResultService.parseRelatedWordCounts(memberId, keywordId);
+
+        return ResponseEntity.ok(results);
+    }
+
+    @Operation(summary = "추적 중인 키워드에 대한 언론사 빈도 수 반환", description = "추적 키워드에 대한 언론사 분석 결과를 반환합니다.")
+    @GetMapping("/{keywordId}/media_counts")
+    public ResponseEntity<List<TrackingMediaCompanyDto>> media_Counts(@RequestHeader("Authorization") String token,
+                                                                             @PathVariable  Long keywordId) {
+        // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
+        String memberId = tokenProvider.getMemberId(token);
+
+        // 서비스에서 결과 조회
+        List<TrackingMediaCompanyDto> results = trackingResultService.parseMediaCounts(memberId, keywordId);
+
+        return ResponseEntity.ok(results);
+    }
 
 }
