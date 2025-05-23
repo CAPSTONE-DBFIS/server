@@ -2,6 +2,7 @@ package capstone.dbfis.chatbot.domain.trackingkeyword.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
@@ -9,11 +10,11 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @AllArgsConstructor
-public class TrackingResultResponseDto {
+@NoArgsConstructor
+public class TrackingListResponseDto {
     private Long id;
     private String keyword;
     private LocalDate createdAt;
     private int createdOrder;
-    private String articleCntChange;
-    private String llmDescription;  // 연관 키워드 (JSON 문자열 형식으로 저장)
+    private String articleCountReport;
 }

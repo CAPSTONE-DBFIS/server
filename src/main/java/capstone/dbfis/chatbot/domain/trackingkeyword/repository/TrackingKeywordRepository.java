@@ -22,4 +22,9 @@ public interface TrackingKeywordRepository extends JpaRepository<TrackingKeyword
             "WHERE k.requesterId = :requesterId AND k.id = :id")
     Optional<TrackingKeyword> findWithProjectAndTeamByRequesterIdAndId(@Param("requesterId") String requesterId,
                                                                        @Param("id") Long id);
+    @Query("SELECT k FROM TrackingKeyword k " +
+            "JOIN FETCH k.projectId p " +
+            "JOIN FETCH p.team t " +
+            "WHERE k.requesterId = :requesterId AND p.id = :projectId")
+    List<TrackingKeyword> findByRequesterIdAndProjectId(@Param("requesterId") String requesterId, @Param("projectId") Long projectId);
 }

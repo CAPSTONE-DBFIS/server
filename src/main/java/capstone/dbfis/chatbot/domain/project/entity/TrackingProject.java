@@ -22,9 +22,6 @@ public class TrackingProject {
     @ManyToOne(fetch = FetchType.LAZY)
     private Team team;
     private String name;
-    private String description;
-    private LocalDate startDate;
-    private LocalDate endDate;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

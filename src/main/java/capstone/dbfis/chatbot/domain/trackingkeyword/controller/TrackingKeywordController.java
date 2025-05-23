@@ -56,6 +56,15 @@ public class TrackingKeywordController {
         return ResponseEntity.ok(keywords);
     }
 
+    @Operation(summary = "프로젝트에 속한 키워드 조회", description = "사용자가 등록한 특정 프로젝트의 추적 키워드를 반환합니다.")
+    @GetMapping("project/{id}")
+    public ResponseEntity<?> getProjectKeyword(@RequestHeader("Authorization") String token,
+                                               @PathVariable Long id) {
+        String memberId = tokenProvider.getMemberId(token);
+        List<TrackingKeywordResponseDto> keywords = service.getProjectKeywords(memberId, id);
+        return ResponseEntity.ok(keywords);
+    }
+
     @Operation(summary = "특정 키워드 조회", description = "특정한 추적 키워드의 id를 받아 해당 키워드를 반환합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<?> getTrackingKeyword(@RequestHeader("Authorization") String token ,
