@@ -168,7 +168,7 @@ gradle-app.setting
 *.hpr
 
 # Application yml, Application.properties
-*.yml
+application.yml
 application.properties
 
 # .DS_Store
