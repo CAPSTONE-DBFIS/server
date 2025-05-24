@@ -36,8 +36,13 @@ jobs:
         run: |
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
-          scp -i key.pem -o StrictHostKeyChecking=no ./build/libs/*.jar $SSH_USER@$SSH_HOST:/home/$SSH_USER/app.jar
-          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
+
+          JAR_NAME=$(ls ./build/libs | grep '\.jar$' | grep -v plain | head -n 1)
+          echo "Uploading $JAR_NAME"
+
+          scp -i key.pem -o StrictHostKeyChecking=no ./build/libs/$JAR_NAME $SSH_USER@$SSH_HOST:/home/$SSH_USER/$JAR_NAME
+
+          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
             pkill -f "java -jar" || true
-            nohup java -jar /home/$SSH_USER/app.jar > app.log 2>&1 &
+            nohup java -jar /home/$SSH_USER/$JAR_NAME > app.log 2>&1 &
           EOF
