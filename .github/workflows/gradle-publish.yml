@@ -1,0 +1,43 @@
+name: Spring Boot CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build with Gradle
+        run: ./gradlew clean build --stacktrace
+
+      - name: SSH deploy to EC2
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+          scp -i key.pem -o StrictHostKeyChecking=no ./build/libs/*.jar $SSH_USER@$SSH_HOST:/home/$SSH_USER/app.jar
+          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'EOF'
+            pkill -f "java -jar" || true
+            nohup java -jar /home/$SSH_USER/app.jar > app.log 2>&1 &
+          EOF
