@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRENDB - 홈</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f4;
+        }
+
+        .header {
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #0a192f;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            font-size: 1.2em;
+            color: #333;
+            transition: color 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #0a192f;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-menu i {
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #555;
+            transition: color 0.3s ease;
+        }
+
+        .user-menu i:hover {
+            color: #0a192f;
+        }
+
+        .profile-container {
+            position: relative;
+            cursor: pointer;
+            display: none;
+        }
+
+        .profile-menu {
+            display: none;
+            position: absolute;
+            top: 40px;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            z-index: 100;
+        }
+
+        .profile-menu a {
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            color: #333;
+            transition: background 0.3s ease;
+        }
+
+        .profile-menu a:hover {
+            background: #f4f4f4;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #555;
+            transition: color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            color: #0a192f;
+        }
+
+        .main-content {
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .main-content h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #0a192f;
+        }
+
+        .main-content p {
+            font-size: 1.2em;
+            margin-top: 15px;
+            color: #666;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer {
+            background: #0a192f;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            width: 100%;
+            position: fixed;
+            bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="logo">TRENDB</div>
+    <nav class="nav-menu">
+        <a href="#" onclick="goToTracking()">키워드 추적</a>
+        <a href="#" onclick="goToInsight()">인사이트</a>
+        <a href="#">커뮤니티</a>
+        <a href="#" onclick="goToUpload()">파일 공유</a>
+    </nav>
+    <div class="user-menu">
+        <i class="fas fa-bell"></i> <!-- 알림 아이콘 -->
+
+        <!-- 로그인 전: 로그인 버튼 -->
+        <button class="btn btn-primary" id="login-button" onclick="redirectToLogin()">로그인</button>
+
+        <!-- 로그인 후: 프로필 아이콘 + 로그아웃 버튼 -->
+        <div class="profile-container" id="profile-container">
+            <i class="fas fa-user-circle" id="profile-icon" onclick="goToMyPage()"></i>
+            <div class="profile-menu" id="profile-menu">
+                <a href="/chat">채팅</a>
+            </div>
+        </div>
+
+        <button class="logout-btn" id="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+</header>
+
+<div class="main-content">
+    <h1>트렌드 검색 / 데이터 요약</h1>
+    <p>일을 쉽고 빠르게 처리하세요. 원하는 데이터를 가공하여 더욱 효율적으로 분석할 수 있습니다.</p>
+
+    <button class="btn btn-primary" onclick="goToChat()">rag 채팅 시작</button>
+    <button class="btn btn-primary" onclick="goToAgentChat()">agent 채팅 시작</button>
+    <button class="btn btn-primary" onclick="goToGraphChat()">langgraph 채팅 시작</button>
+</div>
+
+<footer class="footer">
+    <p>검색한 트렌드와 데이터 요약본을 모두 저장하여 관리</p>
+</footer>
+
+<script>
+    const baseURL = window.location.origin;
+    document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(updateUI, 100);
+    });
+
+    function updateUI() {
+        const token = localStorage.getItem("accessToken");
+        const profileContainer = document.getElementById("profile-container");
+        const loginButton = document.getElementById("login-button");
+        const logoutButton = document.getElementById("logout-button");
+
+        console.log("저장된 JWT 토큰:", token);
+
+        if (token) {
+            console.log("로그인 상태");
+            loginButton.style.display = "none";
+            profileContainer.style.display = "flex";
+            logoutButton.style.display = "inline-block";
+        } else {
+            console.log("로그아웃 상태");
+            loginButton.style.display = "block";
+            profileContainer.style.display = "none";
+            logoutButton.style.display = "none";
+        }
+    }
+
+    function validateTokenAndRedirect(url) {
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            alert("로그인이 필요합니다.");
+            window.location.href = "/login";
+            return;
+        }
+
+        fetch(`${baseURL}/api/token/validate`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`JWT 검증 성공: ${url}로 이동`);
+                    window.location.href = url;
+                } else {
+                    console.log(`JWT 검증 실패: 로그인 필요`);
+                    alert("세션이 만료되었습니다. 다시 로그인하세요.");
+                    logout();
+                }
+            })
+            .catch(error => {
+                console.error("서버 연결 오류:", error);
+                alert("서버에 문제가 발생했습니다. 다시 시도해 주세요.");
+            });
+    }
+
+    // 페이지 이동 함수
+    function goToMyPage() { validateTokenAndRedirect("/mypage"); }
+    function goToChat() { validateTokenAndRedirect("/chat"); }
+    function goToAgentChat() { validateTokenAndRedirect("/agent_chat"); }
+    function goToGraphChat() { validateTokenAndRedirect("/graph_chat"); }
+    function goToUpload() { validateTokenAndRedirect("/file-list"); }
+    function goToTracking() { validateTokenAndRedirect("/tracking"); }
+    function goToInsight() { validateTokenAndRedirect("/insight"); }
+
+    function logout() {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        console.log("로그아웃 완료");
+        updateUI();
+        setTimeout(() => window.location.href = "/login", 500);
+    }
+
+    function redirectToLogin() {
+        window.location.href = "/login";
+    }
+
+</script>
+
+</body>
+</html>

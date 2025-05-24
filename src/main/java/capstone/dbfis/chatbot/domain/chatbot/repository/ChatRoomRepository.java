@@ -1,0 +1,20 @@
+package capstone.dbfis.chatbot.domain.chatbot.repository;
+
+import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoom;
+import capstone.dbfis.chatbot.domain.chatbot.entity.ChatRoomType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
+    @Query("SELECT c FROM ChatRoom c WHERE c.memberId = :memberId " +
+            "ORDER BY c.favorite DESC, c.favoriteAddedAt DESC NULLS LAST, c.id ASC")
+    List<ChatRoom> findByMemberIdSorted(@Param("memberId") String memberId);
+    Optional<ChatRoom> findByIdAndMemberId(Long id, String userId); // 특정 chatroomId + userId로 채팅방 조회
+    List<ChatRoom> findByTeamIdInAndType(List<Long> teamIds, ChatRoomType type);
+}

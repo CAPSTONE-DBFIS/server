@@ -1,0 +1,86 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.4'
+	id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'capstone.dbfis'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Spring Boot 스타터
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-web' // RestTemplate
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'  // WebClient 사용 (비동기)
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-mail' // 메일 기능 추가
+
+	// OpenAPI/Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
+
+	// JWT 관련
+	implementation 'io.jsonwebtoken:jjwt:0.9.1'
+
+	// JAXB
+	implementation 'javax.xml.bind:jaxb-api:2.3.1'
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// PostgreSQL
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// JSON
+	implementation 'org.json:json:20210307'
+
+	// 유튜브 API
+	implementation 'com.google.api-client:google-api-client:1.33.0'
+	implementation 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
+	implementation 'com.google.apis:google-api-services-youtube:v3-rev20230816-2.0.0'
+	implementation 'com.google.http-client:google-http-client-jackson2:1.39.2'
+
+	// macOS Netty DNS Resolver for Apple Silicon
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.113.Final:osx-aarch_64'
+
+	// AWS SDK S3
+	implementation 'com.amazonaws:aws-java-sdk-s3:1.12.261'
+
+	// Elasticsearch
+	implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.17.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+	implementation 'org.apache.httpcomponents:httpmime:4.5.13'
+
+	// 테스트 의존성
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

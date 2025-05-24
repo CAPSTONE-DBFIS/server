@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>TRENDB 팀 스토리지</title>
+
+    <!-- Bootstrap + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+
+    <style>
+        body { background: #f0f2f5 }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,.7); display: none; align-items: center; justify-content: center; z-index: 1000 }
+        .sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd }
+        .sidebar h6 { margin-top: 1rem; font-size: .9rem; color: #666 }
+        .sidebar .nav-link { white-space: nowrap; text-overflow: ellipsis; overflow: hidden }
+        .sidebar .nav-link.active { background: #e7f1ff; color: #0d6efd }
+        .main-area { flex: 1; display: flex; flex-direction: column }
+        .actions .btn { min-width: 90px }
+        .breadcrumb { background: transparent; padding: .5rem 1rem; margin: 0 }
+        .file-table th, .file-table td { vertical-align: middle; white-space: nowrap }
+        .file-table tr.folder-row:hover { background: #eef6ff; cursor: pointer }
+        .file-table tr.file-row:hover { background: #f8f9fa }
+        .file-card { border: 1px solid #ddd; border-radius: .5rem; padding: .75rem; background: #fff; text-align: center; cursor: pointer; transition: .2s }
+        .file-card:hover { background: #f5f7ff }
+        .icon-btn { border: none; background: transparent; padding: 0 .25rem; font-size: 1rem }
+
+        /* 모달 스타일 */
+        #chatModal .modal-dialog { max-width: 1000px }
+        #chatModal .modal-content { border: none; border-radius: 1rem }
+        #chatModal .modal-header { background: #f8f9fa; border-bottom: none }
+        #chatModal .modal-title { font-size: 1.25rem }
+        #chatModal .chat-messages {
+            max-height: 800px; overflow-y: auto; padding: 1rem; background: #fafafa;
+            border: 1px solid #ddd; border-radius: 0.5rem; margin-bottom: 1rem
+        }
+        #chatModal .chat-message {
+            margin-bottom: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.5rem; word-wrap: break-word
+        }
+        #chatModal .chat-message.user {
+            margin-left: auto; background: #0d6efd; color: white; max-width: 70%
+        }
+        #chatModal .chat-message.bot {
+            margin-right: auto; background: #e9ecef; color: #333; max-width: 70%
+        }
+        #chatModal .chat-input {
+            display: flex; gap: 0.5rem; padding: 0 1rem 1rem
+        }
+        #chatModal .chat-input input {
+            flex: 1; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.5rem
+        }
+        #chatModal .chat-input button {
+            border-radius: 0.5rem; padding: 0.5rem 1rem
+        }
+    </style>
+</head>
+<body>
+<div id="loadingOverlay"><div class="spinner-border text-primary"></div></div>
+
+<div class="d-flex vh-100">
+    <aside class="sidebar d-flex flex-column p-3">
+        <h6>최근 팀</h6><ul class="nav nav-pills flex-column mb-3" id="recentTeams"></ul>
+        <h6>모든 프로젝트</h6><ul class="nav nav-pills flex-column mb-4" id="allTeams"></ul>
+    </aside>
+
+    <main class="main-area">
+        <div class="p-3 border-bottom d-flex align-items-center actions">
+            <h5 id="currentTeamName" class="me-4 mb-0">팀 스토리지</h5>
+            <button class="btn btn-outline-primary me-2" onclick="triggerUpload()">업로드</button>
+            <button class="btn btn-outline-success me-2" onclick="openNewFolder()">폴더 생성</button>
+            <button class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#chatModal">챗봇</button>
+            <input type="file" id="uploadInput" hidden onchange="handleUpload(event)"/>
+            <div class="input-group ms-auto" style="width:300px;">
+                <input id="searchInput" type="text" class="form-control form-control-sm" placeholder="파일명 검색"
+                       onkeyup="if(event.key==='Enter') searchFiles()"/>
+                <button class="btn btn-outline-secondary btn-sm" onclick="searchFiles()">
+                    <i class="bi-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" id="breadcrumb"></ol>
+        </nav>
+
+        <!-- 잔여 용량 표시 -->
+        <div class="p-2 ps-4"><small id="storageInfo" class="text-muted">잔여 용량: -- MB</small></div>
+
+        <section class="suggestion p-3 border-bottom">
+            <small class="text-muted">자주 사용하는 파일</small>
+            <div class="row g-2 mt-2" id="suggestions"></div>
+        </section>
+
+        <section class="flex-fill overflow-auto p-3">
+            <div class="d-flex align-items-center mb-2">
+                <h6 class="mb-0 me-3">All files</h6>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="setSort('desc')">최근 순</button>
+                    <button class="btn btn-outline-secondary" onclick="setSort('asc')">오래된 순</button>
+                    <button class="btn btn-outline-secondary" onclick="setSort('name')">이름 순</button>
+                </div>
+            </div>
+            <table class="table table-hover table-sm file-table">
+                <thead class="table-light">
+                <tr>
+                    <th>ID</th><th>이름</th><th>종류</th><th>크기</th><th>업로더</th><th>동작</th>
+                </tr>
+                </thead>
+                <tbody id="fileTable"></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<!-- 챗봇 모달 -->
+<div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chatModalLabel">챗봇</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="질문 입력..." onkeyup="if(event.key==='Enter') sendChatQuery()"/>
+                    <button class="btn btn-primary" onclick="sendChatQuery()">전송</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const baseAPI = "/api/teams";
+    let currentTeamId = null, currentFolderId = null, pathStack = [], currentSort = 'desc';
+
+    const token = () => localStorage.getItem('accessToken');
+    const showLoading = on => document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+    const fmtSize = b => b < 1024 ? b + ' B' : b/1024<1024 ? (b/1024).toFixed(1) + ' KB' : (b/1048576).toFixed(1) + ' MB';
+    const getName = o => o.name ?? o.originalName ?? o.originalFilename ?? '—';
+    const getUploader = o => o.uploaderName ?? o.uploaderNickname ?? o.uploaderId ?? o.uploader ?? '-';
+
+    window.onload = async () => {
+        showLoading(true);
+        const res = await fetch(`${baseAPI}/my-teams`, {
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        const teams = await res.json();
+        ['recentTeams', 'allTeams'].forEach(id => document.getElementById(id).innerHTML = '');
+        teams.forEach(t => {
+            ['recentTeams', 'allTeams'].forEach(list => {
+                const a = document.createElement('a');
+                a.className = 'nav-link text-truncate';
+                a.textContent = t.teamName;
+                a.onclick = () => selectTeam(t.teamId, t.teamName);
+                const li = document.createElement('li');
+                li.className = 'nav-item mb-1';
+                li.append(a);
+                document.getElementById(list).append(li);
+            });
+        });
+        showLoading(false);
+    };
+
+    function selectTeam(id, name) {
+        currentTeamId = id;
+        currentFolderId = null;
+        pathStack = [];
+        document.querySelectorAll('.sidebar .nav-link').forEach(a => a.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-link')
+            .forEach(a => { if (a.textContent === name) a.classList.add('active'); });
+        document.getElementById('currentTeamName').textContent = `${name} 팀 스토리지`;
+        updateBreadcrumb();
+        loadRemainingStorage();
+        loadSuggestions();
+        loadFolderAndFiles();
+        clearChat(); // 팀 변경 시 채팅 기록 초기화
+    }
+
+    function updateBreadcrumb() {
+        const bc = document.getElementById('breadcrumb');
+        bc.innerHTML = '<li class="breadcrumb-item"><a href="#" onclick="goRoot()">루트</a></li>';
+        pathStack.forEach((p, i) => {
+            bc.innerHTML += i < pathStack.length - 1
+                ? `<li class="breadcrumb-item"><a href="#" onclick="goLevel(${i})">${p.name}</a></li>`
+                : `<li class="breadcrumb-item active">${p.name}</li>`;
+        });
+    }
+    const goRoot = () => { currentFolderId = null; pathStack = []; updateBreadcrumb(); loadFolderAndFiles(); };
+    const goLevel = i => { currentFolderId = pathStack[i].id; pathStack = pathStack.slice(0, i + 1); updateBreadcrumb(); loadFolderAndFiles(); };
+
+    async function loadRemainingStorage() {
+        if (!currentTeamId) return;
+        const res = await fetch(`${baseAPI}/${currentTeamId}/storage/remaining`, {
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        if (res.ok) {
+            const { remainingMegaBytes } = await res.json();
+            document.getElementById('storageInfo').textContent = `잔여 용량: ${remainingMegaBytes} MB`;
+        }
+    }
+
+    async function loadSuggestions() {
+        if (!currentTeamId) return;
+        const files = await fetch(`${baseAPI}/${currentTeamId}/files/recommend`, {
+            headers: { Authorization: `Bearer ${token()}` }
+        }).then(r => r.json());
+        const row = document.getElementById('suggestions'); row.innerHTML = '';
+        files.slice(0, 4).forEach(f => {
+            const col = document.createElement('div'); col.className = 'col-3';
+            col.innerHTML = `
+                <div class="file-card" onclick="downloadFile(${f.id});event.stopPropagation()">
+                  <div style="font-size:2rem">${f.type === 'FOLDER' ? '📁' : '📄'}</div>
+                  <small>${getName(f)}</small>
+                </div>`;
+            row.append(col);
+        });
+    }
+
+    async function loadFolderAndFiles() {
+        if (!currentTeamId) return;
+        showLoading(true);
+        try {
+            let url = currentFolderId === null
+                ? `${baseAPI}/${currentTeamId}/folders/contents`
+                : `${baseAPI}/${currentTeamId}/folders/${currentFolderId}/contents`;
+            url += `?sort=${currentSort}`;
+            const items = await fetch(url, {
+                headers: { Authorization: `Bearer ${token()}` }
+            }).then(r => r.ok ? r.json() : []);
+            renderTable(items);
+        } catch { /* error */ }
+        showLoading(false);
+    }
+
+    async function searchFiles() {
+        if (!currentTeamId) return;
+        const kw = document.getElementById('searchInput').value.trim();
+        if (!kw) return loadFolderAndFiles();
+        showLoading(true);
+        try {
+            const results = await fetch(
+                `${baseAPI}/${currentTeamId}/files/search?name=${encodeURIComponent(kw)}`,
+                { headers: { Authorization: `Bearer ${token()}` } }
+            ).then(r => r.ok ? r.json() : []);
+            renderTable(results);
+        } catch { /* error */ }
+        showLoading(false);
+    }
+
+    function renderTable(arr) {
+        const tb = document.getElementById('fileTable'); tb.innerHTML = '';
+        arr.forEach(i => {
+            const tr = document.createElement('tr');
+            tr.className = i.type === 'FOLDER' ? 'folder-row' : 'file-row';
+            tr.innerHTML = `
+                <td>${i.id || ''}</td>
+                <td>${getName(i)}</td>
+                <td>${i.type === 'FOLDER' ? '폴더' : '파일'}</td>
+                <td>${i.type === 'FOLDER' ? '-' : fmtSize(i.size)}</td>
+                <td>${getUploader(i)}</td>
+                <td>
+                  <button class="icon-btn" title="다운로드" ${i.type === 'FOLDER' ? 'disabled' : ''}
+                          onclick="downloadFile(${i.id});event.stopPropagation()">
+                    <i class="bi-download"></i>
+                  </button>
+                  <button class="icon-btn text-danger" title="삭제"
+                          onclick="deleteItem(${i.id},'${i.type}');event.stopPropagation()">
+                    <i class="bi-trash"></i>
+                  </button>
+                </td>`;
+            if (i.type === 'FOLDER') {
+                tr.onclick = () => {
+                    currentFolderId = i.id;
+                    pathStack.push({ id: i.id, name: getName(i) });
+                    updateBreadcrumb();
+                    loadFolderAndFiles();
+                };
+            }
+            tb.append(tr);
+        });
+    }
+
+    async function downloadFile(id) {
+        showLoading(true);
+        const res = await fetch(`${baseAPI}/${currentTeamId}/files/${id}`, {
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        const blob = await res.blob();
+        const disp = res.headers.get('Content-Disposition');
+        const fname = disp?.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+            ? RegExp.$1.replace(/['"]/g, '') : 'download';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = decodeURIComponent(fname);
+        a.click();
+        showLoading(false);
+    }
+
+    async function deleteItem(id, type) {
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        showLoading(true);
+        const url = type === 'FOLDER'
+            ? `${baseAPI}/${currentTeamId}/folders/${id}`
+            : `${baseAPI}/${currentTeamId}/files/${id}`;
+        await fetch(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token()}` }
+        });
+        loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    const triggerUpload = () => document.getElementById('uploadInput').click();
+    async function handleUpload(e) {
+        const f = e.target.files[0]; if (!f) return;
+        showLoading(true);
+        const fd = new FormData(); fd.append('file', f);
+        await fetch(`${baseAPI}/${currentTeamId}/folders/${currentFolderId}/files`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token()}` },
+            body: fd
+        });
+        e.target.value = null;
+        loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    async function openNewFolder() {
+        const name = prompt('새 폴더 이름'); if (!name) return;
+        showLoading(true);
+        await fetch(`${baseAPI}/${currentTeamId}/folders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token()}`
+            },
+            body: JSON.stringify({ parentId: currentFolderId, name })
+        });
+        loadFolderAndFiles();
+        showLoading(false);
+    }
+
+    const setSort = o => { currentSort = o; loadFolderAndFiles(); };
+
+    // 채팅 관련 함수
+    function clearChat() {
+        document.getElementById('chatMessages').innerHTML = '';
+    }
+
+    function addChatMessage(content, isUser = false) {
+        const messages = document.getElementById('chatMessages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${isUser ? 'user' : 'bot'}`;
+        msgDiv.textContent = content;
+        messages.appendChild(msgDiv);
+        messages.scrollTop = messages.scrollHeight; // 자동 스크롤
+    }
+
+    async function sendChatQuery() {
+        if (!currentTeamId) {
+            alert('팀을 먼저 선택해주세요.');
+            return;
+        }
+
+        const query = document.getElementById('chatInput').value.trim();
+        if (!query) return;
+
+        addChatMessage(query, true);
+        document.getElementById('chatInput').value = '';
+
+        showLoading(true);
+        let botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'chat-message bot';
+        document.getElementById('chatMessages').appendChild(botMessageDiv);
+
+        let fullResponse = '';
+        let sources = [];
+
+        try {
+            const response = await fetch(
+                `${baseAPI}/${currentTeamId}/files/query`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token()}`,
+                        'Accept': 'text/event-stream',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({ 'query': query }).toString()
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop();
+
+                for (const part of parts) {
+                    const line = part.replace(/^data:\s*/, "").trim();
+                    if (!line) continue;
+
+                    let json;
+                    try {
+                        json = JSON.parse(line);
+                    } catch (e) {
+                        console.warn('JSON 파싱 실패:', line);
+                        continue;
+                    }
+
+                    if (json.token) {
+                        fullResponse += json.token;
+                    }
+
+                    if (json.sources && Array.isArray(json.sources)) {
+                        sources = json.sources;
+                    }
+
+                    let html = markdownToHTML(fullResponse);
+                    if (sources.length) {
+                        html += `<br><br><small class="text-muted">📄 출처: ${sources.map(s => `<code>${s}</code>`).join(', ')}</small>`;
+                    }
+                    botMessageDiv.innerHTML = html;
+
+                    document.getElementById('chatMessages').scrollTop =
+                        document.getElementById('chatMessages').scrollHeight;
+                }
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            botMessageDiv.textContent += '\n[오류 발생]';
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // 마크다운 파싱 함수
+    function markdownToHTML(markdown) {
+        const mathBlockRe = /(\\\[[\s\S]*?\\\])|(\$\$[\s\S]*?\$\$)/g;
+        const mathBlocks = new Map();
+        let mathIdx = 0;
+        markdown = markdown.replace(mathBlockRe, m => {
+            const key = `__MATH_BLOCK_${mathIdx++}__`;
+            mathBlocks.set(key, m);
+            return key;
+        });
+
+        const codeBlockRe = /```([a-z]*)\n([\s\S]*?)```/gi;
+        const codeBlocks = new Map();
+        let codeIdx = 0;
+        markdown = markdown.replace(codeBlockRe, (_, lang, code) => {
+            const escaped = code
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            const key = `__CODE_BLOCK_${codeIdx++}__`;
+            codeBlocks.set(key, { html: escaped, lang });
+            return key;
+        });
+
+        const linkMap = new Map();
+        let linkIdx = 0;
+        markdown = markdown.replace(/\[(\d+)\]\((https?:\/\/[^\s]+)\)/g, (_, number, url) => {
+            const key = `__LINK_${linkIdx++}__`;
+            linkMap.set(key, { number: parseInt(number), url });
+            return key;
+        });
+
+        const tableRe = /(^|\r?\n)(\|.*\|\r?\n\|[-:\s|]+\|\r?\n(?:\|.*\|\r?\n?)*)/gm;
+        markdown = markdown.replace(tableRe, (_, nl, block) => {
+            const lines = block.trim().split(/\r?\n/);
+            const headers = lines[0].slice(1, -1).split("|").map(s => s.trim());
+            const rows = lines.slice(2);
+
+            let html = "<table><thead><tr>";
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += "</tr></thead><tbody>";
+            rows.forEach(row => {
+                const cols = row.slice(1, -1).split("|").map(s => s.trim());
+                if (cols.length === headers.length) {
+                    html += "<tr>";
+                    cols.forEach(c => html += `<td>${c}</td>`);
+                    html += "</tr>";
+                }
+            });
+            html += "</tbody></table>";
+            return nl + html;
+        });
+
+        markdown = markdown.replace(
+            /!\[(.*?)\]\((.*?)\)/g,
+            '<img src="$2" alt="$1" style="max-width:100%;height:auto;border-radius:8px;margin:10px 0;">'
+        );
+
+        markdown = markdown.replace(
+            /\[(.*?)\]\((https?:\/\/[^\s]+)\)/g,
+            '<a href="$2" target="_blank">$1</a>'
+        );
+
+        markdown = markdown
+            .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
+            .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
+            .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
+            .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^- (.*)$/gm, '<li>$1</li>')
+            .replace(/\n/g, '<br>');
+
+        markdown = markdown.replace(/__LINK_(\d+)__/g, (_, idx) => {
+            const { number, url } = linkMap.get(`__LINK_${idx}__`);
+            return `<a href="${url}" target="_blank" class="link-icon"><i class="fas fa-link"></i><span class="link-icon-number">${number}</span></a>`;
+        });
+
+        for (const [key, { html, lang }] of codeBlocks.entries()) {
+            const cls = lang ? ` class="language-${lang}"` : "";
+            markdown = markdown.replace(
+                key,
+                `<pre><code${cls}>${html}</code></pre>`
+            );
+        }
+
+        for (const [key, raw] of mathBlocks.entries()) {
+            markdown = markdown.replace(
+                key,
+                `<div class="math-block">${raw}</div>`
+            );
+        }
+
+        return markdown;
+    }
+</script>
+</body>
+</html>
