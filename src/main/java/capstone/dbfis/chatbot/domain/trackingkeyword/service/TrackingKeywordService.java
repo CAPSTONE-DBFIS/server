@@ -56,14 +56,13 @@ public class TrackingKeywordService {
     /**
      * 기존 추적 키워드를 수정합니다.
      */
-    public TrackingKeyword updateKeyword(String requesterId, Long id, UpdateTrackingKeywordRequest request) {
-        // 멤버의 추적 키워드 조회
+    @Transactional
+    public TrackingKeywordResponseDto updateKeyword(String requesterId, Long id, UpdateTrackingKeywordRequest request) {
         TrackingKeyword keyword = trackingKeywordRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "키워드를 찾을 수 없습니다."
                 ));
 
-        // 멤버의 ID와 해당 키워드의 요청자 ID가 동일한지 검증
         if (!keyword.getRequesterId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "수정 권한이 없습니다.");
         }
@@ -71,7 +70,17 @@ public class TrackingKeywordService {
         keyword.setStartDate(request.getStartDate());
         keyword.setEndDate(request.getEndDate());
         keyword.setTrackingInterval(request.getTrackingInterval());
-        return trackingKeywordRepository.save(keyword);
+
+        TrackingKeyword updatedKeyword = trackingKeywordRepository.save(keyword);
+
+        return new TrackingKeywordResponseDto(
+                updatedKeyword.getId(),
+                updatedKeyword.getKeyword(),
+                updatedKeyword.getStartDate(),
+                updatedKeyword.getEndDate(),
+                updatedKeyword.getTrackingInterval(),
+                updatedKeyword.getProjectId() != null ? updatedKeyword.getProjectId().getId() : null
+        );
     }
 
     /**

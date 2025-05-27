@@ -21,7 +21,7 @@ public class TrackingResultController {
     private final TrackingResultService trackingResultService;
 
     @Operation(summary = "추적 llm요약본 조회", description = "추적 키워드에 대한 주기 동안의 수집 요약괍 분석본을 반환합니다.")
-    @GetMapping("/{keywordId}")
+    @GetMapping("/{keywordId}/summary")
     public ResponseEntity<List<TrackingResultResponseDto>> report(@RequestHeader("Authorization") String token,
                                                                 @PathVariable  Long keywordId) {
         // 예시로 tokenProvider를 통해 memberId를 추출하는 로직
