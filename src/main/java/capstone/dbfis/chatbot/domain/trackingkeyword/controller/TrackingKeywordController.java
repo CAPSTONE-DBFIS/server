@@ -35,7 +35,8 @@ public class TrackingKeywordController {
             @PathVariable Long id,
             @RequestBody UpdateTrackingKeywordRequest request) {
         String memberId = tokenProvider.getMemberId(token);
-        return ResponseEntity.ok(service.updateKeyword(memberId, id, request));
+        TrackingKeywordResponseDto keywords = service.updateKeyword(memberId, id, request);
+        return ResponseEntity.ok(keywords);
     }
 
     @Operation(summary = "키워드 삭제", description = "지정한 추적 키워드를 삭제합니다.")
