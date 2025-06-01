@@ -156,4 +156,29 @@ public class InsightController {
                 keyword, startDate, endDate, category, isForeign);
         return ResponseEntity.ok(result);
     }
+    
+    /**
+     * 경쟁사 언급량 분석 API
+     */
+    @GetMapping("/competitors/mentions")
+    @Operation(summary = "경쟁사 언급량 분석", description = "기간별 경쟁사 언급량과 점유율을 분석하여 반환합니다.")
+    public ResponseEntity<String> getCompetitorMentionAnalysis(
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate,
+            @RequestParam(value = "period", defaultValue = "daily") String period) {
+        String result = insightService.getCompetitorMentionAnalysis(startDate, endDate, period);
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 경쟁사 감성 분석 API
+     */
+    @GetMapping("/competitors/sentiment")
+    @Operation(summary = "경쟁사 감성 분석", description = "경쟁사별 긍정·부정·중립 비율을 분석하여 반환합니다.")
+    public ResponseEntity<String> getCompetitorSentimentAnalysis(
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate) {
+        String result = insightService.getCompetitorSentimentAnalysis(startDate, endDate);
+        return ResponseEntity.ok(result);
+    }
 }

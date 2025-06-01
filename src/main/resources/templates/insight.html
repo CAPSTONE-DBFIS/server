@@ -285,6 +285,29 @@
             background-color: #f1f3f4;
             color: #5f6368;
         }
+        /* 추가된 스타일 */
+        .period-toggle {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .period-btn {
+            background-color: #f0f0f0;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .period-btn.active {
+            background-color: #5B55D7;
+            color: white;
+        }
+        
+        .period-selector {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -372,6 +395,87 @@
         </div>
     </div>
 
+    <!-- 경쟁사 분석 섹션 -->
+    <div class="section" id="competitors-section">
+        <h2>경쟁사 분석</h2>
+        
+        <!-- 기간 선택 영역 -->
+        <div class="competitors-form" style="margin-bottom: 20px;">
+            <!-- 일간/주간/월간 토글 -->
+            <div class="period-toggle" style="margin-bottom: 15px;">
+                <button id="daily-toggle" class="period-btn active" onclick="setPeriodMode('daily')">일간</button>
+                <button id="weekly-toggle" class="period-btn" onclick="setPeriodMode('weekly')">주간</button>
+                <button id="monthly-toggle" class="period-btn" onclick="setPeriodMode('monthly')">월간</button>
+            </div>
+            
+            <!-- 일간 모드 캘린더 -->
+            <div id="daily-selector" class="period-selector">
+                <label for="comp-date">날짜 선택:</label>
+                <input type="date" id="comp-date" style="margin-right: 10px;" />
+            </div>
+            
+            <!-- 주간 모드 선택기 -->
+            <div id="weekly-selector" class="period-selector" style="display: none;">
+                <label for="comp-week-month">월 선택:</label>
+                <select id="comp-week-month" style="margin-right: 10px;">
+                    <option value="1">1월</option>
+                    <option value="2">2월</option>
+                    <option value="3">3월</option>
+                    <option value="4">4월</option>
+                    <option value="5">5월</option>
+                    <option value="6">6월</option>
+                    <option value="7">7월</option>
+                    <option value="8">8월</option>
+                    <option value="9">9월</option>
+                    <option value="10">10월</option>
+                    <option value="11">11월</option>
+                    <option value="12">12월</option>
+                </select>
+                <label for="comp-week">주 선택:</label>
+                <select id="comp-week" style="margin-right: 10px;">
+                    <option value="1">1주차</option>
+                    <option value="2">2주차</option>
+                    <option value="3">3주차</option>
+                    <option value="4">4주차</option>
+                    <option value="5">5주차</option>
+                </select>
+            </div>
+            
+            <!-- 월간 모드 선택기 -->
+            <div id="monthly-selector" class="period-selector" style="display: none;">
+                <label for="comp-month">월 선택:</label>
+                <select id="comp-month" style="margin-right: 10px;">
+                    <option value="1">1월</option>
+                    <option value="2">2월</option>
+                    <option value="3">3월</option>
+                    <option value="4">4월</option>
+                    <option value="5">5월</option>
+                    <option value="6">6월</option>
+                    <option value="7">7월</option>
+                    <option value="8">8월</option>
+                    <option value="9">9월</option>
+                    <option value="10">10월</option>
+                    <option value="11">11월</option>
+                    <option value="12">12월</option>
+                </select>
+            </div>
+            
+            <button onclick="loadCompetitorsData()">분석</button>
+        </div>
+        
+        <!-- 경쟁사 언급량 분석 차트 -->
+        <div class="charts-wrapper">
+            <div class="chart-container">
+                <canvas id="competitors-mention-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">언급량 비율</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="competitors-sentiment-chart"></canvas>
+                <p style="text-align:center; font-weight:bold;">경쟁사별 감성 분석</p>
+            </div>
+        </div>
+    </div>
+
     <!-- 오른쪽 패널: 워드 클라우드 및 기사 결과 (모달 표시용) -->
     <div class="section" id="results-section">
         <h2>워드 클라우드</h2>
@@ -410,6 +514,81 @@
     let WEEKLY_DATA = {};
 
     let sentimentChart = null;
+
+    // 경쟁사 컨트롤러 관련 변수와 함수
+    let currentPeriodMode = 'daily';
+    let competitorsData = null;
+
+    // 기간 모드 설정 (일간/주간/월간)
+    function setPeriodMode(mode) {
+        currentPeriodMode = mode;
+        
+        // 토글 버튼 상태 업데이트
+        document.getElementById('daily-toggle').classList.toggle('active', mode === 'daily');
+        document.getElementById('weekly-toggle').classList.toggle('active', mode === 'weekly');
+        document.getElementById('monthly-toggle').classList.toggle('active', mode === 'monthly');
+        
+        // 선택기 표시/숨김 처리
+        document.getElementById('daily-selector').style.display = mode === 'daily' ? 'block' : 'none';
+        document.getElementById('weekly-selector').style.display = mode === 'weekly' ? 'block' : 'none';
+        document.getElementById('monthly-selector').style.display = mode === 'monthly' ? 'block' : 'none';
+    }
+
+    // 선택된 날짜 범위 계산
+    function getSelectedDateRange() {
+        const year = new Date().getFullYear();
+        
+        if (currentPeriodMode === 'daily') {
+            // 일간 모드
+            const date = document.getElementById('comp-date').value;
+            if (!date) return null;
+            
+            return {
+                startDate: date,
+                endDate: date,
+                period: 'daily'
+            };
+        } else if (currentPeriodMode === 'weekly') {
+            // 주간 모드
+            const month = parseInt(document.getElementById('comp-week-month').value);
+            const week = parseInt(document.getElementById('comp-week').value);
+            
+            // 해당 월의 첫 날
+            const firstDayOfMonth = new Date(year, month - 1, 1);
+            
+            // 주차에 따른 날짜 계산
+            const startOffset = (week - 1) * 7;
+            const startDate = new Date(year, month - 1, 1 + startOffset);
+            const endDate = new Date(year, month - 1, 7 + startOffset);
+            
+            // 월을 넘어가는 경우 조정
+            if (endDate.getMonth() !== month - 1) {
+                // 해당 월의 마지막 날로 설정
+                endDate.setDate(0);
+            }
+            
+            return {
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0],
+                period: 'weekly'
+            };
+        } else {
+            // 월간 모드
+            const month = parseInt(document.getElementById('comp-month').value);
+            
+            // 해당 월의 첫 날
+            const startDate = new Date(year, month - 1, 1);
+            
+            // 해당 월의 마지막 날
+            const endDate = new Date(year, month, 0);
+            
+            return {
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0],
+                period: 'monthly'
+            };
+        }
+    }
 
     // 일간 키워드 데이터 조회
     async function fetchDailyData(date) {
@@ -518,20 +697,34 @@
     // 전체 데이터 로드
     async function loadAllData() {
         const date = document.getElementById('date').value;
+        
+        // 일간 데이터
         DAILY_DATA = await fetchDailyData(date);
         renderDailyKeywordChart(DAILY_DATA);
         if (DAILY_DATA.length > 0) {
             currentDailyKeyword = DAILY_DATA[0].keyword;
             renderDailyRelatedChart(DAILY_DATA[0].relatedKeywords);
             renderWordCloud(currentDailyKeyword, DAILY_DATA[0].relatedKeywords);
+        } else {
+            if (dailyChart) dailyChart.destroy();
+            if (dailyRelatedChart) dailyRelatedChart.destroy();
         }
-
+        
+        // 주간 데이터
         WEEKLY_DATA = await fetchWeeklyData(date);
         renderWeeklyKeywordChart(WEEKLY_DATA);
-        if (WEEKLY_DATA.keywords.length > 0) {
+        if (WEEKLY_DATA.keywords && WEEKLY_DATA.keywords.length > 0) {
             currentWeeklyKeyword = WEEKLY_DATA.keywords[0].keyword;
             renderWeeklyRelatedChart(WEEKLY_DATA.keywords[0].relatedKeywords);
+            document.getElementById('weekly-date-range').textContent = 
+                `${WEEKLY_DATA.range_start} ~ ${WEEKLY_DATA.range_end}`;
+        } else {
+            if (weeklyChart) weeklyChart.destroy();
+            if (weeklyRelatedChart) weeklyRelatedChart.destroy();
         }
+        
+        // 경쟁사 데이터도 함께 로드
+        loadCompetitorsData();
     }
 
     // 일간 키워드 막대 그래프 렌더링
@@ -1125,6 +1318,250 @@
     document.addEventListener("DOMContentLoaded", function() {
         setDefaultDates();
         loadCategories();
+    });
+
+    async function loadCompetitorsData() {
+        const dateRange = getSelectedDateRange();
+        
+        if (!dateRange) {
+            alert('분석 기간을 선택해주세요.');
+            return;
+        }
+        
+        try {
+            // 경쟁사 언급량 데이터 로드
+            const mentionData = await fetchCompetitorsMentionData(dateRange.startDate, dateRange.endDate, dateRange.period);
+            competitorsData = mentionData; // 언급량 데이터 저장
+            updateCompetitorsMentionChart(mentionData);
+            
+            // 경쟁사 감성 분석 데이터 로드
+            const sentimentData = await fetchCompetitorsSentimentData(dateRange.startDate, dateRange.endDate);
+            updateCompetitorsSentimentChart(sentimentData);
+        } catch (error) {
+            console.error('경쟁사 데이터 로드 중 오류 발생:', error);
+            alert('경쟁사 데이터를 불러오는 중 오류가 발생했습니다.');
+        }
+    }
+    
+    // 경쟁사 언급량 데이터 조회
+    async function fetchCompetitorsMentionData(startDate, endDate, period) {
+        const res = await fetch(`http://localhost:8080/api/insight/competitors/mentions?startDate=${startDate}&endDate=${endDate}&period=${period}`);
+        return await res.json();
+    }
+    
+    // 경쟁사 감성 분석 데이터 조회
+    async function fetchCompetitorsSentimentData(startDate, endDate) {
+        const res = await fetch(`http://localhost:8080/api/insight/competitors/sentiment?startDate=${startDate}&endDate=${endDate}`);
+        return await res.json();
+    }
+    
+    // 경쟁사 언급량 차트 업데이트
+    function updateCompetitorsMentionChart(data) {
+        const ctx = document.getElementById('competitors-mention-chart').getContext('2d');
+        
+        // 기존 차트가 있다면 파괴
+        if (window.competitorsMentionChart) {
+            window.competitorsMentionChart.destroy();
+        }
+        
+        // 데이터 준비
+        const competitors = data.competitors || [];
+        
+        // 언급량 기준 내림차순 정렬 (이미 서버에서 정렬되어 있지만 한번 더 확인)
+        competitors.sort((a, b) => b.article_count - a.article_count);
+        
+        const labels = competitors.map(comp => comp.name);
+        const percentages = competitors.map(comp => comp.percentage);
+        const articleCounts = competitors.map(comp => comp.article_count);
+        
+        // 상위 10개 경쟁사만 표시
+        const topLabels = labels.slice(0, 10);
+        const topPercentages = percentages.slice(0, 10);
+        const topArticleCounts = articleCounts.slice(0, 10);
+        
+        // 차트 생성
+        window.competitorsMentionChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topLabels,
+                datasets: [{
+                    label: '언급량 비율 (%)',
+                    data: topPercentages,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '언급량 비율 (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                return `${context.dataset.label}: ${context.parsed.y}% (${topArticleCounts[index]}건)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 경쟁사 감성 분석 차트 업데이트
+    function updateCompetitorsSentimentChart(sentimentData) {
+        const ctx = document.getElementById('competitors-sentiment-chart').getContext('2d');
+        
+        // 기존 차트가 있다면 파괴
+        if (window.competitorsSentimentChart) {
+            window.competitorsSentimentChart.destroy();
+        }
+        
+        // 데이터 준비
+        const sentimentCompetitors = sentimentData.competitors || [];
+        
+        // 언급량 데이터가 없으면 기본 정렬 사용
+        if (!competitorsData || !competitorsData.competitors) {
+            console.warn('언급량 데이터가 없어 기본 정렬을 사용합니다.');
+            
+            // 상위 8개 경쟁사만 표시 (화면 공간 제약)
+            const topCompetitors = sentimentCompetitors.slice(0, 8);
+            const labels = topCompetitors.map(comp => comp.name);
+            
+            renderSentimentChart(ctx, topCompetitors, labels);
+            return;
+        }
+        
+        // 언급량 순서대로 감성 분석 데이터 정렬
+        const mentionCompetitors = competitorsData.competitors || [];
+        
+        // 언급량 기준 상위 8개 경쟁사 이름 추출
+        const topMentionNames = mentionCompetitors
+            .sort((a, b) => b.article_count - a.article_count)
+            .slice(0, 8)
+            .map(comp => comp.name);
+        
+        // 언급량 기준으로 정렬된 감성 분석 데이터 생성
+        const sortedSentimentCompetitors = [];
+        for (const name of topMentionNames) {
+            const comp = sentimentCompetitors.find(c => c.name === name);
+            if (comp) {
+                sortedSentimentCompetitors.push(comp);
+            }
+        }
+        
+        // 차트 렌더링
+        renderSentimentChart(ctx, sortedSentimentCompetitors, topMentionNames);
+    }
+    
+    // 경쟁사 감성 분석 차트 렌더링 함수
+    function renderSentimentChart(ctx, competitors, labels) {
+        // 차트 생성
+        window.competitorsSentimentChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '긍정',
+                        data: competitors.map(comp => comp.positive_rate),
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '중립',
+                        data: competitors.map(comp => comp.neutral_rate),
+                        backgroundColor: 'rgba(201, 203, 207, 0.7)',
+                        borderColor: 'rgba(201, 203, 207, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '부정',
+                        data: competitors.map(comp => comp.negative_rate),
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: '비율 (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const datasetIndex = context.datasetIndex;
+                                const comp = competitors[index];
+                                
+                                let count = 0;
+                                let label = '';
+                                
+                                if (datasetIndex === 0) { // 긍정
+                                    count = comp.positive_count;
+                                    label = '긍정';
+                                } else if (datasetIndex === 1) { // 중립
+                                    count = comp.neutral_count;
+                                    label = '중립';
+                                } else { // 부정
+                                    count = comp.negative_count;
+                                    label = '부정';
+                                }
+                                
+                                return `${label}: ${context.parsed.y}% (${count}건)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 페이지 로드 시 초기화
+    document.addEventListener("DOMContentLoaded", function() {
+        setDefaultDates();
+        loadCategories();
+        
+        // 현재 날짜 기준 값 세팅
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+        
+        // 일간 모드 기본값
+        document.getElementById('comp-date').value = today.toISOString().split('T')[0];
+        
+        // 주간 모드 기본값
+        document.getElementById('comp-week-month').value = currentMonth;
+        const currentWeek = Math.ceil(today.getDate() / 7);
+        document.getElementById('comp-week').value = Math.min(currentWeek, 5);
+        
+        // 월간 모드 기본값
+        document.getElementById('comp-month').value = currentMonth;
     });
 </script>
 </body>
