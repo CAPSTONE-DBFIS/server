@@ -101,12 +101,6 @@
   <em>기간별 트렌드 분석 스트리밍</em>
 </p>
 
-<p align="center">
-  <img src=".github/assets/server_competitor_analysis_streaming.gif" width="900" alt="경쟁사 분석 스트리밍">
-  <br>
-  <em>경쟁사 분석 스트리밍</em>
-</p>
-
 <table align="center">
   <tr>
     <td align="center" width="50%">
