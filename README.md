@@ -2,8 +2,8 @@
   <img src=".github/assets/trendb_logo.png" alt="TRENDB Logo" width="150">
 </p>
 
-<h1 align="center">TRENDB Server</h1>
-<p align="center">AI 기반 IT 트렌드 분석 서비스의 메인 API 서버</p>
+<h1 align="center">TRENDB: IT 트렌드 분석 AI 에이전트 Server</h1>
+<p align="center">다양한 도구를 활용하여 IT 업계 트렌드에 대한 인사이트를 제공하는 지능형 에이전트</p>
 <p align="center"><strong>Spring Boot 기반 인증, 협업, 대시보드, AI 연동 허브</strong></p>
 <p align="center"><strong>프로젝트 기간: 2024.07.10 ~ 2025.06.04</strong></p>
 
