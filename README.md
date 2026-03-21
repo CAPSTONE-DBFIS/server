@@ -14,9 +14,7 @@
   <a href="https://spring.io/projects/spring-data-jpa"><img src="https://img.shields.io/badge/Spring_Data_JPA-3.3.4-6DB33F.svg?style=flat-square" alt="JPA"></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-4169E1.svg?style=flat-square&logo=postgresql" alt="PostgreSQL"></a>
   <a href="https://www.elastic.co/elasticsearch"><img src="https://img.shields.io/badge/Elasticsearch-005571.svg?style=flat-square&logo=elasticsearch" alt="Elasticsearch"></a>
-  <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-DC382D.svg?style=flat-square&logo=redis" alt="Redis"></a>
   <a href="https://aws.amazon.com/s3/"><img src="https://img.shields.io/badge/Amazon_S3-569A31.svg?style=flat-square&logo=amazon-s3" alt="Amazon S3"></a>
-  <a href="https://swagger.io/"><img src="https://img.shields.io/badge/Swagger-85EA2D.svg?style=flat-square&logo=swagger" alt="Swagger"></a>
 </p>
 
 <p align="center">
