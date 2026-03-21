@@ -59,19 +59,35 @@
 - 회원가입 시 인증번호 발송 및 인증번호 검증 단계를 통해 이메일 소유를 확인합니다.
 - 마이페이지에서 프로필 조회 및 수정, 비밀번호 변경 기능을 지원합니다.
 
-<p align="center">
-  <img src=".github/assets/server_login.png" width="420" alt="로그인 화면">
-  <img src=".github/assets/server_signup.png" width="420" alt="회원가입 화면">
-  <br>
-  <em>로그인(좌) 및 회원가입(우)</em>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_login.png" alt="로그인 화면" width="100%">
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_signup.png" alt="회원가입 화면" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>로그인 화면</em></td>
+    <td align="center"><em>회원가입 화면</em></td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src=".github/assets/server_signup_verification.png" width="420" alt="인증번호 입력 화면">
-  <img src=".github/assets/server_signup_email_verification.png" width="420" alt="회원가입 이메일 인증 예시">
-  <br>
-  <em>인증번호 입력(좌) 및 회원가입 이메일 인증 발송 예시(우)</em>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_signup_verification.png" alt="인증번호 입력 화면" width="100%">
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_signup_email_verification.png" alt="회원가입 이메일 인증 예시" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>인증번호 입력 화면</em></td>
+    <td align="center"><em>회원가입 이메일 인증 발송 예시</em></td>
+  </tr>
+</table>
 
 ### 2.2. AI 챗봇 및 페르소나 기반 대화
 
@@ -93,12 +109,20 @@
   <em>경쟁사 분석 스트리밍</em>
 </p>
 
-<p align="center">
-  <img src=".github/assets/server_persona_manage.png" width="420" alt="페르소나 관리">
-  <img src=".github/assets/server_source_reference.png" width="420" alt="답변 출처 제공">
-  <br>
-  <em>페르소나 관리(좌) 및 답변 출처 제공(우)</em>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_persona_manage.png" alt="페르소나 관리" width="100%">
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_source_reference.png" alt="답변 출처 제공" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>페르소나 관리</em></td>
+    <td align="center"><em>답변 출처 제공</em></td>
+  </tr>
+</table>
 
 ### 2.3. 인사이트 대시보드 및 뉴스 분석 API
 
@@ -112,12 +136,20 @@
   <em>인사이트 트렌드 키워드 탐색</em>
 </p>
 
-<p align="center">
-  <img src=".github/assets/server_insight_domestic.png" width="420" alt="국내 인사이트 대시보드">
-  <img src=".github/assets/server_insight_foreign.png" width="420" alt="해외 인사이트 대시보드">
-  <br>
-  <em>국내 인사이트(좌) 및 해외 인사이트(우)</em>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_insight_domestic.png" alt="국내 인사이트 대시보드" width="100%">
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_insight_foreign.png" alt="해외 인사이트 대시보드" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>국내 인사이트 대시보드</em></td>
+    <td align="center"><em>해외 인사이트 대시보드</em></td>
+  </tr>
+</table>
 
 ### 2.4. 팀 협업 및 문서 공유
 
@@ -126,12 +158,20 @@
 - 업로드된 파일은 외부 AI 서버와 연계되어 문서 기반 질의응답(RAG)에 활용됩니다.
 - 추천 파일, 파일명 검색, 남은 스토리지 조회, 파일 다운로드/삭제 기능까지 포함해 협업형 문서 저장소 경험을 제공합니다.
 
-<p align="center">
-  <img src=".github/assets/server_team_member_add.png" width="420" alt="팀원 추가 화면">
-  <img src=".github/assets/server_team_storage.png" width="420" alt="팀 스토리지 화면">
-  <br>
-  <em>팀원 추가(좌) 및 팀 스토리지 관리(우)</em>
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_team_member_add.png" alt="팀원 추가 화면" width="100%">
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/assets/server_team_storage.png" alt="팀 스토리지 화면" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><em>팀원 추가 화면</em></td>
+    <td align="center"><em>팀 스토리지 화면</em></td>
+  </tr>
+</table>
 
 ---
 
